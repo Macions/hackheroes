@@ -3,12 +3,12 @@ let stats_section = document.getElementById("stats");
 let amount_of_project = document.querySelector("#stats article#amount_of_projects h2 span");
 let amount_of_future_creators = document.querySelector("#stats article#amount_of_future_creators h2 span");
 
-let amount_of_project_int = amount_of_project.innerText;
-let amount_of_future_creators_int = amount_of_future_creators.innerText;
+let amount_of_project_int = amount_of_project ? amount_of_project.innerText : "0";
+let amount_of_future_creators_int = amount_of_future_creators ? amount_of_future_creators.innerText : "0";
 let projectAnimated = false;
 
 function tryAnimateProjects() {
-	if (projectAnimated) return;
+	if (projectAnimated || !stats_section) return;
 
 	const rect = stats_section.getBoundingClientRect();
 	const visiblePx = Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
@@ -17,13 +17,21 @@ function tryAnimateProjects() {
 		projectAnimated = true;
 
 		const projectCount = parseInt(amount_of_project_int, 10) || 0;
-		for (let i = 0; i <= projectCount; i++) {
-			setTimeout(() => amount_of_project.innerText = i, 20 * i);
+		if (amount_of_project) {
+			for (let i = 0; i <= projectCount; i++) {
+				setTimeout(() => {
+					if (amount_of_project) amount_of_project.innerText = i;
+				}, 20 * i);
+			}
 		}
 
 		const futureCount = parseInt(amount_of_future_creators_int, 10) || 0;
-		for (let j = 0; j <= futureCount; j++) {
-			setTimeout(() => amount_of_future_creators.innerText = j, 20 * j);
+		if (amount_of_future_creators) {
+			for (let j = 0; j <= futureCount; j++) {
+				setTimeout(() => {
+					if (amount_of_future_creators) amount_of_future_creators.innerText = j;
+				}, 20 * j);
+			}
 		}
 
 		window.removeEventListener("scroll", tryAnimateProjects);
@@ -31,9 +39,11 @@ function tryAnimateProjects() {
 	}
 }
 
-window.addEventListener("scroll", tryAnimateProjects);
-window.addEventListener("resize", tryAnimateProjects);
-tryAnimateProjects();
+if (stats_section) {
+	window.addEventListener("scroll", tryAnimateProjects);
+	window.addEventListener("resize", tryAnimateProjects);
+	tryAnimateProjects();
+}
 
 // ====== CAROUSEL PROJEKTÓW ======
 const project_section = document.getElementById("projects");
@@ -41,24 +51,35 @@ const move_circles = document.querySelectorAll("#move_circles .circle");
 let autoSlideInterval = null;
 
 function updateProjectCarousel(nextIndex) {
+	if (!project_section || !move_circles.length) return;
+
 	const offset = nextIndex * 100;
 	project_section.style.transform = `translateX(-${offset}%)`;
-	project_section.style.transition = "transform 0.5s ease"; // Dodaj płynną animację
+	project_section.style.transition = "transform 0.5s ease";
+
 	move_circles.forEach(c => c.classList.remove("active"));
-	move_circles[nextIndex].classList.add("active");
+	if (move_circles[nextIndex]) {
+		move_circles[nextIndex].classList.add("active");
+	}
 }
 
 // Kółka
-move_circles.forEach((circle, index) => {
-	circle.addEventListener("click", () => {
-		updateProjectCarousel(index);
-		resetAutoSlide(); // Reset autoplay po kliknięciu
+if (move_circles.length) {
+	move_circles.forEach((circle, index) => {
+		circle.addEventListener("click", () => {
+			updateProjectCarousel(index);
+			resetAutoSlide();
+		});
 	});
-});
+}
 
 function startAutoSlide() {
+	if (!move_circles.length || !project_section) return;
+
 	autoSlideInterval = setInterval(() => {
 		const active_circle = document.querySelector("#move_circles .circle.active");
+		if (!active_circle) return;
+
 		let currentIndex = Array.from(move_circles).indexOf(active_circle);
 		let nextIndex = (currentIndex + 1) % move_circles.length;
 		updateProjectCarousel(nextIndex);
@@ -70,27 +91,26 @@ function resetAutoSlide() {
 	startAutoSlide();
 }
 
-// Uruchom auto-slide po załadowaniu DOM
-document.addEventListener('DOMContentLoaded', () => {
-	startAutoSlide();
-});
-
 // ====== CAROUSEL OPINII ======
-let opinion_arrow_left = document.querySelector(".arrow.left");
-let opinion_arrow_right = document.querySelector(".arrow.right");
+let opinion_arrow_left = document.querySelector("#future_makers_opinions .arrow.left");
+let opinion_arrow_right = document.querySelector("#future_makers_opinions .arrow.right");
 let opinions = document.getElementById("opinions");
 
 let current_opinion_index = 0;
-let max_opinion_index = opinions.children.length / 2 - 1;
+let max_opinion_index = opinions ? opinions.children.length / 2 - 1 : 0;
 let opinionsAutoSlideInterval = null;
 
 function updateOpinionsCarousel() {
+	if (!opinions) return;
+
 	const offset = current_opinion_index * 100;
 	opinions.style.transform = `translateX(-${offset}%)`;
-	opinions.style.transition = "transform 0.5s ease"; // Dodaj płynną animację
+	opinions.style.transition = "transform 0.5s ease";
 }
 
 function navigateOpinions(direction) {
+	if (!opinions) return;
+
 	if (direction === 'next' && current_opinion_index < max_opinion_index) {
 		current_opinion_index++;
 	} else if (direction === 'prev' && current_opinion_index > 0) {
@@ -101,10 +121,16 @@ function navigateOpinions(direction) {
 }
 
 // Strzałki
-opinion_arrow_left.addEventListener("click", () => navigateOpinions('prev'));
-opinion_arrow_right.addEventListener("click", () => navigateOpinions('next'));
+if (opinion_arrow_left) {
+	opinion_arrow_left.addEventListener("click", () => navigateOpinions('prev'));
+}
+if (opinion_arrow_right) {
+	opinion_arrow_right.addEventListener("click", () => navigateOpinions('next'));
+}
 
 function startOpinionsAutoSlide() {
+	if (!opinions) return;
+
 	opinionsAutoSlideInterval = setInterval(() => {
 		if (current_opinion_index < max_opinion_index) {
 			current_opinion_index++;
@@ -120,19 +146,65 @@ function resetOpinionsAutoSlide() {
 	startOpinionsAutoSlide();
 }
 
-// Uruchom auto-slide opinii po załadowaniu DOM
-document.addEventListener('DOMContentLoaded', () => {
-	startOpinionsAutoSlide();
-});
+// ====== IMPROVED BURGER MENU ======
+function initMobileMenu() {
+	const burgerMenu = document.getElementById('burger-menu');
+	const navUl = document.querySelector('header nav ul');
+
+	if (burgerMenu && navUl) {
+		burgerMenu.addEventListener('click', (e) => {
+			e.stopPropagation();
+			navUl.classList.toggle('mobile-open');
+
+			// Zmień ikonę burger menu
+			if (navUl.classList.contains('mobile-open')) {
+				burgerMenu.style.transform = 'rotate(90deg)';
+				burgerMenu.style.opacity = '0.7';
+			} else {
+				burgerMenu.style.transform = 'rotate(0deg)';
+				burgerMenu.style.opacity = '1';
+			}
+		});
+
+		// Zamknij menu po kliknięciu gdzie indziej
+		document.addEventListener('click', (e) => {
+			if (!navUl.contains(e.target) && e.target !== burgerMenu) {
+				navUl.classList.remove('mobile-open');
+				burgerMenu.style.transform = 'rotate(0deg)';
+				burgerMenu.style.opacity = '1';
+			}
+		});
+
+		// Zamknij menu po kliknięciu w link (dla mobile)
+		if (window.innerWidth <= 768) {
+			navUl.querySelectorAll('a').forEach(link => {
+				link.addEventListener('click', () => {
+					navUl.classList.remove('mobile-open');
+					burgerMenu.style.transform = 'rotate(0deg)';
+					burgerMenu.style.opacity = '1';
+				});
+			});
+		}
+
+		// Zamknij menu po zmianie rozmiaru okna na desktop
+		window.addEventListener('resize', () => {
+			if (window.innerWidth > 768) {
+				navUl.classList.remove('mobile-open');
+				burgerMenu.style.transform = 'rotate(0deg)';
+				burgerMenu.style.opacity = '1';
+			}
+		});
+	}
+}
 
 // ====== FIX FOR MENU SCROLL ISSUE ======
 function fixMenuScroll() {
 	const header = document.querySelector('header');
 	const main = document.querySelector('main');
-	
+
 	if (header && main) {
 		const headerHeight = header.offsetHeight;
-		
+
 		// Dla desktop - dodaj padding aby treść nie była pod sticky header
 		if (!isMobileDevice()) {
 			main.style.paddingTop = '0';
@@ -149,54 +221,13 @@ function fixMenuScroll() {
 
 // ====== SCROLL TO TOP FIX ======
 function scrollToTop() {
-	window.scrollTo(0, 0);
-	
+	window.scrollTo({
+		top: 0,
+		behavior: 'smooth'
+	});
+
 	if (history.scrollRestoration) {
 		history.scrollRestoration = 'manual';
-	}
-}
-
-// ====== IMPROVED MOBILE MENU ======
-function initMobileMenu() {
-	const header = document.querySelector('header');
-	const nav = document.querySelector('header nav');
-	
-	if (isMobileDevice()) {
-		const menuButton = document.createElement('button');
-		menuButton.className = 'mobile-menu-button';
-		menuButton.innerHTML = '☰';
-		menuButton.setAttribute('aria-label', 'Otwórz menu');
-		header.insertBefore(menuButton, nav);
-
-		menuButton.addEventListener('click', (e) => {
-			e.stopPropagation();
-			const ul = nav.querySelector('ul');
-			ul.classList.toggle('mobile-open');
-			menuButton.setAttribute('aria-expanded', ul.classList.contains('mobile-open'));
-			
-			// Zmień ikonę przy otwarciu/zamknięciu
-			menuButton.innerHTML = ul.classList.contains('mobile-open') ? '✕' : '☰';
-		});
-
-		// Zamknij menu po kliknięciu gdzie indziej
-		document.addEventListener('click', (e) => {
-			if (!nav.contains(e.target) && !menuButton.contains(e.target)) {
-				const ul = nav.querySelector('ul');
-				ul.classList.remove('mobile-open');
-				menuButton.setAttribute('aria-expanded', 'false');
-				menuButton.innerHTML = '☰';
-			}
-		});
-
-		// Zamknij menu po kliknięciu w link
-		nav.querySelectorAll('a').forEach(link => {
-			link.addEventListener('click', () => {
-				const ul = nav.querySelector('ul');
-				ul.classList.remove('mobile-open');
-				menuButton.setAttribute('aria-expanded', 'false');
-				menuButton.innerHTML = '☰';
-			});
-		});
 	}
 }
 
@@ -211,7 +242,7 @@ function isTouchDevice() {
 
 function throttle(func, limit) {
 	let inThrottle;
-	return function() {
+	return function () {
 		const args = arguments;
 		const context = this;
 		if (!inThrottle) {
@@ -236,9 +267,13 @@ function handleResponsiveImages() {
 function adjustFontSizes() {
 	const width = window.innerWidth;
 	const html = document.documentElement;
-	if (width < 576) html.style.fontSize = '14px';
-	else if (width < 768) html.style.fontSize = '15px';
-	else html.style.fontSize = '16px';
+	if (width < 576) {
+		html.style.fontSize = '14px';
+	} else if (width < 768) {
+		html.style.fontSize = '15px';
+	} else {
+		html.style.fontSize = '16px';
+	}
 }
 
 // ====== ORIENTATION CHANGE ======
@@ -264,10 +299,10 @@ function enhanceTouchSupport() {
 
 		const style = document.createElement('style');
 		style.textContent = `
-			.touch-device *:hover {
-				transform: none !important;
-			}
-		`;
+            .touch-device *:hover {
+                transform: none !important;
+            }
+        `;
 		document.head.appendChild(style);
 	}
 }
@@ -281,7 +316,7 @@ function initSmoothScroll() {
 			if (target) {
 				const headerHeight = document.querySelector('header').offsetHeight;
 				const targetPosition = target.getBoundingClientRect().top + window.pageYOffset - headerHeight;
-				
+
 				window.scrollTo({
 					top: targetPosition,
 					behavior: 'smooth'
@@ -299,9 +334,11 @@ function initLazyLoading() {
 				const img = entry.target;
 				if (img.dataset.src) {
 					img.src = img.dataset.src;
+					img.removeAttribute('data-src');
 				}
 				if (img.dataset.srcset) {
 					img.srcset = img.dataset.srcset;
+					img.removeAttribute('data-srcset');
 				}
 				img.classList.remove('lazy');
 				observer.unobserve(img);
@@ -318,7 +355,7 @@ function initLazyLoading() {
 function initPerformanceOptimizations() {
 	// Throttle scroll events
 	window.addEventListener('scroll', throttle(tryAnimateProjects, 100));
-	
+
 	// Optimize resize events
 	let resizeTimeout;
 	window.addEventListener('resize', () => {
@@ -349,7 +386,7 @@ function initResponsiveFeatures() {
 	}, 250));
 
 	window.addEventListener('orientationchange', handleOrientationChange);
-	
+
 	// Napraw po załadowaniu obrazków
 	window.addEventListener('load', () => {
 		fixMenuScroll();
@@ -362,7 +399,7 @@ function initErrorHandling() {
 	window.addEventListener('error', (e) => {
 		console.error('JavaScript Error:', e.error);
 	});
-	
+
 	window.addEventListener('unhandledrejection', (e) => {
 		console.error('Unhandled Promise Rejection:', e.reason);
 	});
@@ -373,10 +410,16 @@ document.addEventListener('DOMContentLoaded', () => {
 	initResponsiveFeatures();
 	enhanceTouchSupport();
 	initErrorHandling();
-	
+
 	// Initial carousel setup
-	updateOpinionsCarousel();
-	
+	if (project_section) {
+		startAutoSlide();
+	}
+	if (opinions) {
+		startOpinionsAutoSlide();
+		updateOpinionsCarousel();
+	}
+
 	console.log('TeenCollab - Strona załadowana pomyślnie');
 });
 
@@ -384,4 +427,80 @@ document.addEventListener('DOMContentLoaded', () => {
 window.addEventListener('beforeunload', () => {
 	if (autoSlideInterval) clearInterval(autoSlideInterval);
 	if (opinionsAutoSlideInterval) clearInterval(opinionsAutoSlideInterval);
+});
+
+// ====== TOUCH AND SWIPE SUPPORT ======
+function initSwipeSupport() {
+	if (!isTouchDevice()) return;
+
+	let startX = 0;
+	let endX = 0;
+
+	// Swipe dla karuzeli projektów
+	if (project_section) {
+		project_section.addEventListener('touchstart', (e) => {
+			startX = e.touches[0].clientX;
+		});
+
+		project_section.addEventListener('touchend', (e) => {
+			endX = e.changedTouches[0].clientX;
+			handleSwipe();
+		});
+	}
+
+	// Swipe dla karuzeli opinii
+	if (opinions) {
+		opinions.addEventListener('touchstart', (e) => {
+			startX = e.touches[0].clientX;
+		});
+
+		opinions.addEventListener('touchend', (e) => {
+			endX = e.changedTouches[0].clientX;
+			handleOpinionSwipe();
+		});
+	}
+
+	function handleSwipe() {
+		const swipeThreshold = 50;
+		const diff = startX - endX;
+
+		if (Math.abs(diff) > swipeThreshold) {
+			const active_circle = document.querySelector("#move_circles .circle.active");
+			if (!active_circle) return;
+
+			let currentIndex = Array.from(move_circles).indexOf(active_circle);
+			let nextIndex;
+
+			if (diff > 0) {
+				// Swipe w lewo - następny slajd
+				nextIndex = (currentIndex + 1) % move_circles.length;
+			} else {
+				// Swipe w prawo - poprzedni slajd
+				nextIndex = currentIndex > 0 ? currentIndex - 1 : move_circles.length - 1;
+			}
+
+			updateProjectCarousel(nextIndex);
+			resetAutoSlide();
+		}
+	}
+
+	function handleOpinionSwipe() {
+		const swipeThreshold = 50;
+		const diff = startX - endX;
+
+		if (Math.abs(diff) > swipeThreshold) {
+			if (diff > 0) {
+				// Swipe w lewo - następna opinia
+				navigateOpinions('next');
+			} else {
+				// Swipe w prawo - poprzednia opinia
+				navigateOpinions('prev');
+			}
+		}
+	}
+}
+
+// Dodaj obsługę swipe do inicjalizacji
+document.addEventListener('DOMContentLoaded', () => {
+	initSwipeSupport();
 });

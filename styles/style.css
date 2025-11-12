@@ -125,7 +125,7 @@ main section#top-baner article#left-baner .top p span {
 }
 
 main section#top-baner article#left-baner .bottom p {
-	font-family: "Instrumental Sans", sans-serif;
+	font-family: "Intrument Sans", sans-serif;
 	font-size: 38px;
 	color: black;
 	text-align: center;
@@ -194,7 +194,7 @@ main section#stats article:nth-child(3) {
 }
 
 main section#stats article h2 {
-	font-family: "Instrumental Sans", sans-serif;
+	font-family: "Intrument Sans", sans-serif;
 	font-size: 100px;
 	font-weight: 600;
 }
@@ -205,7 +205,7 @@ main section#stats article:last-child h2 {
 }
 
 main section#stats article p {
-	font-family: "Instrumental Sans", sans-serif;
+	font-family: "Intrument Sans", sans-serif;
 	font-size: 30px;
 	color: #828282;
 }
@@ -224,7 +224,7 @@ main #buttons-join_projects a {
 main #buttons-join_projects a {
 	font-size: 48px;
 	padding: 20px 6rem;
-	font-family: "Instrumental Sans", sans-serif;
+	font-family: "Intrument Sans", sans-serif;
 	border-radius: 25px;
 	font-weight: 600;
 	transition: all 0.4s;
@@ -588,7 +588,7 @@ main section#make_future_with_us article#buttons-make_future {
 main section#make_future_with_us article#buttons-make_future a {
 	text-decoration: none;
 	color: white;
-	font-family: "Instrumental Sans", sans-serif;
+	font-family: "Intrument Sans", sans-serif;
 	font-size: 36px;
 	padding: 15px 50px;
 	background-color: #ff5e61;
@@ -625,7 +625,7 @@ footer article#logo img {
 }
 
 footer article#logo h1 {
-	font-family: "Instrumental Sans", sans-serif;
+	font-family: "Intrument Sans", sans-serif;
 	color: white;
 }
 
@@ -804,6 +804,206 @@ footer p {
         padding: 12px 40px;
         width: 80%;
         text-align: center;
+    }
+}
+
+main section#top-baner {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 100vh;
+    padding: 2rem 5rem;
+    gap: 4rem;
+    align-items: center;
+}
+
+main section#top-baner article#left-baner {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 50%;
+    gap: 3rem;
+}
+
+main section#top-baner article#left-baner .top {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+main section#top-baner article#left-baner .bottom p {
+    font-family: "Intrument Sans", sans-serif;
+    font-size: 38px;
+    color: black;
+    text-align: center;
+    position: relative;
+    padding-top: 2rem;
+}
+
+main section#top-baner article#left-baner .bottom p::before {
+    content: "";
+    position: absolute;
+    width: 50%;
+    height: 2px;
+    left: 50%;
+    top: 0;
+    background-color: #4692c1;
+    transform: translateX(-50%);
+}
+
+main section#top-baner article#right-baner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 50%;
+}
+
+main section#top-baner img {
+    width: 100%;
+    height: auto;
+    max-height: 600px;
+    object-fit: cover;
+    border-radius: 20px;
+}
+
+/* MEDIA QUERIES - poprawki dla mniejszych urządzeń */
+@media (max-width: 1199.98px) {
+    main section#top-baner {
+        padding: 2rem 3rem;
+        gap: 3rem;
+    }
+    
+    main section#top-baner article#left-baner .top h1 {
+        font-size: 85px;
+    }
+    
+    main section#top-baner article#left-baner .top p {
+        font-size: 42px;
+    }
+    
+    main section#top-baner article#left-baner .bottom p {
+        font-size: 34px;
+    }
+}
+
+@media (max-width: 991.98px) {
+    main section#top-baner {
+        flex-direction: column;
+        padding: 2rem 3rem;
+        gap: 3rem;
+        min-height: auto;
+    }
+    
+    main section#top-baner article#left-baner,
+    main section#top-baner article#right-baner {
+        width: 100%;
+    }
+    
+    main section#top-baner article#left-baner {
+        gap: 2rem;
+    }
+    
+    main section#top-baner article#left-baner .top h1 {
+        font-size: 70px;
+        text-align: center;
+    }
+    
+    main section#top-baner article#left-baner .top p {
+        font-size: 36px;
+        text-align: center;
+    }
+    
+    main section#top-baner article#left-baner .bottom p {
+        font-size: 30px;
+        padding-top: 1.5rem;
+    }
+    
+    main section#top-baner article#right-baner img {
+        max-height: 400px;
+    }
+}
+
+@media (max-width: 767.98px) {
+    main section#top-baner {
+        padding: 1.5rem 1.5rem;
+        gap: 2rem;
+    }
+    
+    main section#top-baner article#left-baner .top h1 {
+        font-size: 50px;
+    }
+    
+    main section#top-baner article#left-baner .top p {
+        font-size: 28px;
+    }
+    
+    main section#top-baner article#left-baner .bottom p {
+        font-size: 24px;
+        padding-top: 1rem;
+    }
+    
+    main section#top-baner article#left-baner .bottom p::before {
+        width: 70%;
+    }
+}
+
+@media (max-width: 575.98px) {
+    main section#top-baner {
+        padding: 1rem 1rem;
+        gap: 1.5rem;
+    }
+    
+    main section#top-baner article#left-baner .top h1 {
+        font-size: 40px;
+    }
+    
+    main section#top-baner article#left-baner .top p {
+        font-size: 22px;
+    }
+    
+    main section#top-baner article#left-baner .bottom p {
+        font-size: 20px;
+    }
+    
+    main section#top-baner article#right-baner img {
+        max-height: 300px;
+    }
+}
+
+/* USUŃ STARE MEDIA QUERIES Z before - zastąp powyższymi */
+
+/* Poprawka dla burger menu */
+#burger-menu {
+    display: none;
+    width: 60px;
+    height: auto;
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    #burger-menu {
+        display: block;
+    }
+    
+    header nav ul li:not(:first-child):not(:last-child) {
+        display: none;
+    }
+    
+    header nav ul.mobile-open li:not(:first-child) {
+        display: block;
+        width: 100%;
+        text-align: center;
+        padding: 1rem 0;
+    }
+    
+    header nav ul.mobile-open {
+        flex-direction: column;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        background-color: var(--menu-background-color);
+        z-index: 1000;
     }
 }
 
@@ -1068,3 +1268,220 @@ footer p {
     padding: 10px 15px;
     display: block;
 }
+
+/* ====== RESPONSYWNOŚĆ ====== */
+
+/* --- TABLETY (max 1024px) --- */
+@media (max-width: 1024px) {
+    header nav ul {
+        gap: 1rem;
+    }
+
+    #top-baner {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    #left-baner, #right-baner {
+        width: 100%;
+    }
+
+    #right-baner img {
+        width: 100%;
+        height: auto;
+    }
+
+    #stats {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    #stats article {
+        width: 45%;
+        margin: 1rem 0;
+    }
+
+    #how_it_works .content {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    #how_it_works .arrow {
+        display: none;
+    }
+
+    #projects .project .content {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    #projects .left_side-project img {
+        width: 100%;
+        border-radius: 12px;
+    }
+
+    #projects .right_side-project {
+        padding: 1rem;
+    }
+
+    footer {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+
+/* --- SMARTFONY (max 768px) --- */
+@media (max-width: 768px) {
+    nav ul {
+        display: none;
+    }
+
+    nav ul.mobile-open {
+        display: flex;
+        flex-direction: column;
+        position: absolute;
+        top: 100%;
+        right: 0;
+        background: #fff;
+        width: 100%;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        z-index: 1000;
+    }
+
+    nav ul.mobile-open li {
+        padding: 1rem;
+        border-bottom: 1px solid #eee;
+        text-align: center;
+    }
+
+    .mobile-menu-button {
+        display: block;
+        background: none;
+        border: none;
+        font-size: 2rem;
+        cursor: pointer;
+        position: absolute;
+        right: 1rem;
+        top: 1rem;
+    }
+
+    #top-baner {
+        flex-direction: column-reverse;
+        text-align: center;
+    }
+
+    #left-baner h1 {
+        font-size: 2.2rem;
+    }
+
+    #left-baner p {
+        font-size: 1.1rem;
+    }
+
+    #buttons-join_projects {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    #buttons-join_projects a {
+        width: 80%;
+        margin: 0 auto;
+    }
+
+    #our_projects #projects {
+        display: flex;
+        transition: transform 0.5s ease;
+    }
+
+    #move_circles {
+        justify-content: center;
+        margin-top: 1rem;
+    }
+
+    #move_circles .circle {
+        width: 10px;
+        height: 10px;
+        margin: 0 5px;
+    }
+
+    #future_makers_opinions .arrow {
+        display: none;
+    }
+
+    #opinions .opinion .content {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    #opinions .left_side-opinions img {
+        width: 80px;
+        height: 80px;
+    }
+
+    #make_future_with_us h1 {
+        font-size: 1.8rem;
+        padding: 0 1rem;
+    }
+
+    footer {
+        flex-direction: column;
+        text-align: center;
+        padding: 2rem 1rem;
+    }
+
+    footer #logo {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    footer img {
+        width: 60px;
+        height: 60px;
+    }
+
+    footer p {
+        font-size: 0.9rem;
+    }
+}
+
+/* --- MAŁE TELEFONY (max 480px) --- */
+@media (max-width: 480px) {
+    html {
+        font-size: 14px;
+    }
+
+    #left-baner h1 {
+        font-size: 1.8rem;
+    }
+
+    #left-baner p {
+        font-size: 1rem;
+    }
+
+    #how_it_works h1, #our_projects h1, #future_makers_opinions h1 {
+        font-size: 1.5rem;
+    }
+
+    .join_us-button, .projects-button {
+        padding: 0.8rem 1.2rem;
+        font-size: 1rem;
+    }
+
+    #stats article {
+        width: 100%;
+    }
+
+    #projects .right_side-project h2 {
+        font-size: 1.2rem;
+    }
+
+    #projects .right_side-project p {
+        font-size: 0.95rem;
+    }
+
+    #opinions .left_side-opinions img {
+        width: 70px;
+    }
+}
+
