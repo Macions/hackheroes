@@ -401,20 +401,20 @@ main section#our_projects article#projects .project .content .right_side-project
 
 main section#our_projects article#move_circles {
 	position: relative;
-	bottom: 20px;
+	bottom: 2vh;
 	display: flex;
 	gap: 2rem;
 	justify-content: center;
 }
 
 main section#our_projects article#move_circles .circle {
-	width: 1vw;
-	height: 1vw;
+	width: 3vw;
+	height: 3vw;
 	background-color: rgba(128, 128, 128, 0.473);
-	border-radius: 50%;
+	border-radius: 100% !important;
 	cursor: pointer;
-	min-width: 20px !important;
-	min-height: 20px !important;
+	min-width: 3px !important;
+	min-height: 3px !important;
 	max-width: 30px;
 	max-height: 30px;
 }
@@ -849,403 +849,515 @@ main section#top-baner img {
 }
 
 @media (max-width: 1199.98px) {
-    main section#top-baner article#left-baner .top h1 {
-        font-size: 85px;
-    }
-    main section#top-baner article#left-baner .top p {
-        font-size: 42px;
-    }
-    main section#top-baner article#left-baner .bottom p {
-        font-size: 34px;
-    }
-    main section#how_it_works h1,
-    main section#our_projects h1,
-    main section#future_makers_opinions h1,
-    main section#make_future_with_us h1 {
-        font-size: 80px;
-    }
-    main section#stats article h2 {
-        font-size: 90px;
-    }
+	main section#top-baner article#left-baner .top h1 {
+		font-size: 85px;
+	}
+
+	main section#top-baner article#left-baner .top p {
+		font-size: 42px;
+	}
+
+	main section#top-baner article#left-baner .bottom p {
+		font-size: 34px;
+	}
+
+	main section#how_it_works h1,
+	main section#our_projects h1,
+	main section#future_makers_opinions h1,
+	main section#make_future_with_us h1 {
+		font-size: 80px;
+	}
+
+	main section#stats article h2 {
+		font-size: 90px;
+	}
 }
 
 @media (max-width: 991.98px) {
-    :root {
-        --margin-top-sections: 10rem;
-    }
-    header nav ul {
-        flex-wrap: wrap;
-        gap: 15px;
-        padding: 15px 10px;
-    }
-    header nav ul li a {
-        font-size: 20px;
-    }
-    header nav ul li.join a {
-        padding: 15px 25px;
-    }
-    main section#top-baner {
-        flex-direction: column;
-        padding: 2rem 3rem;
-        gap: 3rem;
-        min-height: auto;
-    }
-    main section#top-baner article#left-baner,
-    main section#top-baner article#right-baner {
-        width: 100%;
-    }
-    main section#top-baner article#left-baner {
-        gap: 2rem;
-    }
-    main section#top-baner article#left-baner .top h1 {
-        font-size: 70px;
-        text-align: center;
-    }
-    main section#top-baner article#left-baner .top p {
-        font-size: 36px;
-        text-align: center;
-    }
-    main section#top-baner article#left-baner .bottom p {
-        font-size: 30px;
-        padding-top: 1.5rem;
-    }
-    main section#top-baner article#right-baner img {
-        max-height: 400px;
-    }
-    main section#stats {
-        flex-direction: column;
-        gap: 3rem;
-    }
-    main section#stats article h2 {
-        font-size: 80px;
-    }
-    main section#stats article p {
-        font-size: 24px;
-    }
-    main #buttons-join_projects {
-        flex-direction: column;
-        align-items: center;
-        gap: 2rem;
-    }
-    main #buttons-join_projects a {
-        font-size: 36px;
-        padding: 18px 4rem;
-        width: 80%;
-        text-align: center;
-    }
-    main section#how_it_works article.content {
-        flex-direction: column;
-        gap: 4rem;
-    }
-    main section#how_it_works article.content .arrow {
-        transform: rotate(90deg);
-        width: 40px;
-    }
-    main section#how_it_works article.content div > h3 {
-        font-size: 32px;
-        padding: 8px 30px;
-    }
-    main section#our_projects article#projects .content {
-        flex-direction: column;
-        gap: 2rem;
-        padding: 1.5rem 2rem;
-    }
-    main section#our_projects article#projects .project .content .right_side-project {
-        max-width: 100%;
-        gap: 2rem;
-    }
-    main section#our_projects article#projects .project .content .right_side-project h2 {
-        font-size: 2.5rem;
-    }
-    main section#our_projects article#projects .project .content .right_side-project p {
-        font-size: 24px;
-    }
-    main section#our_projects article#projects .project .content .right_side-project a {
-        font-size: 24px;
-        padding: 8px 25px;
-    }
-    main section#future_makers_opinions article#opinions .opinion {
-        flex: 0 0 100%;
-    }
-    main section#future_makers_opinions article#opinions .opinion .content {
-        flex-direction: column;
-        gap: 2rem;
-        padding: 30px 20px;
-    }
-    main section#future_makers_opinions article#opinions .content .left_side-opinions,
-    main section#future_makers_opinions article#opinions .content .right_side-opinions {
-        width: 100%;
-    }
-    main section#future_makers_opinions article#opinions .content .right_side-opinions p {
-        font-size: 24px;
-    }
-    main section#make_future_with_us article#buttons-make_future {
-        flex-direction: column;
-        align-items: center;
-        gap: 2rem;
-    }
-    main section#make_future_with_us article#buttons-make_future a {
-        font-size: 28px;
-        padding: 12px 40px;
-        width: 80%;
-        text-align: center;
-    }
+	:root {
+		--margin-top-sections: 10rem;
+	}
+
+	header nav ul {
+		flex-wrap: wrap;
+		gap: 15px;
+		padding: 15px 10px;
+	}
+
+	header nav ul li a {
+		font-size: 20px;
+	}
+
+	header nav ul li.join a {
+		padding: 15px 25px;
+	}
+
+	main section#top-baner {
+		flex-direction: column;
+		padding: 2rem 3rem;
+		gap: 3rem;
+		min-height: auto;
+	}
+
+	main section#top-baner article#left-baner,
+	main section#top-baner article#right-baner {
+		width: 100%;
+	}
+
+	main section#top-baner article#left-baner {
+		gap: 2rem;
+	}
+
+	main section#top-baner article#left-baner .top h1 {
+		font-size: 70px;
+		text-align: center;
+	}
+
+	main section#top-baner article#left-baner .top p {
+		font-size: 36px;
+		text-align: center;
+	}
+
+	main section#top-baner article#left-baner .bottom p {
+		font-size: 30px;
+		padding-top: 1.5rem;
+	}
+
+	main section#top-baner article#right-baner img {
+		max-height: 400px;
+	}
+
+	main section#stats {
+		flex-direction: column;
+		gap: 3rem;
+	}
+
+	main section#stats article h2 {
+		font-size: 80px;
+	}
+
+	main section#stats article p {
+		font-size: 24px;
+	}
+
+	main #buttons-join_projects {
+		flex-direction: column;
+		align-items: center;
+		gap: 2rem;
+	}
+
+	main #buttons-join_projects a {
+		font-size: 36px;
+		padding: 18px 4rem;
+		width: 80%;
+		text-align: center;
+	}
+
+	main section#how_it_works article.content {
+		flex-direction: column;
+		gap: 4rem;
+	}
+
+	main section#how_it_works article.content .arrow {
+		transform: rotate(90deg);
+		width: 40px;
+	}
+
+	main section#how_it_works article.content div>h3 {
+		font-size: 32px;
+		padding: 8px 30px;
+	}
+
+	main section#our_projects article#projects .content {
+		flex-direction: column;
+		gap: 2rem;
+		padding: 1.5rem 2rem;
+	}
+
+	main section#our_projects article#projects .project .content .right_side-project {
+		max-width: 100%;
+		gap: 2rem;
+	}
+
+	main section#our_projects article#projects .project .content .right_side-project h2 {
+		font-size: 2.5rem;
+	}
+
+	main section#our_projects article#projects .project .content .right_side-project p {
+		font-size: 24px;
+	}
+
+	main section#our_projects article#projects .project .content .right_side-project a {
+		font-size: 24px;
+		padding: 8px 25px;
+	}
+
+	main section#future_makers_opinions article#opinions .opinion {
+		flex: 0 0 100%;
+	}
+
+	main section#future_makers_opinions article#opinions .opinion .content {
+		flex-direction: column;
+		gap: 2rem;
+		padding: 30px 20px;
+	}
+
+	main section#future_makers_opinions article#opinions .content .left_side-opinions,
+	main section#future_makers_opinions article#opinions .content .right_side-opinions {
+		width: 100%;
+	}
+
+	main section#future_makers_opinions article#opinions .content .right_side-opinions p {
+		font-size: 24px;
+	}
+
+	main section#make_future_with_us article#buttons-make_future {
+		flex-direction: column;
+		align-items: center;
+		gap: 2rem;
+	}
+
+	main section#make_future_with_us article#buttons-make_future a {
+		font-size: 28px;
+		padding: 12px 40px;
+		width: 80%;
+		text-align: center;
+	}
 }
 
 @media (max-width: 768px) {
-    #burger-menu {
-        display: block;
-    }
-    header nav ul li:not(:first-child):not(:last-child) {
-        display: none;
-    }
-    header nav ul.mobile-open li:not(:first-child) {
-        display: block;
-        width: 100%;
-        text-align: center;
-        padding: 1rem 0;
-        border-bottom: 1px solid rgba(255,255,255,0.2);
-    }
-    header nav ul.mobile-open li.join a {
-        background-color: white;
-        color: black;
-        padding: 15px 25px;
-        border-radius: 40px;
-        margin: 10px auto;
-        display: inline-block;
-    }
-    header nav ul.mobile-open {
-        flex-direction: column;
-        position: absolute;
-        top: 100%;
-        left: 0;
-        width: 100%;
-        background-color: var(--menu-background-color);
-        z-index: 1000;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        padding: 0;
-    }
-    header nav ul.mobile-open #burger-menu {
-        display: none;
-    }
-    :root {
-        --margin-top-sections: 8rem;
-    }
-    header nav ul li img {
-        width: 70px;
-    }
-    main section#top-baner {
-        padding: 1.5rem 1.5rem;
-        gap: 2rem;
-    }
-    main section#top-baner article#left-baner .top h1 {
-        font-size: 50px;
-    }
-    main section#top-baner article#left-baner .top p {
-        font-size: 28px;
-    }
-    main section#top-baner article#left-baner .bottom p {
-        font-size: 24px;
-        padding-top: 1rem;
-    }
-    main section#top-baner article#left-baner .bottom p::before {
-        width: 70%;
-    }
-    main section#top-baner article#right-baner img {
-        max-height: 350px;
-    }
-    main section#stats article h2 {
-        font-size: 60px;
-    }
-    main section#stats article p {
-        font-size: 20px;
-    }
-    main #buttons-join_projects a {
-        font-size: 28px;
-        padding: 15px 2rem;
-        width: 90%;
-    }
-    main section#how_it_works h1,
-    main section#our_projects h1,
-    main section#future_makers_opinions h1,
-    main section#make_future_with_us h1 {
-        font-size: 60px;
-    }
-    main section#how_it_works article.content div > h3 {
-        font-size: 24px;
-        padding: 6px 20px;
-    }
-    main section#how_it_works article.content div > img {
-        width: 90%;
-    }
-    main section#our_projects article#projects .project {
-        padding: 20px 15px;
-    }
-    main section#our_projects article#projects .content {
-        padding: 1rem 1.5rem;
-    }
-    main section#our_projects article#projects .project .content .right_side-project h2 {
-        font-size: 2rem;
-    }
-    main section#our_projects article#projects .project .content .right_side-project p {
-        font-size: 20px;
-    }
-    main section#our_projects article#projects .project .content .right_side-project a {
-        font-size: 20px;
-        padding: 6px 20px;
-    }
-    main section#future_makers_opinions article#opinions .opinion .content {
-        padding: 20px 15px;
-    }
-    main section#future_makers_opinions article#opinions .content .right_side-opinions p {
-        font-size: 20px;
-    }
-    main section#future_makers_opinions img.arrow {
-        width: 35px;
-    }
-    main section#make_future_with_us h1 {
-        font-size: 50px;
-    }
-    main section#make_future_with_us article#buttons-make_future a {
-        font-size: 24px;
-        padding: 10px 30px;
-        width: 90%;
-    }
-    footer article#logo img {
-        width: 80px;
-    }
-    footer article#logo h1 {
-        font-size: 1.8rem;
-    }
-    footer p {
-        font-size: 14px;
-        text-align: center;
-        padding: 0 1rem;
-    }
+	#burger-menu {
+		display: block;
+	}
+
+	header nav ul li:not(:first-child):not(:last-child) {
+		display: none;
+	}
+
+	header nav ul.mobile-open li:not(:first-child) {
+		display: block;
+		width: 100%;
+		text-align: center;
+		padding: 1rem 0;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+	}
+
+	header nav ul.mobile-open li.join a {
+		background-color: white;
+		color: black;
+		padding: 15px 25px;
+		border-radius: 40px;
+		margin: 10px auto;
+		display: inline-block;
+	}
+
+	header nav ul.mobile-open {
+		flex-direction: column;
+		position: absolute;
+		top: 100%;
+		left: 0;
+		width: 100%;
+		background-color: var(--menu-background-color);
+		z-index: 1000;
+		box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+		padding: 0;
+	}
+
+	header nav ul.mobile-open #burger-menu {
+		display: none;
+	}
+
+	:root {
+		--margin-top-sections: 8rem;
+	}
+
+	header nav ul li img {
+		width: 70px;
+	}
+
+	main section#top-baner {
+		padding: 1.5rem 1.5rem;
+		gap: 2rem;
+	}
+
+	main section#top-baner article#left-baner .top h1 {
+		font-size: 50px;
+	}
+
+	main section#top-baner article#left-baner .top p {
+		font-size: 28px;
+	}
+
+	main section#top-baner article#left-baner .bottom p {
+		font-size: 24px;
+		padding-top: 1rem;
+	}
+
+	main section#top-baner article#left-baner .bottom p::before {
+		width: 70%;
+	}
+
+	main section#top-baner article#right-baner img {
+		max-height: 350px;
+	}
+
+	main section#stats article h2 {
+		font-size: 60px;
+	}
+
+	main section#stats article p {
+		font-size: 20px;
+	}
+
+	main #buttons-join_projects a {
+		font-size: 28px;
+		padding: 15px 2rem;
+		width: 90%;
+	}
+
+	main section#how_it_works h1,
+	main section#our_projects h1,
+	main section#future_makers_opinions h1,
+	main section#make_future_with_us h1 {
+		font-size: 60px;
+	}
+
+	main section#how_it_works article.content div>h3 {
+		font-size: 24px;
+		padding: 6px 20px;
+	}
+
+	main section#how_it_works article.content div>img {
+		width: 90%;
+	}
+
+	main section#our_projects article#projects .project {
+		padding: 20px 15px;
+	}
+
+	main section#our_projects article#projects .content {
+		padding: 1rem 1.5rem;
+	}
+
+	main section#our_projects article#projects .project .content .right_side-project h2 {
+		font-size: 2rem;
+	}
+
+	main section#our_projects article#projects .project .content .right_side-project p {
+		font-size: 20px;
+	}
+
+	main section#our_projects article#projects .project .content .right_side-project a {
+		font-size: 20px;
+		padding: 6px 20px;
+	}
+
+	main section#future_makers_opinions article#opinions .opinion .content {
+		padding: 20px 15px;
+	}
+
+	main section#future_makers_opinions article#opinions .content .right_side-opinions p {
+		font-size: 20px;
+	}
+
+	main section#future_makers_opinions img.arrow {
+		width: 35px;
+	}
+
+	main section#make_future_with_us h1 {
+		font-size: 50px;
+	}
+
+	main section#make_future_with_us article#buttons-make_future a {
+		font-size: 24px;
+		padding: 10px 30px;
+		width: 90%;
+	}
+
+	footer article#logo img {
+		width: 80px;
+	}
+
+	footer article#logo h1 {
+		font-size: 1.8rem;
+	}
+
+	footer p {
+		font-size: 14px;
+		text-align: center;
+		padding: 0 1rem;
+	}
 }
 
 @media (max-width: 575.98px) {
-    :root {
-        --margin-top-sections: 6rem;
-    }
-    main section#top-baner {
-        padding: 1rem 1rem;
-        gap: 1.5rem;
-    }
-    main section#top-baner article#left-baner .top h1 {
-        font-size: 40px;
-    }
-    main section#top-baner article#left-baner .top p {
-        font-size: 22px;
-    }
-    main section#top-baner article#left-baner .bottom p {
-        font-size: 20px;
-    }
-    main section#top-baner article#right-baner img {
-        max-height: 300px;
-    }
-    main section#stats article h2 {
-        font-size: 50px;
-    }
-    main section#stats article p {
-        font-size: 18px;
-    }
-    main #buttons-join_projects a {
-        font-size: 24px;
-        padding: 12px 1.5rem;
-    }
-    main section#how_it_works h1,
-    main section#our_projects h1,
-    main section#future_makers_opinions h1,
-    main section#make_future_with_us h1 {
-        font-size: 45px;
-    }
-    main section#how_it_works article.content div > h3 {
-        font-size: 20px;
-        padding: 5px 15px;
-    }
-    main section#our_projects article#move_circles {
-        gap: 1rem;
-    }
-    main section#our_projects article#move_circles .circle {
-        width: 20px;
-        height: 10px;
-    }
-    main section#make_future_with_us h1 {
-        font-size: 40px;
-    }
-    main section#make_future_with_us article#buttons-make_future a {
-        font-size: 20px;
-        padding: 8px 25px;
-    }
+	:root {
+		--margin-top-sections: 6rem;
+	}
+
+	main section#top-baner {
+		padding: 1rem 1rem;
+		gap: 1.5rem;
+	}
+
+	main section#top-baner article#left-baner .top h1 {
+		font-size: 40px;
+	}
+
+	main section#top-baner article#left-baner .top p {
+		font-size: 22px;
+	}
+
+	main section#top-baner article#left-baner .bottom p {
+		font-size: 20px;
+	}
+
+	main section#top-baner article#right-baner img {
+		max-height: 300px;
+	}
+
+	main section#stats article h2 {
+		font-size: 50px;
+	}
+
+	main section#stats article p {
+		font-size: 18px;
+	}
+
+	main #buttons-join_projects a {
+		font-size: 24px;
+		padding: 12px 1.5rem;
+	}
+
+	main section#how_it_works h1,
+	main section#our_projects h1,
+	main section#future_makers_opinions h1,
+	main section#make_future_with_us h1 {
+		font-size: 45px;
+	}
+
+	main section#how_it_works article.content div>h3 {
+		font-size: 20px;
+		padding: 5px 15px;
+	}
+
+	main section#our_projects article#move_circles {
+		gap: 1rem;
+	}
+
+	main section#our_projects article#move_circles .circle {
+		/* width: 20px;
+        height:10px; */
+	}
+
+	main section#make_future_with_us h1 {
+		font-size: 40px;
+	}
+
+	main section#make_future_with_us article#buttons-make_future a {
+		font-size: 20px;
+		padding: 8px 25px;
+	}
 }
 
 @media (max-width: 480px) {
-    html {
-        font-size: 14px;
-    }
-    main section#top-baner article#left-baner .top h1 {
-        font-size: 35px;
-    }
-    main section#top-baner article#left-baner .top p {
-        font-size: 20px;
-    }
-    main section#top-baner article#left-baner .bottom p {
-        font-size: 18px;
-    }
-    main section#how_it_works h1,
-    main section#our_projects h1,
-    main section#future_makers_opinions h1 {
-        font-size: 40px;
-    }
-    main #buttons-join_projects a {
-        font-size: 20px;
-        padding: 10px 1rem;
-    }
-    main section#make_future_with_us h1 {
-        font-size: 35px;
-    }
-    main section#make_future_with_us article#buttons-make_future a {
-        font-size: 18px;
-        padding: 8px 20px;
-    }
+	html {
+		font-size: 14px;
+	}
+
+	header nav ul {
+		padding: 5px 20px;
+		justify-content: space-between;
+	}
+
+	header nav ul li img {
+		width: 50px;
+	}
+
+	header nav ul img#burger-menu {
+		width: 30px;
+	}
+
+	main section#top-baner article#left-baner .top h1 {
+		font-size: 50px;
+	}
+
+	main section#top-baner article#left-baner .top p {
+		font-size: 25px;
+	}
+
+	main section#top-baner article#left-baner .bottom p {
+		font-size: 15px;
+	}
+
+	main section#stats {
+		margin-top: 5rem;
+	}
+
+	main section#how_it_works h1,
+	main section#our_projects h1,
+	main section#future_makers_opinions h1 {
+		font-size: 40px;
+	}
+
+	main #buttons-join_projects a {
+		font-size: 20px;
+		padding: 10px 1rem;
+	}
+
+	main section#make_future_with_us h1 {
+		font-size: 35px;
+	}
+
+	main section#make_future_with_us article#buttons-make_future a {
+		font-size: 18px;
+		padding: 8px 20px;
+	}
+
+	main section#how_it_works article.content h3 {
+		font-size: 28px;
+	}
 }
 
 @media (max-height: 500px) and (orientation: landscape) {
-    main section#top-baner {
-        min-height: 120vh;
-    }
-    header nav ul {
-        padding: 5px 10px;
-    }
-    header nav ul li a {
-        font-size: 18px;
-    }
+	main section#top-baner {
+		min-height: 120vh;
+	}
+
+	header nav ul {
+		padding: 5px 10px;
+	}
+
+	header nav ul li a {
+		font-size: 18px;
+	}
 }
 
 @media (min-resolution: 192dpi) {
-    main section#top-baner img,
-    main section#how_it_works article.content div > img,
-    main section#our_projects article#projects .project .content .left_side-project img,
-    main section#future_makers_opinions article#opinions .content .left_side-opinions img,
-    footer article#logo img {
-        image-rendering: -webkit-optimize-contrast;
-        image-rendering: crisp-edges;
-    }
+
+	main section#top-baner img,
+	main section#how_it_works article.content div>img,
+	main section#our_projects article#projects .project .content .left_side-project img,
+	main section#future_makers_opinions article#opinions .content .left_side-opinions img,
+	footer article#logo img {
+		image-rendering: -webkit-optimize-contrast;
+		image-rendering: crisp-edges;
+	}
 }
 
 @media print {
-    header nav ul li.join a,
-    main #buttons-join_projects a,
-    main section#make_future_with_us article#buttons-make_future a {
-        background: #000 !important;
-        color: #fff !important;
-        border: 1px solid #000;
-    }
-    main section#top-baner article#left-baner .top h1,
-    h1:not(main section#top-baner article#left-baner .top h1):not(footer article#logo h1) {
-        background: none !important;
-        -webkit-text-fill-color: #000 !important;
-        color: #000 !important;
-    }
+
+	header nav ul li.join a,
+	main #buttons-join_projects a,
+	main section#make_future_with_us article#buttons-make_future a {
+		background: #000 !important;
+		color: #fff !important;
+		border: 1px solid #000;
+	}
+
+	main section#top-baner article#left-baner .top h1,
+	h1:not(main section#top-baner article#left-baner .top h1):not(footer article#logo h1) {
+		background: none !important;
+		-webkit-text-fill-color: #000 !important;
+		color: #000 !important;
+	}
 }
