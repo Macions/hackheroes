@@ -1,0 +1,1070 @@
+@import url(https://fonts.googleapis.com/css?family=Instrument+Sans:regular,500,600,700,italic,500italic,600italic,700italic);
+@import url(https://fonts.googleapis.com/css?family=Inder:regular);
+@import url(https://fonts.googleapis.com/css?family=Inria+Sans:300,300italic,regular,italic,700,700italic);
+@import url(https://fonts.googleapis.com/css?family=K2D:100,100italic,200,200italic,300,300italic,regular,italic,500,500italic,600,600italic,700,700italic,800,800italic);
+@import url(https://fonts.googleapis.com/css?family=Krub:200,200italic,300,300italic,regular,italic,500,500italic,600,600italic,700,700italic);
+@import url(https://fonts.googleapis.com/css?family=Kite+One:regular);
+
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+body {
+	overflow-x: hidden !important;
+}
+
+:root {
+	--menu-font: "Inter", sans-serif;
+	--menu-background-color: #ff5e61;
+	--margin-top-sections: 15rem;
+}
+
+header {
+	width: 100%;
+	background-color: var(--menu-background-color);
+	position: sticky; /* DODAJ TO */
+	top: 0; /* DODAJ TO */
+	z-index: 1000; /* DODAJ TO */
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* opcjonalnie - dodaje cień */
+}
+
+header nav {
+	width: 100%;
+}
+header nav ul {
+	padding: 10px 20px;
+	width: 100%;
+	list-style: none;
+	display: flex;
+	justify-content: space-around;
+	align-items: center;
+}
+
+header nav ul li {
+	position: relative;
+}
+
+h1:not(main section#top-baner article#left-baner .top h1):not(
+		footer article#logo h1
+	) {
+	background: linear-gradient(to right, #6ba751, #0f5f71, #c767ff);
+	-webkit-background-clip: text; /* dla WebKit/Chrome/Safari */
+	-webkit-text-fill-color: transparent; /* ukrywa oryginalny kolor tekstu */
+}
+
+header nav ul li:not(.join):not(:has(img))::before {
+	content: "";
+	position: absolute;
+	bottom: -7px;
+	left: 0;
+	width: 0;
+	height: 2px;
+	background-color: white;
+	transition: all 0.4s;
+}
+
+header nav ul li:not(.join):not(:has(img)):hover::before {
+	width: 100%;
+}
+header nav ul li img {
+	width: 90px;
+	border-radius: 30px;
+}
+
+header nav ul li a {
+	text-decoration: none;
+	color: white;
+	font-family: var(--menu-font);
+	font-size: 25px;
+	font-weight: 500;
+}
+
+header nav ul li.join a {
+	padding: 20px 35px;
+	background-color: white;
+	color: black;
+	border-radius: 40px;
+}
+
+main section#top-baner {
+	display: flex;
+	justify-content: space-between;
+	width: 100%;
+	min-height: 100vh;
+	padding: 0px 5rem;
+	gap: 6rem;
+}
+
+main section#top-baner article#left-baner {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-around;
+	width: 50%;
+	/* border: 1px solid #000; */
+}
+
+main section#top-baner article#left-baner .top h1 {
+	font-family: "Inria Sans", sans-serif;
+	font-size: 100px;
+	font-weight: 900;
+	background: linear-gradient(to right, #000000, #1e6d7e, #e3c0f7);
+	-webkit-background-clip: text; /* dla WebKit/Chrome/Safari */
+	-webkit-text-fill-color: transparent; /* ukrywa oryginalny kolor tekstu */
+}
+
+main section#top-baner article#left-baner .top p {
+	font-family: "Inria Sans", sans-serif;
+	font-size: 49px;
+	color: #808080c0;
+}
+
+main section#top-baner article#left-baner .top p span {
+	color: black;
+	font-weight: 600;
+}
+
+main section#top-baner article#left-baner .bottom p {
+	font-family: "Instrumental Sans", sans-serif;
+	font-size: 38px;
+	color: black;
+	text-align: center;
+	position: relative;
+}
+
+main section#top-baner article#left-baner .bottom p::before {
+	content: "";
+	position: absolute;
+	width: 50%;
+	height: 2px;
+	left: 50%;
+	top: -20px;
+	background-color: #4692c1;
+	transform: translateX(-50%);
+}
+
+main section#top-baner article#right-baner {
+	/* border: 1px solid #000; */
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	width: 50%;
+}
+
+main section#top-baner img {
+	/* border: 1px solid #000; */
+	width: 90%;
+	height: auto;
+}
+
+main section#stats {
+	display: flex;
+	justify-content: space-around;
+}
+
+main section#stats article {
+	text-align: center;
+	animation: scale 4s infinite ease-in-out;
+}
+
+main section#stats article:nth-child(1) {
+	animation-delay: 0s;
+}
+
+main section#stats article:nth-child(2) {
+	animation-delay: 0.5s;
+}
+main section#stats article:nth-child(3) {
+	animation-delay: 1s;
+}
+
+@keyframes scale {
+	0% {
+		transform: scale(1);
+	}
+	10% {
+		transform: scale(1.1);
+	}
+	20% {
+		transform: scale(1);
+	}
+	100% {
+		transform: scale(1);
+	}
+}
+
+main section#stats article h2 {
+	font-family: "Instrumental Sans", sans-serif;
+	font-size: 100px;
+	font-weight: 600;
+}
+
+main section#stats article:last-child h2 {
+	font-family: "Inter", sans-serif;
+	font-weight: 500;
+}
+
+main section#stats article p {
+	font-family: "Instrumental Sans", sans-serif;
+	font-size: 30px;
+	color: #828282;
+}
+
+main #buttons-join_projects {
+	margin-top: var(--margin-top-sections);
+	display: flex;
+	justify-content: space-around;
+}
+
+main #buttons-join_projects a {
+	color: white;
+	text-decoration: none;
+}
+
+main #buttons-join_projects a {
+	font-size: 48px;
+	padding: 20px 6rem;
+	font-family: "Instrumental Sans", sans-serif;
+	border-radius: 25px;
+	font-weight: 600;
+	transition: all 0.4s;
+}
+
+main #buttons-join_projects a:first-child {
+	background-color: #413c87;
+}
+
+main #buttons-join_projects a:last-child {
+	background-color: #f9631d;
+}
+
+main #buttons-join_projects a:first-child:hover {
+	background-color: #29256f;
+	transform: scale(1.1);
+}
+
+main #buttons-join_projects a:last-child:hover {
+	background-color: #ff5f15;
+	transform: scale(1.1);
+}
+
+main section#how_it_works {
+	margin-top: var(--margin-top-sections);
+}
+
+main section#how_it_works h1 {
+	font-family: "Inria Sans";
+	text-align: center;
+	font-size: 95px;
+	font-weight: 900;
+}
+
+main section#how_it_works article.content {
+	display: flex;
+	justify-content: space-around;
+	/* border: 1px solid #000; */
+	align-items: center;
+	padding: 0px 10px;
+}
+
+main section#how_it_works article.content div {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+main section#how_it_works article.content div > img {
+	width: 80%;
+	height: auto;
+	/* border: 1px solid #000; */
+	border-radius: 30px;
+}
+
+main section#how_it_works article.content div > h3 {
+	font-family: "K2D", sans-serif;
+	text-align: center;
+	/* border: 1px solid #000; */
+	margin-top: -1rem;
+	font-size: 40px;
+	padding: 10px 50px;
+	border-radius: 43px 13px 31px 22px;
+}
+
+main section#how_it_works article.content .make_projects h3 {
+	background-color: #f0cd9f;
+}
+
+main section#how_it_works article.content .connect_to_other h3 {
+	background-color: #9ff0bb;
+}
+
+main section#how_it_works article.content .support_and_inspire h3 {
+	background-color: #f09fa0;
+}
+
+main section#how_it_works article.content .arrow {
+	opacity: 30%;
+}
+
+main section#our_projects {
+	margin-top: var(--margin-top-sections);
+	overflow: hidden;
+}
+
+main section#our_projects h1 {
+	font-family: "Inria Sans";
+	text-align: center;
+	font-size: 95px;
+	font-weight: 900;
+}
+
+main section#our_projects article#projects {
+	display: flex;
+	transition: all 2s;
+	transform: translateX(0%);
+	margin-top: 2rem;
+}
+
+main section#our_projects article#projects .project {
+	flex: 0 0 100%;
+	padding: 40px 30px;
+	transition: all 1s;
+	/* border: 1px solid #000; */
+}
+
+main section#our_projects article#projects .content {
+	display: flex;
+	justify-content: center;
+	padding: 2rem 3rem;
+	background-color: #ffebb4;
+	border-radius: 20px;
+}
+main
+	section#our_projects
+	article#projects
+	.project
+	.content
+	.left_side-project
+	img {
+	width: 90%;
+	border-radius: 40px;
+}
+
+main
+	section#our_projects
+	article#projects
+	.project
+	.content
+	.right_side-project {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 3rem;
+	max-width: 50%;
+}
+
+main
+	section#our_projects
+	article#projects
+	.project
+	.content
+	.right_side-project
+	h2 {
+	font-family: "Inria Sans", sans-serif;
+	font-size: 3.5rem;
+	font-weight: 900;
+	text-align: center;
+}
+
+main
+	section#our_projects
+	article#projects
+	.project
+	.content
+	.right_side-project
+	p {
+	font-family: "Inria Sans", sans-serif;
+	font-size: 30px;
+	text-align: center;
+}
+
+main
+	section#our_projects
+	article#projects
+	.project
+	.content
+	.right_side-project
+	a {
+	text-align: center;
+	text-decoration: none;
+	color: black;
+	font-family: "Krub", sans-serif;
+	font-size: 30px;
+	font-weight: 900;
+	padding: 10px 30px;
+	background-color: white;
+	border-radius: 20px;
+	max-width: 80%;
+	margin: 0 auto;
+	box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.479);
+	transition: all 0.3s;
+}
+
+main
+	section#our_projects
+	article#projects
+	.project
+	.content
+	.right_side-project
+	a:hover {
+	box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.452);
+}
+
+main section#our_projects article#move_circles {
+	position: relative;
+	bottom: 20px;
+	display: flex;
+	gap: 2rem;
+	justify-content: center;
+}
+
+main section#our_projects article#move_circles .circle {
+	width: 3px;
+	height: 3px;
+	background-color: rgba(128, 128, 128, 0.473);
+	border-radius: 20px;
+	cursor: pointer;
+}
+
+main section#our_projects article#move_circles .circle.active {
+	background-color: black;
+}
+
+main section#future_makers_opinions {
+	margin-top: var(--margin-top-sections);
+	overflow: hidden;
+	position: relative;
+}
+
+main section#future_makers_opinions h1 {
+	font-family: "Inria Sans";
+	text-align: center;
+	font-size: 95px;
+	font-weight: 900;
+}
+
+main section#future_makers_opinions article#opinions {
+	display: flex;
+	transform: translateX(-100%);
+	transition: all 1.5s;
+	margin-top: 2rem;
+	/* padding: 20px; */
+	/* ❌ usuń gap, bo psuje szerokości */
+}
+
+main section#future_makers_opinions article#opinions .opinion {
+	flex: 0 0 50%;
+	box-sizing: border-box;
+	padding: 20px;
+	display: flex;
+	justify-content: center;
+	position: relative;
+}
+
+main section#future_makers_opinions article#opinions .opinion::before {
+	content: url("/photos/quote_icon.png");
+	position: absolute;
+	top: -10px;
+	right: 15px;
+}
+
+main section#future_makers_opinions article#opinions .opinion .content {
+	display: flex;
+	background-color: rgba(128, 128, 128, 0.333);
+	border-radius: 20px;
+	width: 95%;
+	padding: 40px 30px;
+	align-items: center;
+	justify-content: space-between;
+	transition: all 0.5s;
+}
+
+main
+	section#future_makers_opinions
+	article#opinions
+	.content
+	.left_side-opinions {
+	width: 45%;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+}
+
+main
+	section#future_makers_opinions
+	article#opinions
+	.content
+	.left_side-opinions
+	img {
+	width: 90%;
+	border-radius: 40px;
+}
+
+main
+	section#future_makers_opinions
+	article#opinions
+	.content
+	.left_side-opinions
+	p {
+	font-family: "Inria Sans", sans-serif;
+	font-size: 17px;
+	margin-top: 0.5rem;
+	font-style: italic;
+	width: 90%;
+}
+
+main
+	section#future_makers_opinions
+	article#opinions
+	.content
+	.right_side-opinions {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 80%;
+}
+
+main
+	section#future_makers_opinions
+	article#opinions
+	.content
+	.right_side-opinions
+	p {
+	font-family: "Kite One", sans-serif;
+	font-size: 30px;
+	max-width: 90%;
+	text-align: center;
+}
+
+main section#future_makers_opinions img.arrow {
+	cursor: pointer;
+	width: 50px;
+	height: auto;
+	position: absolute;
+	top: 55%;
+	z-index: 2;
+}
+
+main section#future_makers_opinions img.arrow.left {
+	left: 5px;
+	transform: rotate(-180deg);
+}
+
+main section#future_makers_opinions img.arrow.right {
+	right: 5px;
+}
+
+main section#make_future_with_us {
+	margin-top: var(--margin-top-sections);
+	margin-bottom: 5rem;
+	text-align: center;
+}
+
+main section#make_future_with_us h1 {
+	font-family: "Inria Sans", sans-serif;
+	font-size: 95px;
+	font-weight: 900;
+	margin-bottom: 2rem;
+}
+
+main section#make_future_with_us article#buttons-make_future {
+	display: flex;
+	justify-content: center;
+	gap: 10rem;
+	margin-top: 5rem;
+}
+
+main section#make_future_with_us article#buttons-make_future a {
+	text-decoration: none;
+	color: white;
+	font-family: "Instrumental Sans", sans-serif;
+	font-size: 36px;
+	padding: 15px 50px;
+	background-color: #ff5e61;
+	border-radius: 20px;
+	transition: all 0.4s;
+}
+
+main section#make_future_with_us article#buttons-make_future a:hover {
+	background-color: #ff3b36;
+	transform: scale(1.1);
+}
+
+footer {
+	margin-top: var(--margin-top-sections);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 1rem 0px;
+	background-color: black;
+}
+
+footer article#logo {
+	margin-bottom: 2rem;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+}
+
+footer article#logo img {
+	width: 120px;
+	height: auto;
+	border-radius: 24px;
+}
+
+footer article#logo h1 {
+	font-family: "Instrumental Sans", sans-serif;
+	color: white;
+}
+
+footer p {
+	font-family: "Inder", sans-serif;
+	color: white;
+	font-size: 17px;
+}
+#burger-menu {
+	display: none;
+	width: 60px;
+	height: auto;
+	cursor: pointer;
+}
+
+@media (max-width: 1199.98px) {
+    main section#top-baner article#left-baner .top h1 {
+        font-size: 85px;
+    }
+    
+    main section#top-baner article#left-baner .top p {
+        font-size: 42px;
+    }
+    
+    main section#how_it_works h1,
+    main section#our_projects h1,
+    main section#future_makers_opinions h1,
+    main section#make_future_with_us h1 {
+        font-size: 80px;
+    }
+    
+    main section#stats article h2 {
+        font-size: 90px;
+    }
+}
+
+@media (max-width: 991.98px) {
+    :root {
+        --margin-top-sections: 10rem;
+    }
+    
+    header nav ul {
+        flex-wrap: wrap;
+        gap: 15px;
+        padding: 15px 10px;
+    }
+    
+    header nav ul li a {
+        font-size: 20px;
+    }
+    
+    header nav ul li.join a {
+        padding: 15px 25px;
+    }
+    
+    main section#top-baner {
+        flex-direction: column;
+        padding: 0px 3rem;
+        gap: 3rem;
+        min-height: auto;
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+    
+    main section#top-baner article#left-baner,
+    main section#top-baner article#right-baner {
+        width: 100%;
+    }
+    
+    main section#top-baner article#left-baner .top h1 {
+        font-size: 70px;
+        text-align: center;
+    }
+    
+    main section#top-baner article#left-baner .top p {
+        font-size: 36px;
+        text-align: center;
+    }
+    
+    main section#top-baner article#left-baner .bottom p {
+        font-size: 32px;
+    }
+    
+    main section#stats {
+        flex-direction: column;
+        gap: 3rem;
+    }
+    
+    main section#stats article h2 {
+        font-size: 80px;
+    }
+    
+    main section#stats article p {
+        font-size: 24px;
+    }
+    
+    main #buttons-join_projects {
+        flex-direction: column;
+        align-items: center;
+        gap: 2rem;
+    }
+    
+    main #buttons-join_projects a {
+        font-size: 36px;
+        padding: 18px 4rem;
+        width: 80%;
+        text-align: center;
+    }
+    
+    main section#how_it_works article.content {
+        flex-direction: column;
+        gap: 4rem;
+    }
+    
+    main section#how_it_works article.content .arrow {
+        transform: rotate(90deg);
+        width: 40px;
+    }
+    
+    main section#how_it_works article.content div > h3 {
+        font-size: 32px;
+        padding: 8px 30px;
+    }
+    
+    main section#our_projects article#projects .content {
+        flex-direction: column;
+        gap: 2rem;
+        padding: 1.5rem 2rem;
+    }
+    
+    main section#our_projects article#projects .project .content .right_side-project {
+        max-width: 100%;
+        gap: 2rem;
+    }
+    
+    main section#our_projects article#projects .project .content .right_side-project h2 {
+        font-size: 2.5rem;
+    }
+    
+    main section#our_projects article#projects .project .content .right_side-project p {
+        font-size: 24px;
+    }
+    
+    main section#our_projects article#projects .project .content .right_side-project a {
+        font-size: 24px;
+        padding: 8px 25px;
+    }
+    
+    main section#future_makers_opinions article#opinions .opinion {
+        flex: 0 0 100%;
+    }
+    
+    main section#future_makers_opinions article#opinions .opinion .content {
+        flex-direction: column;
+        gap: 2rem;
+        padding: 30px 20px;
+    }
+    
+    main section#future_makers_opinions article#opinions .content .left_side-opinions,
+    main section#future_makers_opinions article#opinions .content .right_side-opinions {
+        width: 100%;
+    }
+    
+    main section#future_makers_opinions article#opinions .content .right_side-opinions p {
+        font-size: 24px;
+    }
+    
+    main section#make_future_with_us article#buttons-make_future {
+        flex-direction: column;
+        align-items: center;
+        gap: 2rem;
+    }
+    
+    main section#make_future_with_us article#buttons-make_future a {
+        font-size: 28px;
+        padding: 12px 40px;
+        width: 80%;
+        text-align: center;
+    }
+}
+
+@media (max-width: 767.98px) {
+    :root {
+        --margin-top-sections: 8rem;
+    }
+    
+    .mobile-menu-button {
+        display: block;
+    }
+    
+    header {
+        position: relative;
+        min-height: 60px;
+    }
+    
+    header nav ul {
+        display: none;
+        flex-direction: column;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        background-color: var(--menu-background-color);
+        padding: 20px;
+        z-index: 1000;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    header nav ul.mobile-open {
+        display: flex;
+    }
+    
+    header nav ul li {
+        margin: 10px 0;
+    }
+    
+    header nav ul li img {
+        width: 70px;
+    }
+    
+    main section#top-baner {
+        padding: 0px 1.5rem;
+        gap: 2rem;
+    }
+    
+    main section#top-baner article#left-baner .top h1 {
+        font-size: 50px;
+    }
+    
+    main section#top-baner article#left-baner .top p {
+        font-size: 28px;
+    }
+    
+    main section#top-baner article#left-baner .bottom p {
+        font-size: 24px;
+    }
+    
+    main section#stats article h2 {
+        font-size: 60px;
+    }
+    
+    main section#stats article p {
+        font-size: 20px;
+    }
+    
+    main #buttons-join_projects a {
+        font-size: 28px;
+        padding: 15px 2rem;
+        width: 90%;
+    }
+    
+    main section#how_it_works h1,
+    main section#our_projects h1,
+    main section#future_makers_opinions h1,
+    main section#make_future_with_us h1 {
+        font-size: 60px;
+    }
+    
+    main section#how_it_works article.content div > h3 {
+        font-size: 24px;
+        padding: 6px 20px;
+    }
+    
+    main section#how_it_works article.content div > img {
+        width: 90%;
+    }
+    
+    main section#our_projects article#projects .project {
+        padding: 20px 15px;
+    }
+    
+    main section#our_projects article#projects .content {
+        padding: 1rem 1.5rem;
+    }
+    
+    main section#our_projects article#projects .project .content .right_side-project h2 {
+        font-size: 2rem;
+    }
+    
+    main section#our_projects article#projects .project .content .right_side-project p {
+        font-size: 20px;
+    }
+    
+    main section#our_projects article#projects .project .content .right_side-project a {
+        font-size: 20px;
+        padding: 6px 20px;
+    }
+    
+    main section#future_makers_opinions article#opinions .opinion .content {
+        padding: 20px 15px;
+    }
+    
+    main section#future_makers_opinions article#opinions .content .right_side-opinions p {
+        font-size: 20px;
+    }
+    
+    main section#future_makers_opinions img.arrow {
+        width: 35px;
+    }
+    
+    main section#make_future_with_us h1 {
+        font-size: 50px;
+    }
+    
+    main section#make_future_with_us article#buttons-make_future a {
+        font-size: 24px;
+        padding: 10px 30px;
+        width: 90%;
+    }
+    
+    footer article#logo img {
+        width: 80px;
+    }
+    
+    footer article#logo h1 {
+        font-size: 1.8rem;
+    }
+    
+    footer p {
+        font-size: 14px;
+        text-align: center;
+        padding: 0 1rem;
+    }
+}
+
+@media (max-width: 575.98px) {
+    :root {
+        --margin-top-sections: 6rem;
+    }
+    
+    main section#top-baner article#left-baner .top h1 {
+        font-size: 40px;
+    }
+    
+    main section#top-baner article#left-baner .top p {
+        font-size: 22px;
+    }
+    
+    main section#top-baner article#left-baner .bottom p {
+        font-size: 20px;
+    }
+    
+    main section#stats article h2 {
+        font-size: 50px;
+    }
+    
+    main section#stats article p {
+        font-size: 18px;
+    }
+    
+    main #buttons-join_projects a {
+        font-size: 24px;
+        padding: 12px 1.5rem;
+    }
+    
+    main section#how_it_works h1,
+    main section#our_projects h1,
+    main section#future_makers_opinions h1,
+    main section#make_future_with_us h1 {
+        font-size: 45px;
+    }
+    
+    main section#how_it_works article.content div > h3 {
+        font-size: 20px;
+        padding: 5px 15px;
+    }
+    
+    main section#our_projects article#move_circles {
+        gap: 1rem;
+    }
+    
+    main section#our_projects article#move_circles .circle {
+        width: 20px;
+        height: 10px;
+    }
+    
+    main section#make_future_with_us h1 {
+        font-size: 40px;
+    }
+    
+    main section#make_future_with_us article#buttons-make_future a {
+        font-size: 20px;
+        padding: 8px 25px;
+    }
+    
+    .mobile-menu-button {
+        right: 15px;
+        font-size: 24px;
+    }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+    main section#top-baner {
+        min-height: 120vh;
+    }
+    
+    header nav ul {
+        padding: 5px 10px;
+    }
+    
+    header nav ul li a {
+        font-size: 18px;
+    }
+}
+
+@media (min-resolution: 192dpi) {
+    main section#top-baner img,
+    main section#how_it_works article.content div > img,
+    main section#our_projects article#projects .project .content .left_side-project img,
+    main section#future_makers_opinions article#opinions .content .left_side-opinions img,
+    footer article#logo img {
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+    }
+}
+
+@media print {
+    header nav ul li.join a,
+    main #buttons-join_projects a,
+    main section#make_future_with_us article#buttons-make_future a {
+        background: #000 !important;
+        color: #fff !important;
+        border: 1px solid #000;
+    }
+    
+    main section#top-baner article#left-baner .top h1,
+    h1:not(main section#top-baner article#left-baner .top h1):not(footer article#logo h1) {
+        background: none !important;
+        -webkit-text-fill-color: #000 !important;
+        color: #000 !important;
+    }
+}
+
+.touch-device .circle {
+    min-width: 44px;
+    min-height: 44px;
+}
+
+.touch-device header nav ul li a {
+    padding: 10px 15px;
+    display: block;
+}
