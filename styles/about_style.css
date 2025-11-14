@@ -45,8 +45,8 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 1.5rem;
-    max-width: 1200px;
+    padding: 1rem 10rem;
+    /* max-width: 1200px; */
     margin: 0 auto;
 }
 
@@ -60,8 +60,8 @@ header {
 }
 
 .nav-brand img {
-    width: 3rem;
-    height: 3rem;
+    width: 4rem;
+    height: 4rem;
     border-radius: 0.5rem;
 }
 
@@ -69,7 +69,7 @@ header {
     display: flex;
     list-style: none;
     align-items: center;
-    gap: 2rem;
+    gap: 3rem;
 }
 
 .nav-menu a {
@@ -78,6 +78,7 @@ header {
     font-weight: 500;
     transition: color 0.3s;
     position: relative;
+    font-size: 1.2rem;
 }
 
 .nav-menu a:hover {
@@ -103,7 +104,7 @@ header {
     color: white !important;
     padding: 0.5rem 1.5rem;
     border-radius: 0.5rem;
-    transition: all 0.3s;
+    transition: all 0.9s;
 }
 
 .cta-button:hover {
@@ -193,7 +194,7 @@ header {
 
 /* Sekcje ogólne */
 .section-title {
-    font-size: 3rem;
+    font-size: 4rem;
     font-weight: 800;
     text-align: center;
     margin-bottom: 1rem;
@@ -204,11 +205,11 @@ header {
 }
 
 .section-subtitle {
-    font-size: 1.25rem;
+    font-size: 2rem;
     text-align: center;
     color: var(--text-light);
     margin-bottom: 3rem;
-    max-width: 600px;
+    max-width: 1000px;
     margin-left: auto;
     margin-right: auto;
 }
@@ -227,7 +228,8 @@ header {
 }
 
 .mission-statement {
-    font-size: 1.25rem;
+    font-size: 1.45rem;
+    text-align: center;
     line-height: 1.8;
     color: var(--text);
     margin-bottom: 3rem;
@@ -246,12 +248,12 @@ header {
 }
 
 .value-icon {
-    font-size: 2rem;
+    font-size: 3rem;
     flex-shrink: 0;
 }
 
 .value-item h4 {
-    font-size: 1.25rem;
+    font-size: 1.45rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
     color: var(--text);
@@ -260,6 +262,7 @@ header {
 .value-item p {
     color: var(--text-light);
     line-height: 1.6;
+    font-size: 1.25rem;
 }
 
 .mission-visual {
@@ -289,7 +292,7 @@ header {
 }
 
 .visual-card h3 {
-    font-size: 1.25rem;
+    font-size: 1.55rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
     color: var(--text);
@@ -297,6 +300,7 @@ header {
 
 .visual-card p {
     color: var(--text-light);
+    font-size: 1.25rem;
 }
 
 /* Cel i założenia */
@@ -373,7 +377,7 @@ header {
 
 .timeline {
     position: relative;
-    max-width: 800px;
+    /* max-width: 800px; */
     margin: 0 auto;
 }
 
@@ -410,7 +414,7 @@ header {
     padding: 1rem 1.5rem;
     border-radius: 2rem;
     font-weight: 700;
-    font-size: 1.125rem;
+    font-size: 1.325rem;
     box-shadow: var(--shadow);
     z-index: 2;
 }
@@ -421,13 +425,13 @@ header {
     border-radius: 1rem;
     box-shadow: var(--shadow);
     border: 1px solid var(--border);
-    width: 45%;
+    width: 50%;
     margin: 0 2rem;
     z-index: 2;
 }
 
 .timeline-content h3 {
-    font-size: 1.25rem;
+    font-size: 1.55rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
     color: var(--text);
@@ -436,6 +440,7 @@ header {
 .timeline-content p {
     color: var(--text-light);
     line-height: 1.6;
+    font-size: 1.225rem;
 }
 
 /* Jak działa projekt */
@@ -448,7 +453,6 @@ header {
     display: flex;
     flex-direction: column;
     gap: 2rem;
-    max-width: 800px;
     margin: 0 auto 4rem;
 }
 
@@ -466,19 +470,19 @@ header {
 .step-number {
     background: linear-gradient(135deg, var(--primary), var(--secondary));
     color: white;
-    width: 60px;
-    height: 60px;
+    width: 70px;
+    height: 70px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.5rem;
+    font-size: 1.9rem;
     font-weight: 700;
     flex-shrink: 0;
 }
 
 .step-content h3 {
-    font-size: 1.5rem;
+    font-size: 1.7rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
     color: var(--text);
@@ -487,13 +491,14 @@ header {
 .step-content p {
     color: var(--text-light);
     line-height: 1.6;
+    font-size: 1.425rem;
 }
 
 .process-visual {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 2rem;
+    gap: 4rem;
     flex-wrap: wrap;
 }
 
@@ -506,7 +511,7 @@ header {
 }
 
 .stage-icon {
-    font-size: 3rem;
+    font-size: 4rem;
     background: var(--surface);
     width: 80px;
     height: 80px;
@@ -520,6 +525,7 @@ header {
 .visual-stage span {
     font-weight: 600;
     color: var(--text);
+    font-size: 1.3rem;
 }
 
 .visual-arrow {
@@ -582,17 +588,19 @@ header {
 }
 
 .success-stories h3 {
-    font-size: 2rem;
+    font-size: 3rem;
     font-weight: 700;
     text-align: center;
-    margin-bottom: 2rem;
+    margin-bottom: 4rem;
     color: var(--text);
 }
 
 .stories-grid {
+    justify-content: center;
+    align-items: center;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    gap: 3rem;
 }
 
 .story-card {
@@ -615,10 +623,10 @@ header {
     top: -1rem;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 2rem;
+    font-size: 4rem;
     background: var(--background);
-    width: 60px;
-    height: 60px;
+    width: 80px;
+    height: 80px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -627,18 +635,19 @@ header {
 }
 
 .story-card h4 {
-    font-size: 1.25rem;
+    font-size: 2rem;
     font-weight: 600;
     margin-bottom: 1rem;
     color: var(--text);
     text-align: center;
-    margin-top: 1rem;
+    margin-top: 3rem;
 }
 
 .story-card p {
     color: var(--text-light);
     line-height: 1.6;
     text-align: center;
+    font-size: 1.225rem;
 }
 
 /* CTA Section */

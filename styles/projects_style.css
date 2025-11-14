@@ -27,7 +27,7 @@ body {
 }
 
 .container {
-    max-width: 1200px;
+    /* max-width: 1200px; */
     margin: 0 auto;
     padding: 0 1.5rem;
 }
@@ -213,6 +213,7 @@ header {
     transition: all 0.3s;
     font-weight: 500;
     color: var(--text);
+    font-size: 1.2rem;
 }
 
 .filter-btn:hover {
@@ -229,12 +230,14 @@ header {
 /* Projects Grid */
 .projects-section {
     padding: 4rem 0;
+    max-width: 1500px;
+    margin: 0 auto;
 }
 
 .projects-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 2rem;
+    gap: 5rem;
 }
 
 .project-card {
@@ -277,7 +280,7 @@ header {
     color: white;
     padding: 0.25rem 0.75rem;
     border-radius: 1rem;
-    font-size: 0.75rem;
+    font-size: 0.95rem;
     font-weight: 600;
 }
 
@@ -289,7 +292,7 @@ header {
 }
 
 .project-content h3 {
-    font-size: 1.25rem;
+    font-size: 1.35rem;
     font-weight: 700;
     margin-bottom: 0.75rem;
     color: var(--text);
@@ -299,13 +302,14 @@ header {
     color: var(--text-light);
     margin-bottom: 1rem;
     flex-grow: 1;
+    font-size: 1.05rem;
 }
 
 .project-meta {
     display: flex;
     gap: 1rem;
     margin-bottom: 1.5rem;
-    font-size: 0.875rem;
+    font-size: 1.05rem;
     color: var(--text-light);
 }
 
@@ -317,6 +321,7 @@ header {
     text-decoration: none;
     font-weight: 600;
     transition: gap 0.3s;
+    font-size: 1.1rem;
 }
 
 .project-link:hover {
