@@ -1,3 +1,91 @@
+<?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+$hostname = "localhost";
+$username = "root";
+$password = "";
+$database = "teencollab";
+
+$conn = new mysqli($hostname, $username, $password, $database);
+
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $fullName = $_POST['fullName'] ?? '';
+    $email = $_POST['email'] ?? '';
+    $password = $_POST['password'] ?? '';
+    $age = $_POST['age'] ?? '';
+    $school = $_POST['school'] ?? '';
+    $interests = $_POST['interests'] ?? '';
+    $experience = $_POST['experience'] ?? '';
+    $goals = $_POST['goals'] ?? '';
+    $acceptedTerms = isset($_POST['terms']) ? 1 : 0;
+    $acceptedPrivacy = isset($_POST['privacy']) ? 1 : 0;
+    $newsletter = isset($_POST['newsletter']) ? 1 : 0;
+
+    // Walidacja podstawowa
+    if (empty($fullName) || empty($email) || empty($password) || empty($goals)) {
+        echo "<script>alert('Uzupełnij wymagane pola!');</script>";
+        exit();
+    }
+
+    // Sprawdzenie unikalności email
+    $check = $conn->prepare("SELECT id FROM users WHERE email=?");
+    $check->bind_param("s", $email);
+    $check->execute();
+    $check->store_result();
+    if ($check->num_rows > 0) {
+        echo "<script>alert('Ten email jest już używany!');</script>";
+        exit();
+    }
+
+    // Hashowanie hasła
+    $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
+
+    // Wstawienie do bazy
+    $stmt = $conn->prepare("
+        INSERT INTO users 
+        (full_name, email, password_hash, age_class, school, interests, experience, goals, accepted_terms, accepted_privacy, newsletter, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+    ");
+
+    if (!$stmt) {
+        die("Błąd przygotowania zapytania: " . $conn->error);
+    }
+
+    $stmt->bind_param(
+        "ssssssssiii",
+        $fullName,
+        $email,
+        $hashedPassword,
+        $age,
+        $school,
+        $interests,
+        $experience,
+        $goals,
+        $acceptedTerms,
+        $acceptedPrivacy,
+        $newsletter
+    );
+
+    if ($stmt->execute()) {
+        echo "<script>alert('Rejestracja zakończona sukcesem! Możesz się teraz zalogować.');</script>";
+    } else {
+        echo "Błąd SQL: " . $stmt->error;
+    }
+
+    $stmt->close();
+}
+
+$conn->close();
+?>
+
+
+
 <!DOCTYPE html>
 <html lang="pl">
 
@@ -21,7 +109,7 @@
                     <img src="../photos/website-logo.jpg" alt="Logo TeenCollab">
                     <span>TeenCollab</span>
                 </div>
-                
+
                 <ul class="nav-menu">
                     <li><a href="index.html">Strona główna</a></li>
                     <li><a href="projekty.html">Projekty</a></li>
@@ -29,7 +117,7 @@
                     <li><a href="o-projekcie.html">O projekcie</a></li>
                     <li class="nav-cta"><a href="dolacz.html" class="cta-button active">Dołącz</a></li>
                 </ul>
-                
+
                 <button class="burger-menu" id="burger-menu" aria-label="Menu">
                     <span></span>
                     <span></span>
@@ -44,7 +132,8 @@
         <section class="hero-section">
             <div class="hero-content">
                 <h1 class="hero-title">Dołącz do TeenCollab</h1>
-                <p class="hero-subtitle">Rozwijaj umiejętności, współpracuj z innymi i twórz projekty, które zmieniają świat!</p>
+                <p class="hero-subtitle">Rozwijaj umiejętności, współpracuj z innymi i twórz projekty, które zmieniają
+                    świat!</p>
                 <div class="hero-stats">
                     <div class="stat">
                         <span class="stat-number">500+</span>
@@ -68,7 +157,7 @@
             <div class="container">
                 <h2 class="section-title">Wybierz sposób dołączenia</h2>
                 <p class="section-subtitle">Dołącz do naszej społeczności - wybierz odpowiednią opcję dla siebie</p>
-                
+
                 <div class="choice-cards">
                     <div class="choice-card" id="registerChoice">
                         <div class="choice-icon">🚀</div>
@@ -107,13 +196,13 @@
                     <p class="section-subtitle">Wypełnij formularz, aby dołączyć do naszej społeczności</p>
                     <button class="back-button" onclick="showChoice()">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                            <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2"/>
+                            <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2" />
                         </svg>
                         Wróć do wyboru
                     </button>
                 </div>
-                
-                <form class="join-form" id="joinForm">
+
+                <form class="join-form" id="joinForm" method="post" action="">
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="fullName">Imię i nazwisko *</label>
@@ -160,12 +249,15 @@
 
                         <div class="form-group full-width">
                             <label for="experience">Doświadczenie (opcjonalnie)</label>
-                            <textarea id="experience" name="experience" rows="3" placeholder="Opisz swoje dotychczasowe doświadczenie, umiejętności lub projekty..."></textarea>
+                            <textarea id="experience" name="experience" rows="3"
+                                placeholder="Opisz swoje dotychczasowe doświadczenie, umiejętności lub projekty..."></textarea>
                         </div>
 
                         <div class="form-group full-width">
                             <label for="goals">Twoje cele w projekcie *</label>
-                            <textarea id="goals" name="goals" rows="3" placeholder="Czego chcesz się nauczyć? Jakie projekty Cię interesują?" required></textarea>
+                            <textarea id="goals" name="goals" rows="3"
+                                placeholder="Czego chcesz się nauczyć? Jakie projekty Cię interesują?"
+                                required></textarea>
                         </div>
 
                         <div class="form-group full-width">
@@ -196,7 +288,7 @@
                     <button type="submit" class="submit-button">
                         <span>Załóż konto i dołącz</span>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                            <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2"/>
+                            <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" />
                         </svg>
                     </button>
                 </form>
@@ -211,12 +303,12 @@
                     <p class="section-subtitle">Witaj z powrotem! Zaloguj się do swojego konta</p>
                     <button class="back-button" onclick="showChoice()">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                            <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2"/>
+                            <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2" />
                         </svg>
                         Wróć do wyboru
                     </button>
                 </div>
-                
+
                 <form class="join-form" id="loginFormData">
                     <div class="form-grid">
                         <div class="form-group full-width">
@@ -241,12 +333,13 @@
                     <button type="submit" class="submit-button">
                         <span>Zaloguj się</span>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                            <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2"/>
+                            <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" />
                         </svg>
                     </button>
 
                     <div class="form-footer">
-                        <p>Nie masz jeszcze konta? <a href="#" class="link" onclick="showRegister()">Załóż je tutaj</a></p>
+                        <p>Nie masz jeszcze konta? <a href="#" class="link" onclick="showRegister()">Załóż je tutaj</a>
+                        </p>
                     </div>
                 </form>
             </div>
@@ -256,7 +349,7 @@
         <section class="benefits-section">
             <div class="container">
                 <h2 class="section-title">Co zyskujesz dołączając do nas?</h2>
-                
+
                 <div class="benefits-grid">
                     <div class="benefit-card">
                         <div class="benefit-icon">🎓</div>
@@ -390,39 +483,35 @@
 
         // Obsługa formularza rejestracji
         const joinForm = document.getElementById('joinForm');
-        joinForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            const formObject = Object.fromEntries(formData);
-            
-            // Walidacja hasła
+
+        joinForm.addEventListener('submit', function (e) {
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
-            
-            if (password !== confirmPassword) {
-                alert('Hasła nie są identyczne!');
-                return;
-            }
-            
+
+            // Walidacja hasła
             if (password.length < 8) {
-                alert('Hasło musi mieć co najmniej 8 znaków!');
+                e.preventDefault();
+                alert('Hasło musi mieć minimum 8 znaków!');
                 return;
             }
-            
-            console.log('Formularz rejestracji wysłany:', formObject);
-            alert('Dziękujemy za rejestrację! Twoje konto zostało utworzone. Możesz się teraz zalogować.');
-            showLogin();
+
+            if (password !== confirmPassword) {
+                e.preventDefault();
+                alert('Hasła nie są takie same!');
+                return;
+            }
+
+            // Formularz może wysłać się normalnie do PHP
         });
 
         // Obsługa formularza logowania
         const loginForm = document.getElementById('loginFormData');
-        loginForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
+        loginForm.addEventListener('submit', function (e) {
+            // e.preventDefault();
+
             const formData = new FormData(this);
             const formObject = Object.fromEntries(formData);
-            
+
             console.log('Formularz logowania wysłany:', formObject);
             alert('Zalogowano pomyślnie! Przenoszenie do panelu użytkownika...');
             // Tutaj można dodać przekierowanie do dashboardu
@@ -431,7 +520,7 @@
         // Płynne przewijanie do formularza
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
-                e.preventDefault();
+                // e.preventDefault();
                 const target = document.querySelector(this.getAttribute('href'));
                 if (target) {
                     target.scrollIntoView({
