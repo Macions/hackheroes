@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeenCollab</title>
+    <meta name="description"
+        content="Platforma, która łączy uczniów z całej Polski, by razem tworzyć projekty społeczne, ekologiczne i wspierające zdrowie psychiczne.">
+    <link rel="shortcut icon" href="photos/website-logo.jpg" type="image/x-icon">
+    <link rel="stylesheet" href="styles/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <header>
+        <nav>
+            <div class="nav-container">
+                <div class="nav-brand">
+                    <img src="photos/website-logo.jpg" alt="Logo TeenCollab">
+                    <span>TeenCollab</span>
+                </div>
+                
+                <ul class="nav-menu">
+                    <li><a class="active" href="https://teencollab.pl/">Strona główna</a></li>
+                    <li><a href="https://teencollab.pl/projekty">Projekty</a></li>
+                    <li><a href="https://teencollab.pl/społeczność">Społeczność</a></li>
+                    <li><a href="https://teencollab.pl/o-projekcie">O projekcie</a></li>
+                    <li class="nav-cta"><a href="https://teencollab.pl/dolacz" class="cta-button">Dołącz</a></li>
+                </ul>
+                
+                <button class="burger-menu" id="burger-menu" aria-label="Menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <main id="main-content">
+
+        <!-- Main Content Sections -->
+        <section id="top-baner">
+            <article id="left-baner">
+                <div class="top">
+                    <h1>TeenCollab</h1>
+                    <p>Łączymy <span>młodych</span>, <br>żeby razem zmieniać <span>przyszłość</span>.</p>
+                </div>
+                <div class="bottom">
+                    <p><i>Platforma, która łączy uczniów z całej Polski, by razem tworzyć projekty społeczne,
+                            ekologiczne i wspierające zdrowie psychiczne.</i></p>
+                </div>
+            </article>
+            <article id="right-baner">
+                <img src="photos/baner-photo.jpg"
+                    alt="Baner nawiązujący do założeń platformy: pomocy, wspierania, tworzenia projektów.">
+            </article>
+        </section>
+
+        <section id="stats">
+            <article id="amount_of_projects">
+                <h2><span>100</span>+</h2>
+                <p>projektów</p>
+            </article>
+
+            <article id="amount_of_future_creators">
+                <h2><span>100</span>+</h2>
+                <p>kreatorów przyszłości</p>
+            </article>
+
+            <article id="amount_of_ideas">
+                <h2>∞</h2>
+                <p>pomysłów</p>
+            </article>
+        </section>
+
+        <section id="buttons-join_projects">
+            <a href="https://teencollab.pl/login" class="join_us-button">Dołącz do nas</a>
+            <a href="https://teencollab.pl/projekty" class="projects-button">Projekty</a>
+        </section>
+
+        <section id="how_it_works">
+            <h1>Jak to działa?</h1>
+
+            <article class="content">
+                <div class="make_projects">
+                    <img src="photos/make-projects.jpg"
+                        alt="Grafika przedstawiająca otwarty laptop, na jego górze żarówka nawiązująca do kreatywności/pomysłów">
+                    <h3>Twórz projekty</h3>
+                </div>
+
+                <img class="arrow" src="photos/arrow.png" alt="Strzałka w prawo">
+
+                <div class="connect_to_other">
+                    <img src="photos/connect-to-other.jpg"
+                        alt="Grafika postaci ludzi, połączonych linią świadczącą o współpracy ludzi">
+                    <h3>Łącz się z innymi</h3>
+                </div>
+
+                <img class="arrow" src="photos/arrow.png" alt="Strzałka w prawo">
+
+                <div class="support_and_inspire">
+                    <img src="photos/support-inspire.jpg"
+                        alt="Grafika przedstawiająca ręce trzymające serce jako znak wsparcia">
+                    <h3>Wspieraj i inspiruj</h3>
+                </div>
+            </article>
+        </section>
+
+        <section id="our_projects">
+            <h1>Nasze projekty</h1>
+            <article id="projects">
+                <div class="project" data-order="1">
+                    <div class="content">
+                        <div class="left_side-project">
+                            <img src="photos/sprzatanie_lasu.jpg" alt="Zdjęcie przedstawiające sprzątanie lasu">
+                        </div>
+                        <div class="right_side-project">
+                            <h2>Sprzątanie lasu</h2>
+                            <p>Zobacz jak wyglądała jedna z akcji w Łowiczu, w całości zorganizowana przez naszą stronę.
+                            </p>
+                            <a href="https://teencollab.pl/articles/sprzatanie-lasu-w-łowiczu">Szczegóły</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="project" data-order="2">
+                    <div class="content">
+                        <div class="left_side-project">
+                            <img src="photos/sprzatanie_lasu.jpg" alt="Zdjęcie przedstawiające sprzątanie lasu">
+                        </div>
+                        <div class="right_side-project">
+                            <h2>Sprzątanie lasu</h2>
+                            <p>Zobacz jak wyglądała jedna z akcji w Łowiczu, w całości zorganizowana przez naszą stronę.
+                            </p>
+                            <a href="https://teencollab.pl/articles/sprzatanie-lasu-w-łowiczu">Szczegóły</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="project" data-order="3">
+                    <div class="content">
+                        <div class="left_side-project">
+                            <img src="photos/sprzatanie_lasu.jpg" alt="Zdjęcie przedstawiające sprzątanie lasu">
+                        </div>
+                        <div class="right_side-project">
+                            <h2>Sprzątanie lasu</h2>
+                            <p>Zobacz jak wyglądała jedna z akcji w Łowiczu, w całości zorganizowana przez naszą stronę.
+                            </p>
+                            <a href="https://teencollab.pl/articles/sprzatanie-lasu-w-łowiczu">Szczegóły</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="project" data-order="4">
+                    <div class="content">
+                        <div class="left_side-project">
+                            <img src="photos/sprzatanie_lasu.jpg" alt="Zdjęcie przedstawiające sprzątanie lasu">
+                        </div>
+                        <div class="right_side-project">
+                            <h2>Sprzątanie lasu</h2>
+                            <p>Zobacz jak wyglądała jedna z akcji w Łowiczu, w całości zorganizowana przez naszą stronę.
+                            </p>
+                            <a href="https://teencollab.pl/articles/sprzatanie-lasu-w-łowiczu">Szczegóły</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="project" data-order="5">
+                    <div class="content">
+                        <div class="left_side-project">
+                            <img src="photos/sprzatanie_lasu.jpg" alt="Zdjęcie przedstawiające sprzątanie lasu">
+                        </div>
+                        <div class="right_side-project">
+                            <h2>Sprzątanie lasu</h2>
+                            <p>Zobacz jak wyglądała jedna z akcji w Łowiczu, w całości zorganizowana przez naszą stronę.
+                            </p>
+                            <a href="https://teencollab.pl/articles/sprzatanie-lasu-w-łowiczu">Szczegóły</a>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <article id="move_circles">
+                <div class="circle active" data-order="1" aria-label="Przejdź do slajdu 1"></div>
+                <div class="circle" data-order="2" aria-label="Przejdź do slajdu 2"></div>
+                <div class="circle" data-order="3" aria-label="Przejdź do slajdu 3"></div>
+                <div class="circle" data-order="4" aria-label="Przejdź do slajdu 4"></div>
+                <div class="circle" data-order="5" aria-label="Przejdź do slajdu 5"></div>
+            </article>
+        </section>
+
+        <section id="future_makers_opinions">
+            <img class="arrow left" src="photos/mve_arrow.svg"
+                alt="Strzałka do przeglądania wstecz opinii twórców przyszłości">
+            <img class="arrow right" src="photos/mve_arrow.svg"
+                alt="Strzałka do przeglądania kolejnych opinii twórców przyszłości">
+
+            <h1>Opinie kreatorów przyszłości</h1>
+
+            <article id="opinions">
+                <div class="opinion" data-opinion="1">
+                    <div class="content">
+                        <div class="left_side-opinions">
+                            <img src="photos/sample_person.png" alt="Przykładowa kreatorka przyszłości">
+                            <p>Barbara - technikum żywieniowe,<br>tworzę z Wami przyszłość od 2 lat</p>
+                        </div>
+                        <div class="right_side-opinions">
+                            <p>Dzięki tej platformie poznałam super ludzi i zrobiliśmy razem projekt o zdrowiu
+                                psychicznym młodzieży. Totalnie warto.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="opinion" data-opinion="2">
+                    <div class="content">
+                        <div class="left_side-opinions">
+                            <img src="photos/sample_person.png" alt="Przykładowa kreatorka przyszłości">
+                            <p>Barbara - technikum żywieniowe,<br>tworzę z Wami przyszłość od 2 lat</p>
+                        </div>
+                        <div class="right_side-opinions">
+                            <p>Dzięki tej platformie poznałam super ludzi i zrobiliśmy razem projekt o zdrowiu
+                                psychicznym młodzieży. Totalnie warto.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="opinion" data-opinion="3">
+                    <div class="content">
+                        <div class="left_side-opinions">
+                            <img src="photos/sample_person.png" alt="Przykładowa kreatorka przyszłości">
+                            <p>Barbara - technikum żywieniowe,<br>tworzę z Wami przyszłość od 2 lat</p>
+                        </div>
+                        <div class="right_side-opinions">
+                            <p>Dzięki tej platformie poznałam super ludzi i zrobiliśmy razem projekt o zdrowiu
+                                psychicznym młodzieży. Totalnie warto.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="opinion" data-opinion="4">
+                    <div class="content">
+                        <div class="left_side-opinions">
+                            <img src="photos/sample_person.png" alt="Przykładowa kreatorka przyszłości">
+                            <p>Barbara - technikum żywieniowe,<br>tworzę z Wami przyszłość od 2 lat</p>
+                        </div>
+                        <div class="right_side-opinions">
+                            <p>Dzięki tej platformie poznałam super ludzi i zrobiliśmy razem projekt o zdrowiu
+                                psychicznym młodzieży. Totalnie warto.</p>
+                        </div>
+                    </div>
+                </div>
+            </article>
+        </section>
+
+        <section id="make_future_with_us">
+            <h1>Twórz przyszłość razem z nami!</h1>
+
+            <article id="buttons-make_future">
+                <a href="https://teencollab.pl/login" class="join_us-button">Dołącz do nas</a>
+                <a href="https://teencollab.pl/projekty" class="projects-button">Projekty</a>
+            </article>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <img src="photos/website-logo.jpg" alt="Logo TeenCollab">
+                    <div>
+                        <h3>TeenCollab</h3>
+                        <p>Platforma dla młodych zmieniaczy świata</p>
+                    </div>
+                </div>
+                <div class="footer-copyright">
+                    <p>©2025 TeenCollab | Made with ❤️ by M.Cz.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Slider projektów
+        document.addEventListener('DOMContentLoaded', function() {
+            const projectsContainer = document.getElementById('projects');
+            const circles = document.querySelectorAll('#move_circles .circle');
+            let currentSlide = 0;
+            const totalSlides = document.querySelectorAll('.project').length;
+
+            // Funkcja do zmiany slajdu
+            function goToSlide(slideIndex) {
+                currentSlide = slideIndex;
+                projectsContainer.style.transform = `translateX(-${currentSlide * 100}%)`;
+                
+                // Aktualizacja kółek
+                circles.forEach((circle, index) => {
+                    circle.classList.toggle('active', index === currentSlide);
+                });
+            }
+
+            // Event listeners dla kółek
+            circles.forEach((circle, index) => {
+                circle.addEventListener('click', () => {
+                    goToSlide(index);
+                });
+            });
+
+            // Auto-slide co 5 sekund
+            setInterval(() => {
+                currentSlide = (currentSlide + 1) % totalSlides;
+                goToSlide(currentSlide);
+            }, 5000);
+
+            // Slider opinii
+            const opinionsContainer = document.getElementById('opinions');
+            const opinionSlides = document.querySelectorAll('.opinion');
+            const leftArrow = document.querySelector('.arrow.left');
+            const rightArrow = document.querySelector('.arrow.right');
+            let currentOpinion = 0;
+            const totalOpinions = opinionSlides.length;
+
+            function showOpinion(index) {
+                currentOpinion = index;
+                opinionsContainer.style.transform = `translateX(-${currentOpinion * 50}%)`;
+            }
+
+            leftArrow.addEventListener('click', () => {
+                currentOpinion = (currentOpinion - 1 + totalOpinions) % totalOpinions;
+                showOpinion(currentOpinion);
+            });
+
+            rightArrow.addEventListener('click', () => {
+                currentOpinion = (currentOpinion + 1) % totalOpinions;
+                showOpinion(currentOpinion);
+            });
+
+            // Burger menu
+            const burgerMenu = document.getElementById('burger-menu');
+            const navMenu = document.querySelector('.nav-menu');
+
+            burgerMenu.addEventListener('click', () => {
+                burgerMenu.classList.toggle('active');
+                navMenu.classList.toggle('active');
+            });
+
+            // Zamknij menu po kliknięciu w link (dla mobile)
+            document.querySelectorAll('.nav-menu a').forEach(link => {
+                link.addEventListener('click', () => {
+                    burgerMenu.classList.remove('active');
+                    navMenu.classList.remove('active');
+                });
+            });
+
+            // Animacje przy scrollowaniu
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, observerOptions);
+
+            // Obserwuj elementy do animacji
+            document.querySelectorAll('#stats article, #how_it_works .content > div, .project, .opinion').forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(30px)';
+                el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                observer.observe(el);
+            });
+        });
+
+        // Płynne przewijanie do sekcji
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
