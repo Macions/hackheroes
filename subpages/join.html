@@ -63,42 +63,55 @@
             <div class="hero-gradient"></div>
         </section>
 
-        <!-- Zachęta -->
-        <section class="cta-intro">
+        <!-- Wybór opcji -->
+        <section class="auth-choice">
             <div class="container">
-                <div class="cta-content">
-                    <h2 class="section-title">Gotowy na przygodę?</h2>
-                    <p class="cta-text">
-                        Chcesz rozwijać swoje umiejętności w IT, współpracować z innymi i tworzyć ciekawe projekty? 
-                        Dołącz do naszej społeczności młodych twórców i razem zmieniajmy świat na lepsze!
-                    </p>
-                    <div class="cta-features">
-                        <div class="feature">
-                            <span class="feature-icon">💻</span>
-                            <span>Nauka programowania</span>
-                        </div>
-                        <div class="feature">
-                            <span class="feature-icon">👥</span>
-                            <span>Praca w zespole</span>
-                        </div>
-                        <div class="feature">
-                            <span class="feature-icon">🚀</span>
-                            <span>Realne projekty</span>
-                        </div>
-                        <div class="feature">
-                            <span class="feature-icon">🎯</span>
-                            <span>Wsparcie mentorów</span>
-                        </div>
+                <h2 class="section-title">Wybierz sposób dołączenia</h2>
+                <p class="section-subtitle">Dołącz do naszej społeczności - wybierz odpowiednią opcję dla siebie</p>
+                
+                <div class="choice-cards">
+                    <div class="choice-card" id="registerChoice">
+                        <div class="choice-icon">🚀</div>
+                        <h3>Nowe konto</h3>
+                        <p>Nie masz jeszcze konta? Załóż je teraz i dołącz do naszej społeczności!</p>
+                        <ul class="choice-features">
+                            <li>Dostęp do wszystkich projektów</li>
+                            <li>Możliwość współpracy z innymi</li>
+                            <li>Wsparcie mentorów</li>
+                            <li>Certyfikaty udziału</li>
+                        </ul>
+                        <button class="choice-button primary">Załóż konto</button>
+                    </div>
+
+                    <div class="choice-card" id="loginChoice">
+                        <div class="choice-icon">🔐</div>
+                        <h3>Mam już konto</h3>
+                        <p>Posiadasz już konto w naszej społeczności? Zaloguj się poniżej.</p>
+                        <ul class="choice-features">
+                            <li>Szybki dostęp do projektów</li>
+                            <li>Kontynuuj pracę nad zadaniami</li>
+                            <li>Sprawdź postępy</li>
+                            <li>Połącz się z zespołem</li>
+                        </ul>
+                        <button class="choice-button secondary">Zaloguj się</button>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Formularz zgłoszeniowy -->
-        <section class="application-form">
+        <!-- Formularz rejestracji -->
+        <section class="application-form register-form" id="registerForm" style="display: none;">
             <div class="container">
-                <h2 class="section-title">Formularz zgłoszeniowy</h2>
-                <p class="section-subtitle">Wypełnij formularz, a my skontaktujemy się z Tobą w ciągu 48 godzin</p>
+                <div class="form-header">
+                    <h2 class="section-title">Załóż nowe konto</h2>
+                    <p class="section-subtitle">Wypełnij formularz, aby dołączyć do naszej społeczności</p>
+                    <button class="back-button" onclick="showChoice()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        Wróć do wyboru
+                    </button>
+                </div>
                 
                 <form class="join-form" id="joinForm">
                     <div class="form-grid">
@@ -108,17 +121,33 @@
                         </div>
 
                         <div class="form-group">
+                            <label for="email">E-mail *</label>
+                            <input type="email" id="email" name="email" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="password">Hasło *</label>
+                            <input type="password" id="password" name="password" required>
+                            <small class="input-hint">Minimum 8 znaków</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="confirmPassword">Potwierdź hasło *</label>
+                            <input type="password" id="confirmPassword" name="confirmPassword" required>
+                        </div>
+
+                        <div class="form-group">
                             <label for="age">Wiek / Klasa</label>
                             <input type="text" id="age" name="age" placeholder="np. 16 lat / 2 klasa technikum">
                         </div>
 
                         <div class="form-group">
-                            <label for="email">E-mail kontaktowy *</label>
-                            <input type="email" id="email" name="email" required>
+                            <label for="school">Szkoła</label>
+                            <input type="text" id="school" name="school" placeholder="Nazwa Twojej szkoły">
                         </div>
 
                         <div class="form-group">
-                            <label for="interests">Twoje zainteresowania / umiejętności</label>
+                            <label for="interests">Twoje zainteresowania</label>
                             <select id="interests" name="interests">
                                 <option value="">Wybierz obszar zainteresowań</option>
                                 <option value="programming">Programowanie</option>
@@ -130,8 +159,13 @@
                         </div>
 
                         <div class="form-group full-width">
-                            <label for="message">Czego chcesz się nauczyć / w czym chcesz pomóc? *</label>
-                            <textarea id="message" name="message" rows="4" placeholder="Opisz krótko swoje cele, zainteresowania lub pomysły..." required></textarea>
+                            <label for="experience">Doświadczenie (opcjonalnie)</label>
+                            <textarea id="experience" name="experience" rows="3" placeholder="Opisz swoje dotychczasowe doświadczenie, umiejętności lub projekty..."></textarea>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label for="goals">Twoje cele w projekcie *</label>
+                            <textarea id="goals" name="goals" rows="3" placeholder="Czego chcesz się nauczyć? Jakie projekty Cię interesują?" required></textarea>
                         </div>
 
                         <div class="form-group full-width">
@@ -139,6 +173,14 @@
                                 <input type="checkbox" id="terms" name="terms" required>
                                 <span class="checkmark"></span>
                                 Akceptuję <a href="#" class="link">regulamin</a> projektu TeenCollab *
+                            </label>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="privacy" name="privacy" required>
+                                <span class="checkmark"></span>
+                                Akceptuję <a href="#" class="link">politykę prywatności</a> *
                             </label>
                         </div>
 
@@ -152,11 +194,60 @@
                     </div>
 
                     <button type="submit" class="submit-button">
-                        <span>Wyślij zgłoszenie</span>
+                        <span>Załóż konto i dołącz</span>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                             <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2"/>
                         </svg>
                     </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Formularz logowania -->
+        <section class="application-form login-form" id="loginForm" style="display: none;">
+            <div class="container">
+                <div class="form-header">
+                    <h2 class="section-title">Zaloguj się</h2>
+                    <p class="section-subtitle">Witaj z powrotem! Zaloguj się do swojego konta</p>
+                    <button class="back-button" onclick="showChoice()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        Wróć do wyboru
+                    </button>
+                </div>
+                
+                <form class="join-form" id="loginFormData">
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="loginEmail">E-mail *</label>
+                            <input type="email" id="loginEmail" name="loginEmail" required>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label for="loginPassword">Hasło *</label>
+                            <input type="password" id="loginPassword" name="loginPassword" required>
+                            <div class="form-options">
+                                <label class="checkbox-label small">
+                                    <input type="checkbox" id="remember" name="remember">
+                                    <span class="checkmark"></span>
+                                    Zapamiętaj mnie
+                                </label>
+                                <a href="#" class="link">Zapomniałeś hasła?</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="submit-button">
+                        <span>Zaloguj się</span>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                    </button>
+
+                    <div class="form-footer">
+                        <p>Nie masz jeszcze konta? <a href="#" class="link" onclick="showRegister()">Załóż je tutaj</a></p>
+                    </div>
                 </form>
             </div>
         </section>
@@ -242,27 +333,6 @@
                 </div>
             </div>
         </section>
-
-        <!-- Final CTA -->
-        <section class="final-cta">
-            <div class="container">
-                <div class="final-cta-content">
-                    <h2>Nie czekaj - dołącz już teraz!</h2>
-                    <p>Twoja przygoda z programowaniem i tworzeniem projektów społecznych zaczyna się tutaj.</p>
-                    <a href="#joinForm" class="cta-button large">Dołącz teraz!</a>
-                    <div class="cta-stats">
-                        <div class="stat">
-                            <span class="number">48h</span>
-                            <span class="label">Czas na odpowiedź</span>
-                        </div>
-                        <div class="stat">
-                            <span class="number">95%</span>
-                            <span class="label">Zaakceptowanych zgłoszeń</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
     </main>
 
     <footer>
@@ -283,6 +353,28 @@
     </footer>
 
     <script>
+        // Funkcje przełączania między formularzami
+        function showRegister() {
+            document.querySelector('.auth-choice').style.display = 'none';
+            document.querySelector('.register-form').style.display = 'block';
+            document.querySelector('.login-form').style.display = 'none';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function showLogin() {
+            document.querySelector('.auth-choice').style.display = 'none';
+            document.querySelector('.register-form').style.display = 'none';
+            document.querySelector('.login-form').style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function showChoice() {
+            document.querySelector('.auth-choice').style.display = 'block';
+            document.querySelector('.register-form').style.display = 'none';
+            document.querySelector('.login-form').style.display = 'none';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
         // Burger menu
         const burgerMenu = document.getElementById('burger-menu');
         const navMenu = document.querySelector('.nav-menu');
@@ -292,22 +384,48 @@
             navMenu.classList.toggle('active');
         });
 
-        // Obsługa formularza
-        const joinForm = document.getElementById('joinForm');
+        // Event listeners dla przycisków wyboru
+        document.getElementById('registerChoice').addEventListener('click', showRegister);
+        document.getElementById('loginChoice').addEventListener('click', showLogin);
 
+        // Obsługa formularza rejestracji
+        const joinForm = document.getElementById('joinForm');
         joinForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
-            // Tutaj można dodać logikę wysyłania formularza
             const formData = new FormData(this);
             const formObject = Object.fromEntries(formData);
             
-            // Symulacja wysłania formularza
-            console.log('Formularz wysłany:', formObject);
+            // Walidacja hasła
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
             
-            // Pokazanie komunikatu sukcesu
-            alert('Dziękujemy za zgłoszenie! Skontaktujemy się z Tobą w ciągu 48 godzin.');
-            this.reset();
+            if (password !== confirmPassword) {
+                alert('Hasła nie są identyczne!');
+                return;
+            }
+            
+            if (password.length < 8) {
+                alert('Hasło musi mieć co najmniej 8 znaków!');
+                return;
+            }
+            
+            console.log('Formularz rejestracji wysłany:', formObject);
+            alert('Dziękujemy za rejestrację! Twoje konto zostało utworzone. Możesz się teraz zalogować.');
+            showLogin();
+        });
+
+        // Obsługa formularza logowania
+        const loginForm = document.getElementById('loginFormData');
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const formObject = Object.fromEntries(formData);
+            
+            console.log('Formularz logowania wysłany:', formObject);
+            alert('Zalogowano pomyślnie! Przenoszenie do panelu użytkownika...');
+            // Tutaj można dodać przekierowanie do dashboardu
         });
 
         // Płynne przewijanie do formularza
@@ -340,7 +458,7 @@
         }, observerOptions);
 
         // Obserwuj elementy do animacji
-        document.querySelectorAll('.benefit-card, .info-card, .feature').forEach(el => {
+        document.querySelectorAll('.benefit-card, .info-card, .choice-card').forEach(el => {
             el.style.opacity = '0';
             el.style.transform = 'translateY(30px)';
             el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
@@ -352,7 +470,7 @@
             card.style.transitionDelay = `${index * 0.1}s`;
         });
 
-        document.querySelectorAll('.info-card').forEach((card, index) => {
+        document.querySelectorAll('.choice-card').forEach((card, index) => {
             card.style.transitionDelay = `${index * 0.1}s`;
         });
     </script>
