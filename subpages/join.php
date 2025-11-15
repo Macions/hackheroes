@@ -1,88 +1,256 @@
 <?php
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+// Konfiguracja bazy danych
 $hostname = "localhost";
 $username = "root";
 $password = "";
 $database = "teencollab";
 
 $conn = new mysqli($hostname, $username, $password, $database);
-
 if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+    die("Błąd połączenia z bazą: " . $conn->connect_error);
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $fullName = $_POST['fullName'] ?? '';
-    $email = $_POST['email'] ?? '';
-    $password = $_POST['password'] ?? '';
-    $age = $_POST['age'] ?? '';
-    $school = $_POST['school'] ?? '';
-    $interests = $_POST['interests'] ?? '';
-    $experience = $_POST['experience'] ?? '';
-    $goals = $_POST['goals'] ?? '';
-    $acceptedTerms = isset($_POST['terms']) ? 1 : 0;
-    $acceptedPrivacy = isset($_POST['privacy']) ? 1 : 0;
-    $newsletter = isset($_POST['newsletter']) ? 1 : 0;
+$nav_cta_action = '';
+$benefits = 'Co zyskujesz dołączając do nas';
 
-    // Walidacja podstawowa
-    if (empty($fullName) || empty($email) || empty($password) || empty($goals)) {
-        echo "<script>alert('Uzupełnij wymagane pola!');</script>";
-        exit();
+// Zmienna widoczna również przed zalogowaniem, aby uniknąć warningów
+$firstName = "Użytkowniku";
+$userAvatar = "../photos/sample_person.png";
+
+// Funkcja logowania akcji - POPRAWIONA
+function logAction($conn, $userId, $email, $action)
+{
+    // POPRAWIONE: Bezpieczne sprawdzenie istnienia tabeli
+    try {
+        $tableCheck = $conn->query("SELECT 1 FROM logs LIMIT 1");
+        if ($tableCheck === false) {
+            // Tabela nie istnieje, pomiś logowanie
+            return;
+        }
+        $tableCheck->close();
+    } catch (Exception $e) {
+        // Tabela nie istnieje lub błąd zapytania, pomiś logowanie
+        return;
     }
 
-    // Sprawdzenie unikalności email
-    $check = $conn->prepare("SELECT id FROM users WHERE email=?");
-    $check->bind_param("s", $email);
-    $check->execute();
-    $check->store_result();
-    if ($check->num_rows > 0) {
-        echo "<script>alert('Ten email jest już używany!');</script>";
-        exit();
-    }
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+    $agent = $_SERVER['HTTP_USER_AGENT'] ?? '';
 
-    // Hashowanie hasła
-    $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
-
-    // Wstawienie do bazy
     $stmt = $conn->prepare("
-        INSERT INTO users 
-        (full_name, email, password_hash, age_class, school, interests, experience, goals, accepted_terms, accepted_privacy, newsletter, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        INSERT INTO logs (user_id, email, action, details, ip_address, user_agent, created_at)
+        VALUES (?, ?, ?, '', ?, ?, NOW())
     ");
 
-    if (!$stmt) {
+    // Sprawdź czy prepare się powiodło
+    if ($stmt === false) {
+        error_log("Błąd przygotowania zapytania: " . $conn->error);
+        return;
+    }
+
+    $stmt->bind_param("issss", $userId, $email, $action, $ip, $agent);
+    if (!$stmt->execute()) {
+        error_log("Błąd wykonania zapytania: " . $stmt->error);
+    }
+    $stmt->close();
+}
+
+/* ============================================================
+                        SPRAWDZENIE LOGINU
+   ============================================================ */
+if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
+
+    $email = $_SESSION['user_email'];
+
+    // POPRAWIONE: Używamy first_name i last_name
+    $stmt = $conn->prepare("SELECT id, first_name, last_name FROM users WHERE email = ?");
+    if ($stmt === false) {
         die("Błąd przygotowania zapytania: " . $conn->error);
     }
 
-    $stmt->bind_param(
-        "ssssssssiii",
-        $fullName,
-        $email,
-        $hashedPassword,
-        $age,
-        $school,
-        $interests,
-        $experience,
-        $goals,
-        $acceptedTerms,
-        $acceptedPrivacy,
-        $newsletter
-    );
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    // POPRAWIONE: Trzy zmienne dla trzech kolumn
+    $stmt->bind_result($userId, $dbFirstName, $dbLastName);
+    $stmt->fetch();
+    $stmt->close();
 
-    if ($stmt->execute()) {
-        echo "<script>alert('Rejestracja zakończona sukcesem! Możesz się teraz zalogować.');</script>";
-    } else {
-        echo "Błąd SQL: " . $stmt->error;
+    // Użyj first_name z bazy danych
+    $firstName = $dbFirstName ?: "Użytkowniku";
+    $benefits = "Co u nas zyskujesz?";
+
+    logAction($conn, $userId, $email, 'login');
+
+    $nav_cta_action = <<<HTML
+<li class="nav-user-dropdown">
+    <div class="user-menu-trigger">
+        <img src="$userAvatar" alt="Avatar" class="user-avatar">
+        <span class="user-greeting">Cześć, $firstName!</span>
+        <span class="dropdown-arrow">▼</span>
+    </div>
+    <div class="user-dropdown-menu">
+        <a href="profil.php?id=$userId" class="dropdown-item">
+            <span class="dropdown-icon">👤</span> Mój profil
+        </a>
+        <a href="konto.php" class="dropdown-item">
+            <span class="dropdown-icon">⚙️</span> Ustawienia konta
+        </a>
+        <div class="dropdown-divider"></div>
+        <a href="logout.php" class="dropdown-item logout-item">
+            <span class="dropdown-icon">🚪</span> Wyloguj się
+        </a>
+    </div>
+</li>
+HTML;
+
+    echo "<script>window.loggedFlag = true;</script>";
+
+} else {
+
+    /* ============================================================
+                            REJESTRACJA
+       ============================================================ */
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['loginButton'])) {
+
+        $firstName = trim($_POST['firstName'] ?? '');
+        $lastName = trim($_POST['lastName'] ?? '');
+        $nick = trim($_POST['nick'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $password = $_POST['password'] ?? '';
+        $age = $_POST['age'] ?? '';
+        $school = $_POST['school'] ?? '';
+        $interests = $_POST['interests'] ?? '';
+        $experience = $_POST['experience'] ?? '';
+        $goals = $_POST['goals'] ?? '';
+        $acceptedTerms = isset($_POST['terms']) ? 1 : 0;
+        $acceptedPrivacy = isset($_POST['privacy']) ? 1 : 0;
+        $newsletter = isset($_POST['newsletter']) ? 1 : 0;
+
+        if (empty($firstName) || empty($nick) || empty($lastName) || empty($email) || empty($password) || empty($goals)) {
+            echo "<script>alert('Uzupełnij wymagane pola!');</script>";
+        } else {
+
+            $check = $conn->prepare("SELECT id FROM users WHERE email=?");
+            if ($check === false) {
+                die("Błąd przygotowania zapytania: " . $conn->error);
+            }
+
+            $check->bind_param("s", $email);
+            $check->execute();
+            $check->store_result();
+
+            if ($check->num_rows > 0) {
+                echo "<script>window.emailExistsFlag = true;</script>";
+            } else {
+
+                $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
+
+                // POPRAWIONE: Używamy first_name i last_name zamiast full_name
+                $stmt = $conn->prepare("
+                    INSERT INTO users 
+                    (first_name, last_name, nick, email, password_hash, age_class, school, interests, experience, goals, accepted_terms, accepted_privacy, newsletter, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                ");
+
+                if ($stmt === false) {
+                    die("Błąd przygotowania zapytania: " . $conn->error);
+                }
+
+                // POPRAWIONE: 12 parametrów dla 12 wartości
+                $stmt->bind_param(
+                    "sssssssssiiii",
+                    $firstName,        // first_name
+                    $lastName,         // last_name
+                    $nick,
+                    $email,            // email
+                    $hashedPassword,   // password_hash
+                    $age,              // age_class
+                    $school,           // school
+                    $interests,        // interests
+                    $experience,       // experience
+                    $goals,            // goals
+                    $acceptedTerms,    // accepted_terms
+                    $acceptedPrivacy,  // accepted_privacy
+                    $newsletter        // newsletter
+                );
+
+                if ($stmt->execute()) {
+                    $newUserId = $stmt->insert_id;
+                    logAction($conn, $newUserId, $email, 'registration');
+
+                    echo "<script>alert('Rejestracja udana! Możesz się zalogować.');</script>";
+                } else {
+                    echo "Błąd SQL: " . $stmt->error;
+                }
+
+                $stmt->close();
+            }
+
+            $check->close();
+        }
     }
 
-    $stmt->close();
+    /* ============================================================
+                             LOGOWANIE
+       ============================================================ */
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['loginButton'])) {
+
+        $email = $_POST['loginEmail'] ?? '';
+        $password = $_POST['loginPassword'] ?? '';
+
+        if ($email && $password) {
+            // POPRAWIONE: Używamy first_name i last_name
+            $stmt = $conn->prepare("SELECT id, password_hash, first_name, last_name FROM users WHERE email=?");
+            if ($stmt === false) {
+                die("Błąd przygotowania zapytania: " . $conn->error);
+            }
+
+            $stmt->bind_param("s", $email);
+            $stmt->execute();
+            $stmt->store_result();
+            // POPRAWIONE: Cztery zmienne dla czterech kolumn
+            $stmt->bind_result($userId, $hashedPassword, $dbFirstName, $dbLastName);
+
+            if ($stmt->num_rows === 1) {
+                $stmt->fetch();
+
+                if (password_verify($password, $hashedPassword)) {
+
+                    $_SESSION['user_email'] = $email;
+                    $_SESSION['logged_in'] = true;
+                    $_SESSION['user_id'] = $userId;
+
+                    $firstName = $dbFirstName; // Ustawiamy first_name dla wyświetlenia
+
+                    logAction($conn, $userId, $email, 'login');
+
+                    echo "<script>alert('Zalogowano!'); window.location.reload();</script>";
+                } else {
+                    echo "<script>alert('Błędny email lub hasło');</script>";
+                }
+            } else {
+                echo "<script>alert('Błędny email lub hasło');</script>";
+            }
+
+            $stmt->close();
+        }
+    }
+
+    $nav_cta_action = '<li class="nav-cta"><a href="dolacz.html" class="cta-button active">Dołącz</a></li>';
 }
 
 $conn->close();
 ?>
+
 
 
 
@@ -115,7 +283,7 @@ $conn->close();
                     <li><a href="projekty.html">Projekty</a></li>
                     <li><a href="społeczność.html">Społeczność</a></li>
                     <li><a href="o-projekcie.html">O projekcie</a></li>
-                    <li class="nav-cta"><a href="dolacz.html" class="cta-button active">Dołącz</a></li>
+                    <?php echo $nav_cta_action; ?>
                 </ul>
 
                 <button class="burger-menu" id="burger-menu" aria-label="Menu">
@@ -150,6 +318,71 @@ $conn->close();
                 </div>
             </div>
             <div class="hero-gradient"></div>
+        </section>
+
+        <section class="logged">
+            <div class="container">
+                <h2 class="section-title">Cześć <?php echo $firstName; ?></h2>
+                <p class="section-subtitle">Cieszymy się że jesteś w gronie naszych kreatorów przyszłości!</p>
+
+                <div class="logged-cards">
+                    <div class="logged-card">
+                        <div class="logged-icon">📋</div>
+                        <h3>Twoje projekty</h3>
+                        <p>Przeglądaj i zarządzaj swoimi projektami</p>
+                        <ul class="logged-features">
+                            <li>Przeglądaj swoje projekty</li>
+                            <li>Zarządzaj członkami zespołu</li>
+                            <li>Śledź postępy prac</li>
+                            <li>Dodawaj nowe zadania</li>
+                        </ul>
+                        <button class="logged-button primary" onclick="window.location.href='projekty.html'">Przejdź do
+                            projektów</button>
+                    </div>
+
+                    <div class="logged-card">
+                        <div class="logged-icon">👥</div>
+                        <h3>Społeczność</h3>
+                        <p>Połącz się z innymi twórcami i mentorami</p>
+                        <ul class="logged-features">
+                            <li>Znajdź współpracowników</li>
+                            <li>Dołącz do dyskusji</li>
+                            <li>Uczestnicz w wydarzeniach</li>
+                            <li>Dziel się doświadczeniami</li>
+                        </ul>
+                        <button class="logged-button primary" onclick="window.location.href='społeczność.html'">Odkryj
+                            społeczność</button>
+                    </div>
+
+                    <div class="logged-card">
+                        <div class="logged-icon">➕</div>
+                        <h3>Nowy projekt</h3>
+                        <p>Rozpocznij nowy projekt i zgromadź zespół</p>
+                        <ul class="logged-features">
+                            <li>Stwórz nowy projekt</li>
+                            <li>Zdefiniuj cele i zadania</li>
+                            <li>Zaprosz członków zespołu</li>
+                            <li>Ustal harmonogram</li>
+                        </ul>
+                        <button class="logged-button secondary"
+                            onclick="window.location.href='create-project.html'">Utwórz projekt</button>
+                    </div>
+
+                    <div class="logged-card">
+                        <div class="logged-icon">👤</div>
+                        <h3>Twoje konto</h3>
+                        <p>Zarządzaj swoim profilem i ustawieniami</p>
+                        <ul class="logged-features">
+                            <li>Edytuj profil</li>
+                            <li>Zmień hasło</li>
+                            <li>Ustawienia powiadomień</li>
+                            <li>Twoje osiągnięcia</li>
+                        </ul>
+                        <button class="logged-button secondary" onclick="window.location.href='account.html'">Przejdź do
+                            konta</button>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <!-- Wybór opcji -->
@@ -205,8 +438,18 @@ $conn->close();
                 <form class="join-form" id="joinForm" method="post" action="">
                     <div class="form-grid">
                         <div class="form-group">
-                            <label for="fullName">Imię i nazwisko *</label>
-                            <input type="text" id="fullName" name="fullName" required>
+                            <label for="firstName">Imię *</label>
+                            <input type="text" id="firstName" name="firstName" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="lastName">Nazwisko *</label>
+                            <input type="text" id="lastName" name="lastName" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="nick">Nick *</label>
+                            <input type="text" id="nick" name="nick" required>
                         </div>
 
                         <div class="form-group">
@@ -309,28 +552,29 @@ $conn->close();
                     </button>
                 </div>
 
-                <form class="join-form" id="loginFormData">
+                <form class="join-form" id="loginFormData" method="POST">
                     <div class="form-grid">
-                        <div class="form-group full-width">
-                            <label for="loginEmail">E-mail *</label>
-                            <input type="email" id="loginEmail" name="loginEmail" required>
-                        </div>
-
-                        <div class="form-group full-width">
-                            <label for="loginPassword">Hasło *</label>
-                            <input type="password" id="loginPassword" name="loginPassword" required>
-                            <div class="form-options">
-                                <label class="checkbox-label small">
-                                    <input type="checkbox" id="remember" name="remember">
-                                    <span class="checkmark"></span>
-                                    Zapamiętaj mnie
-                                </label>
-                                <a href="#" class="link">Zapomniałeś hasła?</a>
+                        <h6 class="email_exist">Konto o podanym adresie e-mail już istnieje. Zaloguj się.</h4>
+                            <div class="form-group full-width">
+                                <label for="loginEmail">E-mail *</label>
+                                <input type="email" id="loginEmail" name="loginEmail" required>
                             </div>
-                        </div>
+
+                            <div class="form-group full-width">
+                                <label for="loginPassword">Hasło *</label>
+                                <input type="password" id="loginPassword" name="loginPassword" required>
+                                <div class="form-options">
+                                    <label class="checkbox-label small">
+                                        <input type="checkbox" id="remember" name="remember">
+                                        <span class="checkmark"></span>
+                                        Zapamiętaj mnie
+                                    </label>
+                                    <a href="#" class="link">Zapomniałeś hasła?</a>
+                                </div>
+                            </div>
                     </div>
 
-                    <button type="submit" class="submit-button">
+                    <button type="submit" class="submit-button" name="loginButton">
                         <span>Zaloguj się</span>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                             <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" />
@@ -348,7 +592,7 @@ $conn->close();
         <!-- Informacje dodatkowe -->
         <section class="benefits-section">
             <div class="container">
-                <h2 class="section-title">Co zyskujesz dołączając do nas?</h2>
+                <h2 class="section-title"><?php echo $benefits; ?></h2>
 
                 <div class="benefits-grid">
                     <div class="benefit-card">
@@ -382,7 +626,7 @@ $conn->close();
         <section class="info-section">
             <div class="container">
                 <div class="info-grid">
-                    <div class="info-card">
+                    <div class="info-card recrutation">
                         <h3>📅 Terminy rekrutacji</h3>
                         <div class="info-content">
                             <p><strong>Rekrutacja ciągła</strong> - możesz dołączyć w dowolnym momencie!</p>
@@ -446,6 +690,77 @@ $conn->close();
     </footer>
 
     <script>
+
+        const nickInput = document.getElementById('nick');
+        const nickFeedback = document.createElement('small');
+        nickFeedback.style.display = 'block';
+        nickFeedback.style.marginTop = '4px';
+        nickInput.parentNode.appendChild(nickFeedback);
+
+        let nickTimeout = null;
+
+        nickInput.addEventListener('input', function () {
+            const nick = this.value.trim();
+
+            if (nickTimeout) clearTimeout(nickTimeout);
+
+            // Małe opóźnienie żeby nie spamować bazy
+            nickTimeout = setTimeout(() => {
+                if (nick.length < 3) {
+                    nickFeedback.textContent = 'Nick za krótki';
+                    nickFeedback.style.color = 'red';
+                    return;
+                }
+
+                fetch(`check_nick.php?nick=${encodeURIComponent(nick)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === 'taken') {
+                            nickFeedback.textContent = 'Ten nick jest już zajęty';
+                            nickFeedback.style.color = 'red';
+                        } else if (data.status === 'available') {
+                            nickFeedback.textContent = 'Ten nick jest dostępny';
+                            nickFeedback.style.color = 'green';
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        nickFeedback.textContent = 'Błąd sprawdzania nicku';
+                        nickFeedback.style.color = 'red';
+                    });
+            }, 500);
+        });
+
+        // Funkcja wyświetlająca alert o istnieniu emaila
+        function emailExist() {
+            showLogin();
+            let emailAlert = document.querySelector('.email_exist');
+            emailAlert.style.display = 'block';
+        }
+
+        function loggedFlagF() {
+            const loggedSection = document.querySelector('.logged');
+            loggedSection.style.display = 'block';
+
+            const authChoice = document.querySelector('.auth-choice');
+            let recrutationCard = document.querySelector('.info-card.recrutation');
+            recrutationCard.style.display = 'none';
+            authChoice.style.display = 'none';
+        }
+
+        // Po załadowaniu strony sprawdzamy flagę
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.emailExistsFlag) {
+                emailExist();
+
+                window.emailExistsFlag = false; // reset
+            }
+            if (window.loggedFlag) {
+                loggedFlagF();
+                window.loggedFlag = false; // reset
+            }
+        });
+
         // Funkcje przełączania między formularzami
         function showRegister() {
             document.querySelector('.auth-choice').style.display = 'none';
@@ -513,7 +828,7 @@ $conn->close();
             const formObject = Object.fromEntries(formData);
 
             console.log('Formularz logowania wysłany:', formObject);
-            alert('Zalogowano pomyślnie! Przenoszenie do panelu użytkownika...');
+            // alert('Zalogowano pomyślnie! Przenoszenie do panelu użytkownika...');
             // Tutaj można dodać przekierowanie do dashboardu
         });
 

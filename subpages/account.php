@@ -1,3 +1,100 @@
+<?php
+include("global/connection.php");
+session_start();
+
+if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
+    header("Location: join.php");
+    exit();
+}
+
+$userId = $_SESSION["user_id"]; // musi być liczba
+
+if (!$conn) {
+    die("Brak połączenia z bazą: " . mysqli_connect_error());
+}
+
+// Dane użytkownika
+$stmt = $conn->prepare("SELECT first_name, last_name, email, created_at, avatar, nick, phone, verification_status FROM users WHERE id = ?");
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$result = $stmt->get_result();
+if ($result && $result->num_rows === 1) {
+    $user = $result->fetch_assoc();
+    $firstName = $user['first_name'];
+    $lastName = $user['last_name'];
+    $email = $user['email'];
+    $joinDate = date("d.m.Y", strtotime($user['created_at']));
+    $userAvatar = $user['avatar'];
+    $nick = $user['nick'];
+    $phone = $user['phone'];
+    $verificationStatus = $user['verification_status'];
+} else {
+    header("Location: join.php");
+    exit();
+}
+
+// Liczba wszystkich projektów
+$stmt = $conn->prepare("SELECT COUNT(*) AS count FROM project_team WHERE user_id = ?");
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$result = $stmt->get_result();
+$amountOfProjects = $result->fetch_assoc()['count'] ?? 0;
+
+// Liczba własnych projektów (role = 'owner')
+$stmt = $conn->prepare("SELECT COUNT(*) AS count FROM project_team WHERE user_id = ? AND role = 'owner'");
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$result = $stmt->get_result();
+$amountOfOwnProjects = $result->fetch_assoc()['count'] ?? 0;
+
+// Liczba odznak
+$stmt = $conn->prepare("SELECT COUNT(*) AS count FROM badges WHERE user_id = ?");
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$result = $stmt->get_result();
+$amountOfBadges = $result->fetch_assoc()['count'] ?? 0;
+
+// Liczba komentarzy
+$stmt = $conn->prepare("SELECT COUNT(*) AS count FROM comments WHERE user_id = ?");
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$result = $stmt->get_result();
+$addedCommentsAmmount = $result->fetch_assoc()['count'] ?? 0;
+
+// Engagement (proste: projekty + komentarze)
+$engagement = $amountOfProjects + $addedCommentsAmmount;
+
+// Liczba logowań
+$stmt = $conn->prepare("SELECT COUNT(*) AS count FROM logs WHERE user_id = ? AND action = 'login'");
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$result = $stmt->get_result();
+$loginCount = $result->fetch_assoc()['count'] ?? 0;
+
+// Ostatnia zmiana profilu
+$stmt = $conn->prepare("SELECT created_at FROM logs WHERE user_id = ? AND action = 'update' ORDER BY created_at DESC LIMIT 1");
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$result = $stmt->get_result();
+$lastChange = $result->fetch_assoc()['created_at'] ?? 'Brak danych';
+
+// Ostatnie logowanie
+$stmt = $conn->prepare("SELECT created_at FROM logs WHERE user_id = ? AND action = 'login' ORDER BY created_at DESC LIMIT 1");
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$result = $stmt->get_result();
+$lastLogin = $result->fetch_assoc()['created_at'] ?? 'Brak danych';
+
+// Ostatnio edytowany projekt
+$stmt = $conn->prepare("SELECT details FROM logs WHERE user_id = ? AND action = 'project_edit' ORDER BY created_at DESC LIMIT 1");
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$result = $stmt->get_result();
+$lastEditedProject = $result->fetch_assoc()['project_name'] ?? 'Brak danych';
+?>
+
+
+
 <!DOCTYPE html>
 <html lang="pl">
 
@@ -20,7 +117,7 @@
                     <img src="../photos/website-logo.jpg" alt="Logo TeenCollab">
                     <span>TeenCollab</span>
                 </div>
-                
+
                 <ul class="nav-menu">
                     <li><a href="index.html">Strona główna</a></li>
                     <li><a href="projekty.html">Projekty</a></li>
@@ -28,7 +125,7 @@
                     <li><a href="o-projekcie.html">O projekcie</a></li>
                     <li class="nav-cta"><a href="konto.html" class="cta-button active">Moje konto</a></li>
                 </ul>
-                
+
                 <button class="burger-menu" id="burger-menu" aria-label="Menu">
                     <span></span>
                     <span></span>
@@ -40,50 +137,50 @@
 
     <main id="main-content">
         <div class="account-container">
-            <!-- Nagłówek profilu -->
             <section class="profile-header">
                 <div class="profile-avatar-section">
                     <div class="avatar-container">
-                        <img src="../photos/sample_person.png" alt="Zdjęcie profilowe" class="profile-avatar" id="profileAvatar">
+                        <img src="<?php echo $userAvatar; ?>" alt="Twoje zdjęcie profilowe" class="profile-avatar"
+                            id="profileAvatar">
                         <button class="change-avatar-btn" onclick="openAvatarModal()">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                <path d="M4 16L8 12L18 22H2L4 16Z" stroke="currentColor" stroke-width="2"/>
-                                <path d="M15 5L19 9" stroke="currentColor" stroke-width="2"/>
-                                <path d="M18 2L22 6" stroke="currentColor" stroke-width="2"/>
-                                <path d="M21 13V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H11" stroke="currentColor" stroke-width="2"/>
+                                <path d="M4 16L8 12L18 22H2L4 16Z" stroke="currentColor" stroke-width="2" />
+                                <path d="M15 5L19 9" stroke="currentColor" stroke-width="2" />
+                                <path d="M18 2L22 6" stroke="currentColor" stroke-width="2" />
+                                <path
+                                    d="M21 13V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H11"
+                                    stroke="currentColor" stroke-width="2" />
                             </svg>
                             Zmień zdjęcie
                         </button>
                     </div>
                 </div>
                 <div class="profile-info">
-                    <h1 class="profile-name">Jan Kowalski</h1>
+                    <h1 class="profile-name"><?php echo $firstName . " " . $lastName; ?></h1>
                     <p class="profile-role">Kreator Przyszłości</p>
-                    <p class="profile-join-date">Dołączył: 15 marca 2024</p>
+                    <p class="profile-join-date">Dołączył: <?php echo $joinDate; ?></p>
                 </div>
             </section>
 
             <div class="account-layout">
-                <!-- Lewa kolumna -->
                 <div class="account-sidebar">
-                    <!-- Statystyki użytkownika -->
                     <section class="stats-section">
                         <h2>Statystyki</h2>
                         <div class="stats-grid">
                             <div class="stat-item">
-                                <span class="stat-number">12</span>
+                                <span class="stat-number"><?php echo $amountOfProjects; ?></span>
                                 <span class="stat-label">Projektów</span>
                             </div>
                             <div class="stat-item">
-                                <span class="stat-number">5</span>
+                                <span class="stat-number"><?php echo $amountOfOwnProjects; ?></span>
                                 <span class="stat-label">Własnych</span>
                             </div>
                             <div class="stat-item">
-                                <span class="stat-number">8</span>
+                                <span class="stat-number"><?php echo $amountOfBadges; ?></span>
                                 <span class="stat-label">Odznak</span>
                             </div>
                             <div class="stat-item">
-                                <span class="stat-number">85%</span>
+                                <span class="stat-number"><?php echo $engagement; ?></span>
                                 <span class="stat-label">Zaangażowanie</span>
                             </div>
                         </div>
@@ -95,19 +192,19 @@
                         <div class="summary-list">
                             <div class="summary-item">
                                 <span>Konto utworzone:</span>
-                                <span>15.03.2024</span>
+                                <span><?php echo $joinDate; ?></span>
                             </div>
                             <div class="summary-item">
                                 <span>Liczba logowań:</span>
-                                <span>147</span>
+                                <span><?php echo $loginCount; ?></span>
                             </div>
                             <div class="summary-item">
                                 <span>Ostatnia zmiana:</span>
-                                <span>2 dni temu</span>
+                                <span><?php echo $lastChange; ?></span>
                             </div>
                             <div class="summary-item">
                                 <span>Status weryfikacji:</span>
-                                <span class="verified">Zweryfikowany</span>
+                                <span class="verified"><?php echo $verificationStatus; ?></span>
                             </div>
                         </div>
                     </section>
@@ -118,15 +215,18 @@
                         <div class="activity-list">
                             <div class="activity-item">
                                 <span>Ostatnie logowanie</span>
-                                <span>Dzisiaj, 14:30</span>
+                                <span><?php echo $lastLogin; ?></span>
                             </div>
+                            <?php
+
+                            ?>
                             <div class="activity-item">
                                 <span>Edytowany projekt</span>
                                 <span>"Zielone Miasto"</span>
                             </div>
                             <div class="activity-item">
                                 <span>Dodane komentarze</span>
-                                <span>3</span>
+                                <span><?php echo $addedCommentsAmmount; ?></span>
                             </div>
                         </div>
                     </section>
@@ -143,11 +243,15 @@
                             <div class="data-item">
                                 <label>Imię i nazwisko</label>
                                 <div class="data-value">
-                                    <span>Jan Kowalski</span>
+                                    <span><?php echo $firstName . " " . $lastName; ?></span>
                                     <button class="edit-btn" onclick="openEditModal('fullName', 'Jan Kowalski')">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                            <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2"/>
-                                            <path d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z" stroke="currentColor" stroke-width="2"/>
+                                            <path
+                                                d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13"
+                                                stroke="currentColor" stroke-width="2" />
+                                            <path
+                                                d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z"
+                                                stroke="currentColor" stroke-width="2" />
                                         </svg>
                                     </button>
                                 </div>
@@ -155,11 +259,15 @@
                             <div class="data-item">
                                 <label>Nick</label>
                                 <div class="data-value">
-                                    <span>janek_dev</span>
+                                    <span><?php echo $nick; ?></span>
                                     <button class="edit-btn" onclick="openEditModal('nick', 'janek_dev')">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                            <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2"/>
-                                            <path d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z" stroke="currentColor" stroke-width="2"/>
+                                            <path
+                                                d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13"
+                                                stroke="currentColor" stroke-width="2" />
+                                            <path
+                                                d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z"
+                                                stroke="currentColor" stroke-width="2" />
                                         </svg>
                                     </button>
                                 </div>
@@ -167,11 +275,15 @@
                             <div class="data-item">
                                 <label>E-mail</label>
                                 <div class="data-value">
-                                    <span>jan.kowalski@email.com</span>
-                                    <button class="edit-btn" onclick="openEditModal('email', 'jan.kowalski@email.com')">
+                                    <span><?php echo $email; ?></span>
+                                    <button class="edit-btn" onclick="openEditModal('email', '<?php echo $email; ?>')">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                            <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2"/>
-                                            <path d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z" stroke="currentColor" stroke-width="2"/>
+                                            <path
+                                                d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13"
+                                                stroke="currentColor" stroke-width="2" />
+                                            <path
+                                                d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z"
+                                                stroke="currentColor" stroke-width="2" />
                                         </svg>
                                     </button>
                                 </div>
@@ -179,11 +291,15 @@
                             <div class="data-item">
                                 <label>Telefon</label>
                                 <div class="data-value">
-                                    <span>+48 123 456 789</span>
-                                    <button class="edit-btn" onclick="openEditModal('phone', '+48 123 456 789')">
+                                    <span><?php echo $phone; ?></span>
+                                    <button class="edit-btn" onclick="openEditModal('phone', '<?php echo $phone; ?>')">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                            <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="currentColor" stroke-width="2"/>
-                                            <path d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z" stroke="currentColor" stroke-width="2"/>
+                                            <path
+                                                d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13"
+                                                stroke="currentColor" stroke-width="2" />
+                                            <path
+                                                d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z"
+                                                stroke="currentColor" stroke-width="2" />
                                         </svg>
                                     </button>
                                 </div>
@@ -359,23 +475,30 @@
                         <div class="danger-actions">
                             <button class="danger-btn" onclick="openDangerModal('delete')">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                                    <path d="M3 6H5H21" stroke="currentColor" stroke-width="2"/>
-                                    <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="2"/>
+                                    <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" />
+                                    <path
+                                        d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z"
+                                        stroke="currentColor" stroke-width="2" />
                                 </svg>
                                 Usuń konto
                             </button>
                             <button class="danger-btn" onclick="openDangerModal('logout')">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                                    <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" stroke="currentColor" stroke-width="2"/>
-                                    <path d="M16 17L21 12L16 7" stroke="currentColor" stroke-width="2"/>
-                                    <path d="M21 12H9" stroke="currentColor" stroke-width="2"/>
+                                    <path
+                                        d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9"
+                                        stroke="currentColor" stroke-width="2" />
+                                    <path d="M16 17L21 12L16 7" stroke="currentColor" stroke-width="2" />
+                                    <path d="M21 12H9" stroke="currentColor" stroke-width="2" />
                                 </svg>
                                 Wyloguj ze wszystkich urządzeń
                             </button>
                             <button class="danger-btn" onclick="openDangerModal('permissions')">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                                    <path d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z" stroke="currentColor" stroke-width="2"/>
-                                    <path d="M2 12C2 12 5 6 12 6C19 6 22 12 22 12C22 12 19 18 12 18C5 18 2 12 2 12Z" stroke="currentColor" stroke-width="2"/>
+                                    <path
+                                        d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"
+                                        stroke="currentColor" stroke-width="2" />
+                                    <path d="M2 12C2 12 5 6 12 6C19 6 22 12 22 12C22 12 19 18 12 18C5 18 2 12 2 12Z"
+                                        stroke="currentColor" stroke-width="2" />
                                 </svg>
                                 Cofnij wszystkie uprawnienia
                             </button>
