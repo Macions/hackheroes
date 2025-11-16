@@ -21,7 +21,7 @@
                     <img src="../photos/website-logo.jpg" alt="Logo TeenCollab">
                     <span>TeenCollab</span>
                 </div>
-                
+
                 <ul class="nav-menu">
                     <li><a href="index.html">Strona główna</a></li>
                     <li><a href="projekty.html">Projekty</a></li>
@@ -29,7 +29,7 @@
                     <li><a href="o-projekcie.html">O projekcie</a></li>
                     <li class="nav-cta"><a href="dolacz.html" class="cta-button">Dołącz</a></li>
                 </ul>
-                
+
                 <button class="burger-menu" id="burger-menu" aria-label="Menu">
                     <span></span>
                     <span></span>
@@ -67,8 +67,9 @@
         <section class="featured-creators">
             <div class="container">
                 <h2 class="section-title">Najbardziej Zasłużeni Twórcy</h2>
-                <p class="section-subtitle">Poznaj naszych topowych aktywistów, którzy prowadzą najważniejsze inicjatywy</p>
-                
+                <p class="section-subtitle">Poznaj naszych topowych aktywistów, którzy prowadzą najważniejsze inicjatywy
+                </p>
+
                 <div class="creators-grid">
                     <article class="creator-card featured">
                         <div class="creator-badge">🥇 #1</div>
@@ -78,7 +79,8 @@
                         <div class="creator-content">
                             <h3>Anna Kowalska</h3>
                             <span class="creator-role">Liderka Projektów Ekologicznych</span>
-                            <p class="creator-achievements">Zorganizowała 15 akcji sprzątania lasów, zaangażowała 200+ wolontariuszy, zdobyła grant na rozwój zielonych inicjatyw</p>
+                            <p class="creator-achievements">Zorganizowała 15 akcji sprzątania lasów, zaangażowała 200+
+                                wolontariuszy, zdobyła grant na rozwój zielonych inicjatyw</p>
                             <div class="creator-stats">
                                 <div class="stat">
                                     <span class="number">15</span>
@@ -100,7 +102,8 @@
                         <div class="creator-content">
                             <h3>Michał Nowak</h3>
                             <span class="creator-role">Specjalista IT & Mentor</span>
-                            <p class="creator-achievements">Stworzył platformę do koordynacji wolontariatu, przeszkolił 50+ osób z podstaw programowania, lider tech community</p>
+                            <p class="creator-achievements">Stworzył platformę do koordynacji wolontariatu, przeszkolił
+                                50+ osób z podstaw programowania, lider tech community</p>
                             <div class="creator-stats">
                                 <div class="stat">
                                     <span class="number">8</span>
@@ -122,7 +125,8 @@
                         <div class="creator-content">
                             <h3>Katarzyna Wiśniewska</h3>
                             <span class="creator-role">Koordynatorka Projektów Społecznych</span>
-                            <p class="creator-achievements">Zorganizowała pomoc dla 100+ seniorów, stworzyła program mentoringowy dla młodzieży, koordynowała 10 dużych eventów</p>
+                            <p class="creator-achievements">Zorganizowała pomoc dla 100+ seniorów, stworzyła program
+                                mentoringowy dla młodzieży, koordynowała 10 dużych eventów</p>
                             <div class="creator-stats">
                                 <div class="stat">
                                     <span class="number">12</span>
@@ -144,7 +148,7 @@
             <div class="container">
                 <h2 class="section-title">Młode Talenty</h2>
                 <p class="section-subtitle">Świeża energia i nowe pomysły - przyszłość naszej społeczności</p>
-                
+
                 <div class="talents-grid">
                     <article class="talent-card">
                         <div class="talent-image">
@@ -154,7 +158,8 @@
                             <h3>Julia Nowak</h3>
                             <span class="talent-join-date">Dołączyła 3 miesiące temu</span>
                             <blockquote class="talent-quote">
-                                "Chcę rozwijać swoje umiejętności front-endowe i tworzyć aplikacje, które pomagają lokalnym społecznościom"
+                                "Chcę rozwijać swoje umiejętności front-endowe i tworzyć aplikacje, które pomagają
+                                lokalnym społecznościom"
                             </blockquote>
                             <div class="talent-goals">
                                 <span class="goal-tag">🎯 Front-end</span>
@@ -172,7 +177,8 @@
                             <h3>Piotr Kowalski</h3>
                             <span class="talent-join-date">Dołączył 2 miesiące temu</span>
                             <blockquote class="talent-quote">
-                                "Interesuje mnie ekologia i zrównoważony rozwój. Chcę organizować akcje edukacyjne w szkołach"
+                                "Interesuje mnie ekologia i zrównoważony rozwój. Chcę organizować akcje edukacyjne w
+                                szkołach"
                             </blockquote>
                             <div class="talent-goals">
                                 <span class="goal-tag">🎯 Ekologia</span>
@@ -190,7 +196,8 @@
                             <h3>Alicja Zielińska</h3>
                             <span class="talent-join-date">Dołączyła 1 miesiąc temu</span>
                             <blockquote class="talent-quote">
-                                "Uwielbiam grafiki i social media. Chcę pomagać w promocji projektów i dotrzeć do większej liczby młodych ludzi"
+                                "Uwielbiam grafiki i social media. Chcę pomagać w promocji projektów i dotrzeć do
+                                większej liczby młodych ludzi"
                             </blockquote>
                             <div class="talent-goals">
                                 <span class="goal-tag">🎯 Grafika</span>
@@ -208,7 +215,8 @@
                             <h3>Mateusz Lewandowski</h3>
                             <span class="talent-join-date">Dołączył 4 miesiące temu</span>
                             <blockquote class="talent-quote">
-                                "Chcę rozwijać swoje umiejętności leadershipowe i organizować projekty, które realnie zmieniają moje miasto"
+                                "Chcę rozwijać swoje umiejętności leadershipowe i organizować projekty, które realnie
+                                zmieniają moje miasto"
                             </blockquote>
                             <div class="talent-goals">
                                 <span class="goal-tag">🎯 Leadership</span>
@@ -226,7 +234,7 @@
             <div class="container">
                 <h2 class="section-title">Ciekawostki & Wyróżnienia</h2>
                 <p class="section-subtitle">Zobacz, co udało nam się osiągnąć razem w ostatnim czasie</p>
-                
+
                 <div class="stats-highlights">
                     <div class="highlight-card">
                         <div class="highlight-icon">🚀</div>
@@ -277,7 +285,8 @@
             <div class="container">
                 <div class="cta-content">
                     <h2>Chcesz być częścią naszej społeczności?</h2>
-                    <p>Dołącz do tysięcy młodych ludzi, którzy razem tworzą lepszą przyszłość. Nie ma znaczenia, czy dopiero zaczynasz, czy masz już doświadczenie - każdy znajdzie tu swoje miejsce!</p>
+                    <p>Dołącz do tysięcy młodych ludzi, którzy razem tworzą lepszą przyszłość. Nie ma znaczenia, czy
+                        dopiero zaczynasz, czy masz już doświadczenie - każdy znajdzie tu swoje miejsce!</p>
                     <div class="cta-buttons">
                         <a href="dolacz.html" class="cta-button primary">Dołącz do nas!</a>
                         <a href="projekty.html" class="cta-button secondary">Zobacz projekty</a>

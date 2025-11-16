@@ -13,15 +13,24 @@ if ($conn->connect_error) {
     die(json_encode(['status' => 'error', 'message' => 'Błąd połączenia z bazą']));
 }
 
-$nick = trim($_GET['nick'] ?? '');
+// Obsługa zarówno GET jak i POST
+$nick = trim($_REQUEST['nick'] ?? '');
 
 if ($nick === '') {
     echo json_encode(['status' => 'error', 'message' => 'Nie podano nicku']);
     exit;
 }
 
-$stmt = $conn->prepare("SELECT id FROM users WHERE nick=?");
-$stmt->bind_param("s", $nick);
+// Sprawdź czy nick istnieje u innych użytkowników (nie licząc aktualnego użytkownika)
+$userId = $_SESSION["user_id"] ?? 0;
+if ($userId > 0) {
+    $stmt = $conn->prepare("SELECT id FROM users WHERE nick = ? AND id != ?");
+    $stmt->bind_param("si", $nick, $userId);
+} else {
+    $stmt = $conn->prepare("SELECT id FROM users WHERE nick = ?");
+    $stmt->bind_param("s", $nick);
+}
+
 $stmt->execute();
 $stmt->store_result();
 
@@ -33,3 +42,4 @@ if ($stmt->num_rows > 0) {
 
 $stmt->close();
 $conn->close();
+?>

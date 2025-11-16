@@ -22,9 +22,22 @@ if ($conn->connect_error) {
 $nav_cta_action = '';
 $benefits = 'Co zyskujesz dołączając do nas';
 
-// Zmienna widoczna również przed zalogowaniem, aby uniknąć warningów
-$firstName = "Użytkowniku";
-$userAvatar = "../photos/sample_person.png";
+if (isset($_SESSION['user_email'])) {
+    $email = $_SESSION['user_email'];
+
+    // Przygotowanie zapytania
+    $stmt = $conn->prepare("SELECT first_name, avatar FROM users WHERE email = ?");
+    if ($stmt === false) {
+        die("Błąd przygotowania zapytania: " . $conn->error);
+    }
+
+    $stmt->bind_param("s", $email); // 's' bo email jest stringiem
+    $stmt->execute();
+    $stmt->bind_result($firstName, $userAvatar); // Wartości zostaną przypisane tutaj
+    $stmt->fetch();
+    $stmt->close();
+}
+
 
 // Funkcja logowania akcji - POPRAWIONA
 function logAction($conn, $userId, $email, $action)
@@ -38,7 +51,6 @@ function logAction($conn, $userId, $email, $action)
         }
         $tableCheck->close();
     } catch (Exception $e) {
-        // Tabela nie istnieje lub błąd zapytania, pomiś logowanie
         return;
     }
 

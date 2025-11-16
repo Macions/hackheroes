@@ -83,7 +83,16 @@ $stmt = $conn->prepare("SELECT created_at FROM logs WHERE user_id = ? AND action
 $stmt->bind_param("i", $userId);
 $stmt->execute();
 $result = $stmt->get_result();
-$lastLogin = $result->fetch_assoc()['created_at'] ?? 'Brak danych';
+$lastLogin = $result->fetch_assoc()['created_at'] ?? null;
+$stmt->close();
+
+if ($lastLogin) {
+    $timeOnly = date('m.d.Y', strtotime($lastLogin));       // godzina:minuta
+    $fullDate = date('m.d.Y H:i:s', strtotime($lastLogin)); // pełna data
+} else {
+    $timeOnly = 'Brak danych';
+    $fullDate = '';
+}
 
 // Ostatnio edytowany projekt
 $stmt = $conn->prepare("SELECT details FROM logs WHERE user_id = ? AND action = 'project_edit' ORDER BY created_at DESC LIMIT 1");
@@ -91,9 +100,9 @@ $stmt->bind_param("i", $userId);
 $stmt->execute();
 $result = $stmt->get_result();
 $lastEditedProject = $result->fetch_assoc()['project_name'] ?? 'Brak danych';
+
+// Zmiana hasła
 ?>
-
-
 
 <!DOCTYPE html>
 <html lang="pl">
@@ -215,7 +224,8 @@ $lastEditedProject = $result->fetch_assoc()['project_name'] ?? 'Brak danych';
                         <div class="activity-list">
                             <div class="activity-item">
                                 <span>Ostatnie logowanie</span>
-                                <span><?php echo $lastLogin; ?></span>
+                                <span
+                                    title="<?= htmlspecialchars($fullDate) ?>"><?= htmlspecialchars($timeOnly) ?></span>
                             </div>
                             <?php
 
@@ -244,7 +254,7 @@ $lastEditedProject = $result->fetch_assoc()['project_name'] ?? 'Brak danych';
                                 <label>Imię i nazwisko</label>
                                 <div class="data-value">
                                     <span><?php echo $firstName . " " . $lastName; ?></span>
-                                    <button class="edit-btn" onclick="openEditModal('fullName', 'Jan Kowalski')">
+                                    <button class="edit-btn">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                                             <path
                                                 d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13"
@@ -260,7 +270,7 @@ $lastEditedProject = $result->fetch_assoc()['project_name'] ?? 'Brak danych';
                                 <label>Nick</label>
                                 <div class="data-value">
                                     <span><?php echo $nick; ?></span>
-                                    <button class="edit-btn" onclick="openEditModal('nick', 'janek_dev')">
+                                    <button class="edit-btn">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                                             <path
                                                 d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13"
@@ -276,7 +286,7 @@ $lastEditedProject = $result->fetch_assoc()['project_name'] ?? 'Brak danych';
                                 <label>E-mail</label>
                                 <div class="data-value">
                                     <span><?php echo $email; ?></span>
-                                    <button class="edit-btn" onclick="openEditModal('email', '<?php echo $email; ?>')">
+                                    <button class="edit-btn">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                                             <path
                                                 d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13"
@@ -292,7 +302,7 @@ $lastEditedProject = $result->fetch_assoc()['project_name'] ?? 'Brak danych';
                                 <label>Telefon</label>
                                 <div class="data-value">
                                     <span><?php echo $phone; ?></span>
-                                    <button class="edit-btn" onclick="openEditModal('phone', '<?php echo $phone; ?>')">
+                                    <button class="edit-btn">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                                             <path
                                                 d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13"
@@ -319,36 +329,24 @@ $lastEditedProject = $result->fetch_assoc()['project_name'] ?? 'Brak danych';
                             <h2>Moje projekty</h2>
                         </div>
                         <div class="projects-list">
-                            <div class="project-item">
-                                <div class="project-info">
-                                    <h3>Zielone Miasto</h3>
-                                    <div class="project-meta">
-                                        <span class="status active">Aktywny</span>
-                                        <span class="role">Lider projektu</span>
-                                    </div>
-                                </div>
-                                <button class="project-btn">Przejdź do projektu</button>
-                            </div>
-                            <div class="project-item">
-                                <div class="project-info">
-                                    <h3>EduApp dla szkół</h3>
-                                    <div class="project-meta">
-                                        <span class="status completed">Ukończony</span>
-                                        <span class="role">Developer</span>
-                                    </div>
-                                </div>
-                                <button class="project-btn">Przejdź do projektu</button>
-                            </div>
-                            <div class="project-item">
-                                <div class="project-info">
-                                    <h3>Portal społecznościowy</h3>
-                                    <div class="project-meta">
-                                        <span class="status active">Aktywny</span>
-                                        <span class="role">Designer</span>
-                                    </div>
-                                </div>
-                                <button class="project-btn">Przejdź do projektu</button>
-                            </div>
+                            <?php
+                            $myProjectsStmt = $conn->prepare("SELECT * FROM projects p JOIN project_team pt ON p.id = pt.project_id WHERE pt.user_id = ?");
+                            $myProjectsStmt->bind_param("i", $userId);
+                            $myProjectsStmt->execute();
+                            $myProjects = $myProjectsStmt->get_result();
+
+                            if ($myProjects->num_rows > 0) {
+                                while ($project = $myProjects->fetch_assoc()) {
+                                    echo '<div class="project-item">
+                                                <h3>' . htmlspecialchars($project['project_name']) . '</h3>
+                                                <p>' . htmlspecialchars($project['description']) . '</p>
+                                                <span class="project-role">Rola: ' . htmlspecialchars($project['role']) . '</span>
+                                            </div>';
+                                }
+                            } else {
+                                echo '<p>Nie jesteś jeszcze członkiem żadnego projektu.</p>';
+                            }
+                            ?>
                         </div>
                     </section>
 
@@ -371,27 +369,20 @@ $lastEditedProject = $result->fetch_assoc()['project_name'] ?? 'Brak danych';
                                 <h3>Powiadomienia</h3>
                                 <div class="checkbox-group">
                                     <label class="checkbox-label">
-                                        <input type="checkbox" checked>
+                                        <input type="checkbox" data-setting="new_tasks_email">
                                         <span class="checkmark"></span>
                                         E-mail o nowych zadaniach
                                     </label>
                                     <label class="checkbox-label">
-                                        <input type="checkbox" checked>
+                                        <input type="checkbox" data-setting="new_comments_email">
                                         <span class="checkmark"></span>
                                         Powiadomienia o komentarzach
                                     </label>
                                     <label class="checkbox-label">
-                                        <input type="checkbox">
+                                        <input type="checkbox" data-setting="system_email">
                                         <span class="checkmark"></span>
                                         Powiadomienia systemowe
                                     </label>
-                                </div>
-                            </div>
-                            <div class="setting-group">
-                                <h3>Motyw</h3>
-                                <div class="theme-buttons">
-                                    <button class="theme-btn active">Jasny</button>
-                                    <button class="theme-btn">Ciemny</button>
                                 </div>
                             </div>
                         </div>
@@ -402,38 +393,22 @@ $lastEditedProject = $result->fetch_assoc()['project_name'] ?? 'Brak danych';
                         <div class="section-header">
                             <h2>Preferencje projektów</h2>
                         </div>
-                        <div class="preferences-grid">
-                            <div class="preference-item">
-                                <label>Domyślna rola</label>
-                                <select>
-                                    <option>Uczestnik</option>
-                                    <option>Developer</option>
-                                    <option>Designer</option>
-                                    <option>Lider</option>
-                                </select>
-                            </div>
-                            <div class="preference-item">
-                                <label>Widok projektów</label>
-                                <select>
-                                    <option>Siatka</option>
-                                    <option>Lista</option>
-                                </select>
-                            </div>
-                            <div class="preference-item">
-                                <label>Poziom zaangażowania</label>
-                                <select>
-                                    <option>Aktywnie uczestniczę</option>
-                                    <option>Mogę być przypisany do zadań</option>
-                                    <option>Obserwuję</option>
-                                </select>
-                            </div>
-                            <div class="preference-item full-width">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" checked>
-                                    <span class="checkmark"></span>
-                                    Automatyczne zapisywanie szkiców
-                                </label>
-                            </div>
+                        <div class="preference-item">
+                            <label>Domyślna rola</label>
+                            <select>
+                                <option value="Uczestnik">Uczestnik</option>
+                                <option value="Developer">Developer</option>
+                                <option value="Designer">Designer</option>
+                                <option value="Lider">Lider</option>
+                            </select>
+                        </div>
+                        <div class="preference-item">
+                            <label>Poziom zaangażowania</label>
+                            <select>
+                                <option value="Aktywnie uczestniczę">Aktywnie uczestniczę</option>
+                                <option value="Mogę być przypisany do zadań">Mogę być przypisany do zadań</option>
+                                <option value="Obserwuję">Obserwuję</option>
+                            </select>
                         </div>
                     </section>
 
@@ -565,6 +540,8 @@ $lastEditedProject = $result->fetch_assoc()['project_name'] ?? 'Brak danych';
     </footer>
 
     <script src="../scripts/account.js"></script>
-</body>
+
+    <body data-user-id="<?php echo $userId; ?>" data-user-email="<?php echo $email; ?>">
+    </body>
 
 </html>
