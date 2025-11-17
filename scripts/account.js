@@ -8,7 +8,113 @@ document.addEventListener("DOMContentLoaded", function () {
 	initializePasswordChange();
 	initializeNotifications();
 	initializePreferences();
+	verificationCheck();
+	initializeAvatarModal();
 });
+
+function initializeAvatarModal() {
+	console.log("Initializing avatar modal...");
+
+	// 1. Przycisk zapisywania avatara w modal
+	const saveAvatarBtn = document.querySelector(
+		"#avatarModal .modal-btn.primary"
+	);
+	if (saveAvatarBtn) {
+		saveAvatarBtn.addEventListener("click", saveAvatar);
+		console.log("✅ Avatar save button found:", saveAvatarBtn);
+	} else {
+		console.error("❌ Avatar save button not found!");
+
+		// Debug: sprawdź wszystkie przyciski w modal
+		const allButtons = document.querySelectorAll("#avatarModal button");
+		console.log("All buttons in modal:", allButtons);
+
+		// Spróbuj znaleźć przycisk po tekście
+		const buttons = document.querySelectorAll("#avatarModal button");
+		buttons.forEach((btn) => {
+			if (
+				btn.textContent.includes("Zapisz") ||
+				btn.textContent.includes("Save")
+			) {
+				btn.addEventListener("click", saveAvatar);
+				console.log("✅ Found save button by text:", btn);
+			}
+		});
+	}
+
+	// 2. Input do wybierania pliku
+	const avatarUpload = document.getElementById("avatarUpload");
+	if (avatarUpload) {
+		avatarUpload.addEventListener("change", function () {
+			previewAvatar(this);
+		});
+		console.log("✅ Avatar upload input found");
+	} else {
+		console.error("❌ Avatar upload input not found!");
+	}
+
+	// 3. Przyciski zamykania modala
+	const closeAvatarBtns = document.querySelectorAll(
+		"#avatarModal .modal-btn.secondary, #avatarModal .modal-close"
+	);
+	if (closeAvatarBtns.length > 0) {
+		closeAvatarBtns.forEach((btn) => {
+			btn.addEventListener("click", closeAvatarModal);
+		});
+		console.log("✅ Close buttons found:", closeAvatarBtns.length);
+	} else {
+		console.error("❌ Close buttons not found!");
+
+		// Dodaj ręcznie do przycisku Anuluj
+		const cancelBtn = document.querySelector(
+			"#avatarModal .modal-btn.secondary"
+		);
+		if (cancelBtn) {
+			cancelBtn.addEventListener("click", closeAvatarModal);
+			console.log("✅ Added close event to cancel button");
+		}
+	}
+
+	// 4. Przycisk zmiany avatara na stronie profilu (poza modem)
+	const changeAvatarBtn = document.querySelector(".change-avatar-btn");
+	if (changeAvatarBtn) {
+		changeAvatarBtn.addEventListener("click", openAvatarModal);
+		console.log("✅ Change avatar button found");
+	} else {
+		console.error("❌ Change avatar button not found!");
+
+		// Sprawdź czy może jest inny przycisk
+		const profileAvatar = document.getElementById("profileAvatar");
+		if (profileAvatar) {
+			profileAvatar.addEventListener("click", openAvatarModal);
+			console.log("✅ Added click event to profile avatar");
+		}
+	}
+
+	// 5. Zamknięcie modala przy kliknięciu w tło
+	const avatarModal = document.getElementById("avatarModal");
+	if (avatarModal) {
+		avatarModal.addEventListener("click", function (e) {
+			if (e.target === this) {
+				closeAvatarModal();
+			}
+		});
+		console.log("✅ Background click handler added");
+	}
+
+	// 6. Zamknięcie modala klawiszem Escape
+	document.addEventListener("keydown", function (e) {
+		if (
+			e.key === "Escape" &&
+			avatarModal &&
+			avatarModal.style.display === "flex"
+		) {
+			closeAvatarModal();
+		}
+	});
+
+	console.log("🎯 Avatar modal initialization complete");
+}
 
 function initializeInlineEditing() {
 	const editButtons = document.querySelectorAll(".edit-btn");
@@ -45,6 +151,11 @@ function initializeInlineEditing() {
 }
 
 function startInlineEdit(field, valueElement, editButton) {
+	if (isSaving) {
+		console.log("Trwa zapisywanie, pomijam nową edycję");
+		return;
+	}
+
 	finishEditing();
 
 	const currentValue = valueElement.textContent;
@@ -71,6 +182,7 @@ function startInlineEdit(field, valueElement, editButton) {
 
 	if (field === "nick") {
 		input.addEventListener("input", function () {
+			if (isSaving) return; // Blokuj podczas zapisywania
 			clearTimeout(nickCheckTimeout);
 			nickCheckTimeout = setTimeout(() => {
 				checkNickAvailability(this.value);
@@ -79,6 +191,8 @@ function startInlineEdit(field, valueElement, editButton) {
 	}
 
 	input.addEventListener("keypress", function (e) {
+		if (isSaving) return; // Blokuj podczas zapisywania
+
 		if (e.key === "Enter") {
 			saveInlineEdit();
 		} else if (e.key === "Escape") {
@@ -87,6 +201,8 @@ function startInlineEdit(field, valueElement, editButton) {
 	});
 
 	input.addEventListener("blur", function () {
+		if (isSaving) return; // Blokuj podczas zapisywania
+
 		setTimeout(() => {
 			if (!document.activeElement.classList.contains("inline-edit-input")) {
 				saveInlineEdit();
@@ -424,34 +540,6 @@ function previewAvatar(input) {
 	}
 }
 
-function saveAvatar() {
-	const fileInput = document.getElementById("avatarUpload");
-	if (fileInput.files && fileInput.files[0]) {
-		const formData = new FormData();
-		formData.append("avatar", fileInput.files[0]);
-		const userId = document.body.getAttribute("data-user-id");
-		formData.append("user_id", userId);
-
-		const xhr = new XMLHttpRequest();
-		xhr.open("POST", "update_avatar.php", true);
-
-		xhr.onload = function () {
-			if (xhr.status === 200) {
-				const response = JSON.parse(xhr.responseText);
-				if (response.success) {
-					// LOGOWANIE ZMIANY AVATARA
-					logUserAction("avatar_change", "Zdjęcie profilowe zostało zmienione");
-
-					document.getElementById("profileAvatar").src = response.avatarUrl;
-					closeAvatarModal();
-				}
-			}
-		};
-
-		xhr.send(formData);
-	}
-}
-
 function openDangerModal(action) {
 	const messages = {
 		delete: "Czy na pewno chcesz usunąć konto? Tej operacji nie można cofnąć.",
@@ -593,6 +681,24 @@ function validatePasswordFields() {
 			matchIndicator.textContent = "Hasła nie są identyczne";
 			matchIndicator.className = "password-match invalid";
 		}
+	}
+}
+
+function verificationCheck() {
+	const verified = document.querySelector(".verified");
+
+	// SPRAWDŹ CZY ELEMENT ISTNIEJE
+	if (!verified) {
+		console.log("Element .verified nie został znaleziony");
+		return;
+	}
+
+	const verifiedValue = verified.textContent.trim();
+
+	if (verifiedValue !== "Zweryfikowany" && verifiedValue !== "Zweryfikowano") {
+		verified.style.color = "red";
+	} else {
+		verified.style.color = "green";
 	}
 }
 
@@ -1019,14 +1125,11 @@ function showPreferenceFeedback(message, type) {
 }
 
 function logUserAction(action, details = "") {
-	console.log("Logowanie akcji:", action, details); // DEBUG
-
 	const xhr = new XMLHttpRequest();
 	xhr.open("POST", "log_action.php", true);
 	xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
 
 	xhr.onload = function () {
-		console.log("Odpowiedź log_action.php:", xhr.status, xhr.responseText); // DEBUG
 		if (xhr.status !== 200) {
 			console.error("Błąd logowania akcji:", action);
 		}
@@ -1042,14 +1145,251 @@ function logUserAction(action, details = "") {
 			.querySelector("[data-user-email]")
 			?.getAttribute("data-user-email") || "";
 
-	console.log("Dane do logowania:", { userId, userEmail, action, details }); // DEBUG
-
 	xhr.send(
 		`user_id=${userId}` +
 			`&email=${encodeURIComponent(userEmail)}` +
 			`&action=${encodeURIComponent(action)}` +
 			`&details=${encodeURIComponent(details)}`
 	);
+}
+
+function openDeleteModal() {
+	document.getElementById("deleteModal").classList.add("active");
+}
+
+function closeDeleteModal() {
+	document.getElementById("deleteModal").classList.remove("active");
+}
+
+function confirmDelete() {
+	const btn = document.getElementById("confirmDeleteBtn");
+	btn.disabled = true;
+	btn.innerHTML = "Usuwanie...";
+
+	fetch("delete_account.php", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/x-www-form-urlencoded",
+		},
+		body: "confirm_delete=true",
+	})
+		.then((response) => response.json())
+		.then((data) => {
+			if (data.success) {
+				window.location.href = "../index.php";
+			} else {
+				alert("Błąd: " + data.message);
+				closeDeleteModal();
+			}
+		})
+		.catch((error) => {
+			console.error("Error:", error);
+			alert("Wystąpił błąd podczas usuwania konta");
+			closeDeleteModal();
+		});
+}
+
+document.getElementById("deleteModal").addEventListener("click", function (e) {
+	if (e.target === this) {
+		closeDeleteModal();
+	}
+});
+
+function showAvatarFeedback(message, type) {
+	let feedback = document.querySelector(".avatar-feedback");
+	if (!feedback) {
+		feedback = document.createElement("div");
+		feedback.className = "avatar-feedback";
+		const modalContent = document.querySelector("#avatarModal .modal-content");
+		modalContent.appendChild(feedback);
+	}
+
+	feedback.textContent = message;
+	feedback.className = `avatar-feedback ${type}`;
+
+	setTimeout(() => {
+		feedback.remove();
+	}, 3000);
+}
+
+// Ulepszona funkcja preview
+function previewAvatar(input) {
+	const feedback = document.querySelector(".avatar-feedback");
+	if (feedback) feedback.remove();
+
+	if (input.files && input.files[0]) {
+		const file = input.files[0];
+
+		// Walidacja rozmiaru
+		if (file.size > 5 * 1024 * 1024) {
+			showAvatarFeedback("Plik jest za duży (max 5MB)", "error");
+			input.value = "";
+			return;
+		}
+
+		// Walidacja typu
+		const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif"];
+		if (!allowedTypes.includes(file.type)) {
+			showAvatarFeedback("Dozwolone formaty: JPG, PNG, GIF", "error");
+			input.value = "";
+			return;
+		}
+
+		const reader = new FileReader();
+		reader.onload = function (e) {
+			document.getElementById("avatarPreview").src = e.target.result;
+		};
+		reader.readAsDataURL(input.files[0]);
+	}
+}
+
+function saveAvatar() {
+	console.log("🔄 saveAvatar function started");
+
+	// ✅ UŻYJ TEGO SAMEGO SELEKTORA CO W initializeAvatarModal()
+	const saveBtn = document.querySelector("#avatarModal .modal-btn.primary");
+	console.log("🔍 Save button in saveAvatar:", saveBtn);
+
+	const fileInput = document.getElementById("avatarUpload");
+
+	// SPRAWDŹ CZY PLIK ISTNIEJE
+	if (!fileInput) {
+		console.error("❌ Nie znaleziono inputa avatarUpload");
+		showAvatarFeedback("Błąd formularza - brak inputa", "error");
+		return;
+	}
+
+	if (!fileInput.files || fileInput.files.length === 0) {
+		console.error("❌ Nie wybrano pliku");
+		showAvatarFeedback("Wybierz plik", "error");
+		return;
+	}
+
+	const file = fileInput.files[0];
+	console.log("📁 Wybrany plik:", file.name, file.size, file.type);
+
+	// Walidacja pliku
+	const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif"];
+	const maxFileSize = 5 * 1024 * 1024; // 5MB
+
+	if (!allowedTypes.includes(file.type)) {
+		showAvatarFeedback("Dozwolone formaty: JPG, PNG, GIF", "error");
+		return;
+	}
+
+	if (file.size > maxFileSize) {
+		showAvatarFeedback("Plik jest za duży (max 5MB)", "error");
+		return;
+	}
+
+	// ✅ BEZPIECZNA AKTUALIZACJA PRZYCISKU
+	let originalText = "Zapisz zdjęcie";
+	if (saveBtn && saveBtn.textContent) {
+		originalText = saveBtn.textContent;
+		saveBtn.textContent = "Zapisywanie...";
+		saveBtn.disabled = true;
+		console.log("🔘 Przycisk zablokowany");
+	} else {
+		console.warn("⚠️ Save button not found, continuing without UI update");
+	}
+
+	// PRZYGOTUJ DANE
+	const formData = new FormData();
+	formData.append("avatar", file);
+
+	const userId = document.body.getAttribute("data-user-id");
+	if (userId) {
+		formData.append("user_id", userId);
+		console.log("👤 User ID:", userId);
+	} else {
+		console.error("❌ Brak user ID");
+		showAvatarFeedback("Błąd sesji", "error");
+
+		// Przywróć przycisk jeśli istnieje
+		if (saveBtn) {
+			saveBtn.textContent = originalText;
+			saveBtn.disabled = false;
+		}
+		return;
+	}
+
+	// WYŚLIJ ZAPYTANIE
+	const xhr = new XMLHttpRequest();
+	xhr.open("POST", "update_avatar.php", true);
+
+	xhr.onload = function () {
+		console.log("📡 Odpowiedź serwera:", xhr.status);
+
+		// ✅ PRZYWRÓĆ PRZYCISK - ZABEZPIECZONE
+		if (saveBtn) {
+			saveBtn.textContent = originalText;
+			saveBtn.disabled = false;
+			console.log("🔘 Przycisk przywrócony");
+		}
+
+		if (xhr.status === 200) {
+			try {
+				const response = JSON.parse(xhr.responseText);
+				console.log("📄 Odpowiedź JSON:", response);
+
+				if (response.success) {
+					// AKTUALIZACJA AVATARA
+					const profileAvatar = document.getElementById("profileAvatar");
+					if (profileAvatar) {
+						profileAvatar.src = response.avatarUrl;
+						console.log("✅ Avatar zaktualizowany:", response.avatarUrl);
+					} else {
+						console.error("❌ Element profileAvatar nie znaleziony");
+					}
+
+					// Avatar w navbarze
+					const navAvatar = document.querySelector(
+						".nav-user-dropdown .user-avatar, .user-avatar"
+					);
+					if (navAvatar) {
+						navAvatar.src = response.avatarUrl;
+						console.log("✅ Avatar w navbarze zaktualizowany");
+					}
+
+					logUserAction("avatar_change", "Zdjęcie profilowe zostało zmienione");
+					closeAvatarModal();
+					showAvatarFeedback("✅ Avatar został zmieniony pomyślnie", "success");
+				} else {
+					console.error("❌ Błąd z serwera:", response.message);
+					showAvatarFeedback(
+						response.message || "Błąd zapisu avatara",
+						"error"
+					);
+				}
+			} catch (e) {
+				console.error("❌ Błąd parsowania JSON:", e);
+				console.error("📄 Surowa odpowiedź:", xhr.responseText);
+				showAvatarFeedback("Błąd serwera - nieprawidłowa odpowiedź", "error");
+			}
+		} else {
+			console.error("❌ Błąd HTTP:", xhr.status);
+			showAvatarFeedback("Błąd połączenia: " + xhr.status, "error");
+		}
+	};
+
+	xhr.onerror = function () {
+		console.error("❌ Błąd XHR");
+		if (saveBtn) {
+			saveBtn.textContent = originalText;
+			saveBtn.disabled = false;
+		}
+		showAvatarFeedback("Błąd połączenia z serwerem", "error");
+	};
+
+	xhr.upload.onprogress = function (e) {
+		if (e.lengthComputable) {
+			const percentComplete = Math.round((e.loaded / e.total) * 100);
+			console.log("📤 Upload progress: " + percentComplete + "%");
+		}
+	};
+
+	console.log("🚀 Wysyłanie żądania...");
+	xhr.send(formData);
 }
 
 const burgerMenu = document.getElementById("burger-menu");

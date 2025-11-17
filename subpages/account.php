@@ -59,10 +59,19 @@ $stmt = $conn->prepare("SELECT COUNT(*) AS count FROM comments WHERE user_id = ?
 $stmt->bind_param("i", $userId);
 $stmt->execute();
 $result = $stmt->get_result();
-$addedCommentsAmmount = $result->fetch_assoc()['count'] ?? 0;
 
-// Engagement (proste: projekty + komentarze)
-$engagement = $amountOfProjects + $addedCommentsAmmount;
+$row = $result->fetch_assoc();
+$count = $row['count'] ?? 0;
+
+if ($amountOfBadges > 99) {
+    $addedCommentsAmmount = '<span title="' . $count . '">99+</span>';
+} else {
+    $addedCommentsAmmount = '<span>' . $count . '</span>';
+}
+
+// Engagement (projekty + komentarze)
+$engagement = $amountOfProjects + $count; // tutaj dodajesz same liczby
+
 
 // Liczba logowań
 $stmt = $conn->prepare("SELECT COUNT(*) AS count FROM logs WHERE user_id = ? AND action = 'login'");
@@ -99,9 +108,20 @@ $stmt = $conn->prepare("SELECT details FROM logs WHERE user_id = ? AND action = 
 $stmt->bind_param("i", $userId);
 $stmt->execute();
 $result = $stmt->get_result();
-$lastEditedProject = $result->fetch_assoc()['project_name'] ?? 'Brak danych';
+$lastEditedProject = $result->fetch_assoc()['details'] ?? 'Brak';
 
-// Zmiana hasła
+
+
+// Odznaki
+
+$badgesStmt = $conn->prepare("SELECT name, description, emoji FROM badges WHERE user_id = ? ORDER BY created_at DESC");
+$badgesStmt->bind_param("i", $userId);
+$badgesStmt->execute();
+$badgesResult = $badgesStmt->get_result();
+$userBadges = $badgesResult->fetch_all(MYSQLI_ASSOC);
+$badgesStmt->close();
+
+
 ?>
 
 <!DOCTYPE html>
@@ -231,12 +251,12 @@ $lastEditedProject = $result->fetch_assoc()['project_name'] ?? 'Brak danych';
 
                             ?>
                             <div class="activity-item">
-                                <span>Edytowany projekt</span>
-                                <span>"Zielone Miasto"</span>
+                                <span>Ostatnio edytowany projekt</span>
+                                <span><?php echo $lastEditedProject ?></span>
                             </div>
                             <div class="activity-item">
                                 <span>Dodane komentarze</span>
-                                <span><?php echo $addedCommentsAmmount; ?></span>
+                                <?php echo $addedCommentsAmmount; ?>
                             </div>
                         </div>
                     </section>
@@ -371,17 +391,17 @@ $lastEditedProject = $result->fetch_assoc()['project_name'] ?? 'Brak danych';
                                     <label class="checkbox-label">
                                         <input type="checkbox" data-setting="new_tasks_email">
                                         <span class="checkmark"></span>
-                                        E-mail o nowych zadaniach
+                                        Powiadomienie e-mail o nowych zadaniach
                                     </label>
                                     <label class="checkbox-label">
                                         <input type="checkbox" data-setting="new_comments_email">
                                         <span class="checkmark"></span>
-                                        Powiadomienia o komentarzach
+                                        Powiadomienie e-mail o komentarzach
                                     </label>
                                     <label class="checkbox-label">
                                         <input type="checkbox" data-setting="system_email">
                                         <span class="checkmark"></span>
-                                        Powiadomienia systemowe
+                                        Powiadomienia e-mail systemowe
                                     </label>
                                 </div>
                             </div>
@@ -418,27 +438,25 @@ $lastEditedProject = $result->fetch_assoc()['project_name'] ?? 'Brak danych';
                             <h2>Odznaki i osiągnięcia</h2>
                         </div>
                         <div class="badges-grid">
-                            <div class="badge-item">
-                                <div class="badge-icon">🏆</div>
-                                <div class="badge-info">
-                                    <h4>Aktywny Twórca</h4>
-                                    <p>Za udział w 10+ projektach</p>
+                            <?php if (!empty($userBadges)): ?>
+                                <?php foreach ($userBadges as $badge): ?>
+                                    <div class="badge-item">
+                                        <div class="badge-icon"><?php echo htmlspecialchars($badge['emoji']); ?></div>
+                                        <div class="badge-info">
+                                            <h4><?php echo htmlspecialchars($badge['name']); ?></h4>
+                                            <p><?php echo htmlspecialchars($badge['description']); ?></p>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="no-badges">
+                                    <div class="badge-icon">🔒</div>
+                                    <div class="badge-info">
+                                        <h4>Brak odznak</h4>
+                                        <p>Bądź aktywny w projektach, aby zdobyć swoje pierwsze odznaki!</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="badge-item">
-                                <div class="badge-icon">🚀</div>
-                                <div class="badge-info">
-                                    <h4>Pierwszy projekt</h4>
-                                    <p>Za ukończenie pierwszego projektu</p>
-                                </div>
-                            </div>
-                            <div class="badge-item">
-                                <div class="badge-icon">💎</div>
-                                <div class="badge-info">
-                                    <h4>Top Contributor</h4>
-                                    <p>Za wyjątkowe zaangażowanie</p>
-                                </div>
-                            </div>
+                            <?php endif; ?>
                         </div>
                     </section>
 
@@ -448,7 +466,7 @@ $lastEditedProject = $result->fetch_assoc()['project_name'] ?? 'Brak danych';
                             <h2>Strefa niebezpieczna</h2>
                         </div>
                         <div class="danger-actions">
-                            <button class="danger-btn" onclick="openDangerModal('delete')">
+                            <button class="danger-btn" onclick="openDeleteModal()">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                                     <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" />
                                     <path
@@ -457,28 +475,29 @@ $lastEditedProject = $result->fetch_assoc()['project_name'] ?? 'Brak danych';
                                 </svg>
                                 Usuń konto
                             </button>
-                            <button class="danger-btn" onclick="openDangerModal('logout')">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                                    <path
-                                        d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9"
-                                        stroke="currentColor" stroke-width="2" />
-                                    <path d="M16 17L21 12L16 7" stroke="currentColor" stroke-width="2" />
-                                    <path d="M21 12H9" stroke="currentColor" stroke-width="2" />
-                                </svg>
-                                Wyloguj ze wszystkich urządzeń
-                            </button>
-                            <button class="danger-btn" onclick="openDangerModal('permissions')">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                                    <path
-                                        d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z"
-                                        stroke="currentColor" stroke-width="2" />
-                                    <path d="M2 12C2 12 5 6 12 6C19 6 22 12 22 12C22 12 19 18 12 18C5 18 2 12 2 12Z"
-                                        stroke="currentColor" stroke-width="2" />
-                                </svg>
-                                Cofnij wszystkie uprawnienia
-                            </button>
                         </div>
                     </section>
+
+                    <!-- Modal potwierdzenia usunięcia konta -->
+                    <div id="deleteModal" class="danger-modal">
+                        <div class="danger-modal-content">
+                            <div class="danger-modal-icon">⚠️</div>
+                            <h3 class="danger-modal-title">Czy na pewno chcesz usunąć konto?</h3>
+                            <p class="danger-modal-text">
+                                Ta operacja jest <strong>nieodwracalna</strong>. Wszystkie Twoje dane, projekty i
+                                osiągnięcia zostaną trwale usunięte.
+                                <br><br>
+                                <strong>Tej akcji nie można cofnąć!</strong>
+                            </p>
+                            <div class="danger-modal-actions">
+                                <button class="danger-modal-btn cancel" onclick="closeDeleteModal()">Anuluj</button>
+                                <button class="danger-modal-btn confirm" onclick="confirmDelete()"
+                                    id="confirmDeleteBtn">
+                                    Tak, usuń konto
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -502,7 +521,7 @@ $lastEditedProject = $result->fetch_assoc()['project_name'] ?? 'Brak danych';
     </div>
 
     <!-- Modal zmiany avatara -->
-    <div class="modal" id="avatarModal">
+    <<div class="modal" id="avatarModal">
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Zmień zdjęcie profilowe</h3>
@@ -512,36 +531,36 @@ $lastEditedProject = $result->fetch_assoc()['project_name'] ?? 'Brak danych';
                 <div class="avatar-preview">
                     <img src="../photos/sample_person.png" alt="Podgląd" id="avatarPreview">
                 </div>
-                <input type="file" id="avatarUpload" accept="image/*" onchange="previewAvatar(this)">
+                <input type="file" id="avatarUpload" accept="image/*">
                 <label for="avatarUpload" class="upload-btn">Wybierz zdjęcie</label>
             </div>
             <div class="modal-footer">
-                <button class="modal-btn secondary" onclick="closeAvatarModal()">Anuluj</button>
-                <button class="modal-btn primary" onclick="saveAvatar()">Zapisz zdjęcie</button>
+                <button class="modal-btn secondary">Anuluj</button>
+                <button class="modal-btn primary">Zapisz zdjęcie</button>
             </div>
         </div>
-    </div>
+        </div>
 
-    <footer>
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-brand">
-                    <img src="../photos/website-logo.jpg" alt="Logo TeenCollab">
-                    <div>
-                        <h3>TeenCollab</h3>
-                        <p>Platforma dla młodych zmieniaczy świata</p>
+        <footer>
+            <div class="container">
+                <div class="footer-content">
+                    <div class="footer-brand">
+                        <img src="../photos/website-logo.jpg" alt="Logo TeenCollab">
+                        <div>
+                            <h3>TeenCollab</h3>
+                            <p>Platforma dla młodych zmieniaczy świata</p>
+                        </div>
+                    </div>
+                    <div class="footer-copyright">
+                        <p>©2025 TeenCollab | Made with ❤️ by M.Cz.</p>
                     </div>
                 </div>
-                <div class="footer-copyright">
-                    <p>©2025 TeenCollab | Made with ❤️ by M.Cz.</p>
-                </div>
             </div>
-        </div>
-    </footer>
+        </footer>
 
-    <script src="../scripts/account.js"></script>
+        <script src="../scripts/account.js"></script>
 
-    <body data-user-id="<?php echo $userId; ?>" data-user-email="<?php echo $email; ?>">
-    </body>
+        <body data-user-id="<?php echo $userId; ?>" data-user-email="<?php echo $email; ?>">
+        </body>
 
 </html>

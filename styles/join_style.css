@@ -479,6 +479,11 @@ header {
 .form-group textarea {
 	resize: vertical;
 	min-height: 120px;
+	font-family: "Inter", sans-serif;
+}
+
+.form-group textarea::placeholder {
+	font-family: "Inter", sans-serif;
 }
 
 /* Checkbox styling */

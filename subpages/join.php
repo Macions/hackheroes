@@ -57,6 +57,7 @@ function logAction($conn, $userId, $email, $action)
     $ip = $_SERVER['REMOTE_ADDR'] ?? '';
     $agent = $_SERVER['HTTP_USER_AGENT'] ?? '';
 
+    // POPRAWIONE: Dostosowane do struktury tabeli logs
     $stmt = $conn->prepare("
         INSERT INTO logs (user_id, email, action, details, ip_address, user_agent, created_at)
         VALUES (?, ?, ?, '', ?, ?, NOW())
@@ -68,6 +69,7 @@ function logAction($conn, $userId, $email, $action)
         return;
     }
 
+    // POPRAWIONE: 5 parametrów dla 5 placeholderów
     $stmt->bind_param("issss", $userId, $email, $action, $ip, $agent);
     if (!$stmt->execute()) {
         error_log("Błąd wykonania zapytania: " . $stmt->error);
@@ -90,7 +92,6 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
 
     $stmt->bind_param("s", $email);
     $stmt->execute();
-    // POPRAWIONE: Trzy zmienne dla trzech kolumn
     $stmt->bind_result($userId, $dbFirstName, $dbLastName);
     $stmt->fetch();
     $stmt->close();
@@ -128,7 +129,7 @@ HTML;
 } else {
 
     /* ============================================================
-                            REJESTRACJA
+                                REJESTRACJA
        ============================================================ */
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['loginButton'])) {
@@ -136,6 +137,7 @@ HTML;
         $firstName = trim($_POST['firstName'] ?? '');
         $lastName = trim($_POST['lastName'] ?? '');
         $nick = trim($_POST['nick'] ?? '');
+        $phoneNumber = trim($_POST['phone'] ?? ''); // Tutaj jest $phoneNumber
         $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
         $age = $_POST['age'] ?? '';
@@ -168,22 +170,23 @@ HTML;
 
                 // POPRAWIONE: Używamy first_name i last_name zamiast full_name
                 $stmt = $conn->prepare("
-                    INSERT INTO users 
-                    (first_name, last_name, nick, email, password_hash, age_class, school, interests, experience, goals, accepted_terms, accepted_privacy, newsletter, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-                ");
+                INSERT INTO users 
+                (first_name, last_name, nick, email, phone, password_hash, age_class, school, interests, experience, goals, accepted_terms, accepted_privacy, newsletter, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            ");
 
                 if ($stmt === false) {
                     die("Błąd przygotowania zapytania: " . $conn->error);
                 }
 
-                // POPRAWIONE: 12 parametrów dla 12 wartości
+                // POPRAWIONE: Zmieniono $phone na $phoneNumber - 14 parametrów dla 14 wartości
                 $stmt->bind_param(
-                    "sssssssssiiii",
+                    "ssssssssssiiii",
                     $firstName,        // first_name
                     $lastName,         // last_name
-                    $nick,
+                    $nick,             // nick
                     $email,            // email
+                    $phoneNumber,      // phone - POPRAWIONE: było $phone, ma być $phoneNumber
                     $hashedPassword,   // password_hash
                     $age,              // age_class
                     $school,           // school
@@ -467,6 +470,11 @@ $conn->close();
                         <div class="form-group">
                             <label for="email">E-mail *</label>
                             <input type="email" id="email" name="email" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="phone">Numer telefonu</label>
+                            <input type="phone" id="phone" name="phone">
                         </div>
 
                         <div class="form-group">

@@ -61,3 +61,276 @@ IP: ::1, UserAgent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
 SUKCES: Zapisano log ID: 86
 === KONEC ===
 
+2025-11-17 20:16:16 === START ===
+POST: Array
+(
+    [user_id] => 6
+    [email] => maciejkaczarnecka5@gmail.com
+    [action] => preference_change
+    [details] => Domyślna rola: "Developer"
+)
+
+SESSION: Array
+(
+    [user_email] => maciejkaczarnecka5@gmail.com
+    [logged_in] => 1
+    [user_id] => 6
+)
+
+Dane: user_id=6, email=maciejkaczarnecka5@gmail.com, action=preference_change, details=Domyślna rola: "Developer"
+IP: ::1, UserAgent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0
+SUKCES: Zapisano log ID: 90
+=== KONEC ===
+
+2025-11-17 20:16:18 === START ===
+POST: Array
+(
+    [user_id] => 6
+    [email] => maciejkaczarnecka5@gmail.com
+    [action] => preference_change
+    [details] => Poziom zaangażowania: "Obserwuję"
+)
+
+SESSION: Array
+(
+    [user_email] => maciejkaczarnecka5@gmail.com
+    [logged_in] => 1
+    [user_id] => 6
+)
+
+Dane: user_id=6, email=maciejkaczarnecka5@gmail.com, action=preference_change, details=Poziom zaangażowania: "Obserwuję"
+IP: ::1, UserAgent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0
+SUKCES: Zapisano log ID: 91
+=== KONEC ===
+
+2025-11-17 20:16:22 === START ===
+POST: Array
+(
+    [user_id] => 6
+    [email] => maciejkaczarnecka5@gmail.com
+    [action] => preference_change
+    [details] => Domyślna rola: "Uczestnik"
+)
+
+SESSION: Array
+(
+    [user_email] => maciejkaczarnecka5@gmail.com
+    [logged_in] => 1
+    [user_id] => 6
+)
+
+Dane: user_id=6, email=maciejkaczarnecka5@gmail.com, action=preference_change, details=Domyślna rola: "Uczestnik"
+IP: ::1, UserAgent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0
+SUKCES: Zapisano log ID: 92
+=== KONEC ===
+
+2025-11-17 20:55:56 === START ===
+POST: Array
+(
+    [user_id] => 7
+    [email] => maciejkaczarnecka5@gmail.com
+    [action] => profile_update
+    [details] => Zmiana Telefon: "" → "maciejkaczarnecka5@gmail.com"
+)
+
+SESSION: Array
+(
+    [user_email] => maciejkaczarnecka5@gmail.com
+    [logged_in] => 1
+    [user_id] => 7
+)
+
+Dane: user_id=7, email=maciejkaczarnecka5@gmail.com, action=profile_update, details=Zmiana Telefon: "" → "maciejkaczarnecka5@gmail.com"
+IP: ::1, UserAgent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0
+SUKCES: Zapisano log ID: 96
+=== KONEC ===
+
+2025-11-17 21:00:34 === START ===
+POST: Array
+(
+    [user_id] => 7
+    [email] => maciejkaczarnecka5@gmail.com
+    [action] => profile_update
+    [details] => Zmiana Telefon: "573221560" → "33333"
+)
+
+SESSION: Array
+(
+    [user_email] => maciejkaczarnecka5@gmail.com
+    [logged_in] => 1
+    [user_id] => 7
+)
+
+Dane: user_id=7, email=maciejkaczarnecka5@gmail.com, action=profile_update, details=Zmiana Telefon: "573221560" → "33333"
+IP: ::1, UserAgent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0
+SUKCES: Zapisano log ID: 97
+=== KONEC ===
+
+2025-11-17 21:08:52 === START ===
+POST: Array
+(
+    [user_id] => 8
+    [email] => maciejkaczarnecka5@gmail.com
+    [action] => profile_update
+    [details] => Zmiana Telefon: "" → "maciejkaczarnecka5@gmail.com"
+)
+
+SESSION: Array
+(
+    [user_email] => maciejkaczarnecka5@gmail.com
+    [logged_in] => 1
+    [user_id] => 8
+)
+
+Dane: user_id=8, email=maciejkaczarnecka5@gmail.com, action=profile_update, details=Zmiana Telefon: "" → "maciejkaczarnecka5@gmail.com"
+IP: ::1, UserAgent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0
+SUKCES: Zapisano log ID: 101
+=== KONEC ===
+
+2025-11-17 21:11:31 === START ===
+POST: Array
+(
+    [user_id] => 9
+    [email] => maciejkaczarnecka5@gmail.com
+    [action] => profile_update
+    [details] => Zmiana Telefon: "573221560" → "5732215603"
+)
+
+SESSION: Array
+(
+    [user_email] => maciejkaczarnecka5@gmail.com
+    [logged_in] => 1
+    [user_id] => 9
+)
+
+Dane: user_id=9, email=maciejkaczarnecka5@gmail.com, action=profile_update, details=Zmiana Telefon: "573221560" → "5732215603"
+IP: ::1, UserAgent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0
+SUKCES: Zapisano log ID: 105
+=== KONEC ===
+
+2025-11-17 21:31:46 === START ===
+POST: Array
+(
+    [user_id] => 9
+    [email] => maciejkaczarnecka5@gmail.com
+    [action] => avatar_change
+    [details] => Zdjęcie profilowe zostało zmienione
+)
+
+SESSION: Array
+(
+    [user_email] => maciejkaczarnecka5@gmail.com
+    [logged_in] => 1
+    [user_id] => 9
+)
+
+Dane: user_id=9, email=maciejkaczarnecka5@gmail.com, action=avatar_change, details=Zdjęcie profilowe zostało zmienione
+IP: ::1, UserAgent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0
+SUKCES: Zapisano log ID: 107
+=== KONEC ===
+
+2025-11-17 21:33:27 === START ===
+POST: Array
+(
+    [user_id] => 9
+    [email] => maciejkaczarnecka5@gmail.com
+    [action] => avatar_change
+    [details] => Zdjęcie profilowe zostało zmienione
+)
+
+SESSION: Array
+(
+    [user_email] => maciejkaczarnecka5@gmail.com
+    [logged_in] => 1
+    [user_id] => 9
+)
+
+Dane: user_id=9, email=maciejkaczarnecka5@gmail.com, action=avatar_change, details=Zdjęcie profilowe zostało zmienione
+IP: ::1, UserAgent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0
+SUKCES: Zapisano log ID: 109
+=== KONEC ===
+
+2025-11-17 21:38:13 === START ===
+POST: Array
+(
+    [user_id] => 9
+    [email] => maciejkaczarnecka5@gmail.com
+    [action] => avatar_change
+    [details] => Zdjęcie profilowe zostało zmienione
+)
+
+SESSION: Array
+(
+    [user_email] => maciejkaczarnecka5@gmail.com
+    [logged_in] => 1
+    [user_id] => 9
+)
+
+Dane: user_id=9, email=maciejkaczarnecka5@gmail.com, action=avatar_change, details=Zdjęcie profilowe zostało zmienione
+IP: ::1, UserAgent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0
+SUKCES: Zapisano log ID: 113
+=== KONEC ===
+
+2025-11-17 21:39:53 === START ===
+POST: Array
+(
+    [user_id] => 9
+    [email] => maciejkaczarnecka5@gmail.com
+    [action] => avatar_change
+    [details] => Zdjęcie profilowe zostało zmienione
+)
+
+SESSION: Array
+(
+    [user_email] => maciejkaczarnecka5@gmail.com
+    [logged_in] => 1
+    [user_id] => 9
+)
+
+Dane: user_id=9, email=maciejkaczarnecka5@gmail.com, action=avatar_change, details=Zdjęcie profilowe zostało zmienione
+IP: ::1, UserAgent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0
+SUKCES: Zapisano log ID: 115
+=== KONEC ===
+
+2025-11-17 21:41:44 === START ===
+POST: Array
+(
+    [user_id] => 9
+    [email] => maciejkaczarnecka5@gmail.com
+    [action] => avatar_change
+    [details] => Zdjęcie profilowe zostało zmienione
+)
+
+SESSION: Array
+(
+    [user_email] => maciejkaczarnecka5@gmail.com
+    [logged_in] => 1
+    [user_id] => 9
+)
+
+Dane: user_id=9, email=maciejkaczarnecka5@gmail.com, action=avatar_change, details=Zdjęcie profilowe zostało zmienione
+IP: ::1, UserAgent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0
+SUKCES: Zapisano log ID: 117
+=== KONEC ===
+
+2025-11-17 21:43:00 === START ===
+POST: Array
+(
+    [user_id] => 9
+    [email] => maciejkaczarnecka5@gmail.com
+    [action] => avatar_change
+    [details] => Zdjęcie profilowe zostało zmienione
+)
+
+SESSION: Array
+(
+    [user_email] => maciejkaczarnecka5@gmail.com
+    [logged_in] => 1
+    [user_id] => 9
+)
+
+Dane: user_id=9, email=maciejkaczarnecka5@gmail.com, action=avatar_change, details=Zdjęcie profilowe zostało zmienione
+IP: ::1, UserAgent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0
+SUKCES: Zapisano log ID: 119
+=== KONEC ===
+
