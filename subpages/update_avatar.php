@@ -11,15 +11,13 @@ $userId = $_SESSION["user_id"];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['avatar'])) {
 
-    // Sprawdź czy plik został poprawnie przesłany
     if ($_FILES['avatar']['error'] !== UPLOAD_ERR_OK) {
         echo json_encode(['success' => false, 'message' => 'Błąd przesyłania pliku']);
         exit();
     }
 
-    // Walidacja pliku
     $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
-    $maxFileSize = 5 * 1024 * 1024; // 5MB
+    $maxFileSize = 5 * 1024 * 1024;
 
     $fileType = $_FILES['avatar']['type'];
     $fileSize = $_FILES['avatar']['size'];
@@ -34,31 +32,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['avatar'])) {
         exit();
     }
 
-    // ✅ POPRAWIONE: Ścieżka do folderu nadrzędnego
-    $uploadDir = __DIR__ . '/../photos/avatars/';
+    // Ścieżka zapisu
+    $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/Konkurs/photos/avatars/';
 
     if (!file_exists($uploadDir)) {
         mkdir($uploadDir, 0755, true);
     }
 
-    // Generuj unikalną nazwę pliku
     $fileExtension = pathinfo($_FILES['avatar']['name'], PATHINFO_EXTENSION);
     $fileName = 'avatar_' . $userId . '_' . time() . '.' . $fileExtension;
     $filePath = $uploadDir . $fileName;
 
-    // Przenieś plik
     if (move_uploaded_file($_FILES['avatar']['tmp_name'], $filePath)) {
 
-        // ✅ POPRAWIONE: URL względem głównego katalogu (bez subpages)
-        $avatarUrl = 'photos/avatars/' . $fileName;
+        // ✅ ZMIENIONE: Dodaj /Konkurs/ na początku ścieżki
+        $avatarUrl = '/Konkurs/photos/avatars/' . $fileName;
 
-        // Aktualizuj bazę danych
         $stmt = $conn->prepare("UPDATE users SET avatar = ? WHERE id = ?");
         $stmt->bind_param("si", $avatarUrl, $userId);
 
         if ($stmt->execute()) {
 
-            // Usuń stary avatar jeśli istnieje i nie jest domyślny
             $oldStmt = $conn->prepare("SELECT avatar FROM users WHERE id = ?");
             $oldStmt->bind_param("i", $userId);
             $oldStmt->execute();
@@ -66,26 +60,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['avatar'])) {
             $oldStmt->fetch();
             $oldStmt->close();
 
-            // ✅ POPRAWIONE: Usuwanie starego pliku z poprawnej ścieżki
             if (
                 $oldAvatar &&
                 !str_contains($oldAvatar, 'sample_person.png') &&
-                file_exists(__DIR__ . '/../' . $oldAvatar)
+                file_exists($_SERVER['DOCUMENT_ROOT'] . $oldAvatar)
             ) {
-                unlink(__DIR__ . '/../' . $oldAvatar);
+                unlink($_SERVER['DOCUMENT_ROOT'] . $oldAvatar);
             }
 
-            // Zaloguj zmianę avatara
             logAction($conn, $userId, $_SESSION['user_email'], 'avatar_change');
 
             echo json_encode([
                 'success' => true,
-                'avatarUrl' => $avatarUrl,
+                'avatarUrl' => $avatarUrl, // ✅ Teraz z /Konkurs/ na początku
                 'message' => 'Avatar został zmieniony pomyślnie'
             ]);
 
         } else {
-            // Jeśli błąd bazy, usuń przesłany plik
             unlink($filePath);
             echo json_encode(['success' => false, 'message' => 'Błąd bazy danych: ' . $stmt->error]);
         }
@@ -102,7 +93,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['avatar'])) {
 
 $conn->close();
 
-// Funkcja logowania
 function logAction($conn, $userId, $email, $action)
 {
     try {

@@ -1333,11 +1333,17 @@ function saveAvatar() {
 				console.log("📄 Odpowiedź JSON:", response);
 
 				if (response.success) {
+					// ✅ DODAJ / NA POCZĄTKU ŚCIEŻKI
+					const fullAvatarUrl = response.avatarUrl.startsWith("/")
+						? response.avatarUrl
+						: "/" + response.avatarUrl;
+					console.log("✅ Pełna ścieżka do avatara:", fullAvatarUrl);
+
 					// AKTUALIZACJA AVATARA
 					const profileAvatar = document.getElementById("profileAvatar");
 					if (profileAvatar) {
-						profileAvatar.src = response.avatarUrl;
-						console.log("✅ Avatar zaktualizowany:", response.avatarUrl);
+						profileAvatar.src = fullAvatarUrl + "?t=" + new Date().getTime(); // Cache bust
+						console.log("✅ Avatar zaktualizowany:", fullAvatarUrl);
 					} else {
 						console.error("❌ Element profileAvatar nie znaleziony");
 					}
@@ -1347,9 +1353,19 @@ function saveAvatar() {
 						".nav-user-dropdown .user-avatar, .user-avatar"
 					);
 					if (navAvatar) {
-						navAvatar.src = response.avatarUrl;
+						navAvatar.src = fullAvatarUrl + "?t=" + new Date().getTime(); // Cache bust
 						console.log("✅ Avatar w navbarze zaktualizowany");
 					}
+
+					// Avatar w innych miejscach
+					const allAvatars = document.querySelectorAll(
+						'img[src*="avatar"], .user-avatar, .avatar-img'
+					);
+					allAvatars.forEach((img) => {
+						if (img !== profileAvatar && img !== navAvatar) {
+							img.src = fullAvatarUrl + "?t=" + new Date().getTime();
+						}
+					});
 
 					logUserAction("avatar_change", "Zdjęcie profilowe zostało zmienione");
 					closeAvatarModal();
@@ -1392,6 +1408,28 @@ function saveAvatar() {
 	xhr.send(formData);
 }
 
+// W account.js, znajdź tę funkcję i zmodyfikuj:
+function updateAvatarInUI(avatarUrl) {
+	console.log("🔄 Aktualizacja avatar w UI:", avatarUrl);
+
+	// ✅ DODAJ / na początku ścieżki
+	const fullAvatarUrl = "/" + avatarUrl;
+	console.log("✅ Pełna ścieżka do avatara:", fullAvatarUrl);
+
+	// Aktualizuj wszystkie obrazki avatara
+	const avatarImages = document.querySelectorAll(
+		'.user-avatar, .avatar-image, .avatar-img, img[src*="avatar"]'
+	);
+
+	avatarImages.forEach((img) => {
+		const oldSrc = img.src;
+		img.src = fullAvatarUrl + "?t=" + new Date().getTime(); // Cache bust
+		console.log("🖼️ Zaktualizowano obrazek:", oldSrc, "→", img.src);
+	});
+
+	// Aktualizuj w modalach, dropdownach itp.
+	updateAvatarInAllElements(fullAvatarUrl);
+}
 const burgerMenu = document.getElementById("burger-menu");
 const navMenu = document.querySelector(".nav-menu");
 
