@@ -521,7 +521,7 @@ $badgesStmt->close();
     </div>
 
     <!-- Modal zmiany avatara -->
-    <<div class="modal" id="avatarModal">
+    <div class="modal" id="avatarModal">
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Zmień zdjęcie profilowe</h3>
@@ -529,38 +529,56 @@ $badgesStmt->close();
             </div>
             <div class="modal-body">
                 <div class="avatar-preview">
-                    <img src="../photos/sample_person.png" alt="Podgląd" id="avatarPreview">
+                    <img src="<?php echo $userAvatar ?>" alt="Podgląd" id="avatarPreview">
                 </div>
-                <input type="file" id="avatarUpload" accept="image/*">
-                <label for="avatarUpload" class="upload-btn">Wybierz zdjęcie</label>
+
+                <div class="avatar-feedback hidden" id="avatarFeedback"></div>
+
+                <div class="avatar-upload-area">
+                    <input type="file" id="avatarUpload" accept="image/*">
+                    <label for="avatarUpload" class="upload-btn" id="uploadBtn">
+                        <span>Wybierz zdjęcie</span>
+                    </label>
+                </div>
+
+                <div class="file-info hidden" id="fileInfo"></div>
+
+                <div class="avatar-requirements">
+                    <strong>Wymagania:</strong>
+                    <ul>
+                        <li>Format: JPG, PNG, GIF</li>
+                        <li>Maksymalny rozmiar: 5MB</li>
+                        <li>Rekomendowane: 200x200 px</li>
+                    </ul>
+                </div>
             </div>
             <div class="modal-footer">
-                <button class="modal-btn secondary">Anuluj</button>
-                <button class="modal-btn primary">Zapisz zdjęcie</button>
+                <button class="modal-btn secondary" onclick="closeAvatarModal()">Anuluj</button>
+                <button class="modal-btn primary" id="saveAvatarBtn" disabled>Zapisz zdjęcie</button>
             </div>
         </div>
-        </div>
+    </div>
 
-        <footer>
-            <div class="container">
-                <div class="footer-content">
-                    <div class="footer-brand">
-                        <img src="../photos/website-logo.jpg" alt="Logo TeenCollab">
-                        <div>
-                            <h3>TeenCollab</h3>
-                            <p>Platforma dla młodych zmieniaczy świata</p>
-                        </div>
-                    </div>
-                    <div class="footer-copyright">
-                        <p>©2025 TeenCollab | Made with ❤️ by M.Cz.</p>
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <img src="../photos/website-logo.jpg" alt="Logo TeenCollab">
+                    <div>
+                        <h3>TeenCollab</h3>
+                        <p>Platforma dla młodych zmieniaczy świata</p>
                     </div>
                 </div>
+                <div class="footer-copyright">
+                    <p>©2025 TeenCollab | Made with ❤️ by M.Cz.</p>
+                </div>
             </div>
-        </footer>
+        </div>
+    </footer>
 
-        <script src="../scripts/account.js"></script>
+    <script src="../scripts/account.js"></script>
 
-        <body data-user-id="<?php echo $userId; ?>" data-user-email="<?php echo $email; ?>">
-        </body>
+    <body data-user-id="<?php echo $userId; ?>" data-user-email="<?php echo $email; ?>">
+    </body>
 
 </html>

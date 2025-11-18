@@ -1,10 +1,295 @@
+<?php
+session_start();
+include("global/connection.php");
+
+// Sprawdź czy użytkownik jest zalogowany
+if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
+    header("Location: login.php");
+    exit();
+}
+
+$userId = $_SESSION["user_id"];
+$userEmail = $_SESSION["user_email"] ?? '';
+
+// Pobierz ID projektu z URL
+$projectId = $_GET['id'] ?? null;
+
+if (!$projectId) {
+    header("Location: projekty.php");
+    exit();
+}
+
+// Sprawdź połączenie z bazą danych
+if (!$conn) {
+    die("Błąd połączenia z bazą danych: " . $conn->connect_error);
+}
+
+// Formatowanie daty
+function formatDate($dateString)
+{
+    if (!$dateString || $dateString == '0000-00-00')
+        return 'Nie ustawiono';
+    $date = new DateTime($dateString);
+    return $date->format('d.m.Y');
+}
+
+function formatDateTime($dateString)
+{
+    if (!$dateString || $dateString == '0000-00-00 00:00:00')
+        return 'Nie ustawiono';
+    $date = new DateTime($dateString);
+    return $date->format('d.m.Y H:i');
+}
+
+// Funkcja do zwiększania licznika wyświetleń (prosta wersja z sesją)
+// Zmodyfikowana funkcja
+function incrementProjectViews($conn, $projectId, $userId)
+{
+    $viewKey = 'project_view_' . $projectId;
+
+    if (!isset($_SESSION[$viewKey])) {
+        // Zwiększ licznik
+        $updateSql = "UPDATE projects SET views_counter = views_counter + 1, updated_at = NOW() WHERE id = ?";
+        $updateStmt = $conn->prepare($updateSql);
+
+        if ($updateStmt) {
+            $updateStmt->bind_param("i", $projectId);
+            $updateStmt->execute();
+            $updateStmt->close();
+
+            // Oznacz jako obejrzane w tej sesji
+            $_SESSION[$viewKey] = true;
+
+            // Pobierz zaktualizowaną liczbę wyświetleń
+            $selectSql = "SELECT views_counter FROM projects WHERE id = ?";
+            $selectStmt = $conn->prepare($selectSql);
+            if ($selectStmt) {
+                $selectStmt->bind_param("i", $projectId);
+                $selectStmt->execute();
+                $result = $selectStmt->get_result();
+                $row = $result->fetch_assoc();
+                $selectStmt->close();
+                return $row['views_counter'];
+            }
+        }
+    }
+
+    // Jeśli już było liczone, zwróć aktualną wartość
+    $currentSql = "SELECT views_counter FROM projects WHERE id = ?";
+    $currentStmt = $conn->prepare($currentSql);
+    if ($currentStmt) {
+        $currentStmt->bind_param("i", $projectId);
+        $currentStmt->execute();
+        $result = $currentStmt->get_result();
+        $row = $result->fetch_assoc();
+        $currentStmt->close();
+        return $row['views_counter'];
+    }
+
+    return 0;
+}
+
+// Użycie:
+$currentViews = incrementProjectViews($conn, $projectId, $userId);
+
+// Mapowanie priorytetów
+$priorityMap = [
+    'low' => 'Niski',
+    'medium' => 'Średni',
+    'high' => 'Wysoki'
+];
+
+// Mapowanie statusów z wartościami domyślnymi
+$statusMap = [
+    'active' => 'Aktywny',
+    'completed' => 'Zakończony',
+    'paused' => 'Wstrzymany',
+    'draft' => 'Szkic'
+];
+
+// Mapowanie widoczności z wartościami domyślnymi
+$visibilityMap = [
+    'public' => 'Publiczny',
+    'private' => 'Prywatny'
+];
+
+// Bezpieczne pobieranie wartości z mapowań
+function getStatus($status, $statusMap)
+{
+    if (!$status)
+        return 'Aktywny';
+    return $statusMap[$status] ?? 'Aktywny';
+}
+
+function getVisibility($visibility, $visibilityMap)
+{
+    if (!$visibility)
+        return 'Publiczny';
+    return $visibilityMap[$visibility] ?? 'Publiczny';
+}
+
+// Pobierz dane projektu
+try {
+    // Podstawowe informacje o projekcie
+    $sql = "
+        SELECT p.*, u.nick as founder_name, u.email as founder_email
+        FROM projects p 
+        LEFT JOIN users u ON p.founder_id = u.id 
+        WHERE p.id = ?
+    ";
+
+    $stmt = $conn->prepare($sql);
+
+    if ($stmt === false) {
+        throw new Exception("Błąd przygotowania zapytania: " . $conn->error);
+    }
+
+    $stmt->bind_param("i", $projectId);
+
+    if (!$stmt->execute()) {
+        throw new Exception("Błąd wykonania zapytania: " . $stmt->error);
+    }
+
+    $result = $stmt->get_result();
+    $project = $result->fetch_assoc();
+
+    if (!$project) {
+        throw new Exception("Projekt nie istnieje");
+    }
+
+    $stmt->close();
+
+    // ZWIĘKSZ LICZNIK WYŚWIETLEŃ
+    incrementProjectViews($conn, $projectId, $userId);
+
+    // Pobierz kategorie projektu
+    $categories = [];
+    $catSql = "
+        SELECT c.name 
+        FROM categories c 
+        JOIN project_categories pc ON c.id = pc.category_id 
+        WHERE pc.project_id = ?
+    ";
+    $catStmt = $conn->prepare($catSql);
+
+    if ($catStmt) {
+        $catStmt->bind_param("i", $projectId);
+        $catStmt->execute();
+        $catResult = $catStmt->get_result();
+        while ($row = $catResult->fetch_assoc()) {
+            $categories[] = $row['name'];
+        }
+        $catStmt->close();
+    }
+
+    // Pobierz cele projektu
+    $goals = [];
+    $goalStmt = $conn->prepare("SELECT description FROM goals WHERE project_id = ?");
+    if ($goalStmt) {
+        $goalStmt->bind_param("i", $projectId);
+        $goalStmt->execute();
+        $goalResult = $goalStmt->get_result();
+        while ($row = $goalResult->fetch_assoc()) {
+            $goals[] = $row['description'];
+        }
+        $goalStmt->close();
+    }
+
+    // Pobierz umiejętności projektu
+    $skills = [];
+    $skillSql = "
+        SELECT s.name 
+        FROM skills s 
+        JOIN project_skills ps ON s.id = ps.skill_id 
+        WHERE ps.project_id = ?
+    ";
+    $skillStmt = $conn->prepare($skillSql);
+    if ($skillStmt) {
+        $skillStmt->bind_param("i", $projectId);
+        $skillStmt->execute();
+        $skillResult = $skillStmt->get_result();
+        while ($row = $skillResult->fetch_assoc()) {
+            $skills[] = $row['name'];
+        }
+        $skillStmt->close();
+    }
+
+    // Pobierz zadania projektu
+    $tasks = [];
+    $taskStmt = $conn->prepare("SELECT name, description, priority FROM tasks WHERE project_id = ?");
+    if ($taskStmt) {
+        $taskStmt->bind_param("i", $projectId);
+        $taskStmt->execute();
+        $taskResult = $taskStmt->get_result();
+        while ($row = $taskResult->fetch_assoc()) {
+            $tasks[] = $row;
+        }
+        $taskStmt->close();
+    }
+
+    // Pobierz członków zespołu (właściciel + członkowie z project_team)
+    $teamMembers = [];
+
+    // Najpierw pobierz właściciela
+    $ownerSql = "SELECT id, nick, email FROM users WHERE id = ?";
+    $ownerStmt = $conn->prepare($ownerSql);
+    if ($ownerStmt) {
+        $ownerStmt->bind_param("i", $project['founder_id']);
+        $ownerStmt->execute();
+        $ownerResult = $ownerStmt->get_result();
+        $owner = $ownerResult->fetch_assoc();
+        if ($owner) {
+            $owner['role'] = 'Założyciel';
+            $owner['joined_at'] = $project['created_at'];
+            $teamMembers[] = $owner;
+        }
+        $ownerStmt->close();
+    }
+
+    // Potem pobierz pozostałych członków z project_team
+    $teamSql = "
+        SELECT u.id, u.nick, u.email, pt.role, pt.joined_at 
+        FROM project_team pt 
+        JOIN users u ON pt.user_id = u.id 
+        WHERE pt.project_id = ? AND pt.user_id != ?
+    ";
+    $teamStmt = $conn->prepare($teamSql);
+    if ($teamStmt) {
+        $teamStmt->bind_param("ii", $projectId, $project['founder_id']);
+        $teamStmt->execute();
+        $teamResult = $teamStmt->get_result();
+        while ($row = $teamResult->fetch_assoc()) {
+            $teamMembers[] = $row;
+        }
+        $teamStmt->close();
+    }
+
+    // Sprawdź czy użytkownik jest właścicielem projektu
+    $isOwner = ($project['founder_id'] == $userId);
+
+    // Sprawdź czy użytkownik jest członkiem zespołu
+    $isMember = false;
+    foreach ($teamMembers as $member) {
+        if ($member['id'] == $userId) {
+            $isMember = true;
+            break;
+        }
+    }
+
+} catch (Exception $e) {
+    die("Błąd: " . $e->getMessage());
+}
+
+// Tutaj zaczyna się HTML - reszta kodu pozostaje bez zmian
+?>
+
 <!DOCTYPE html>
 <html lang="pl">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EcoFuture - Projekt | TeenCollab</title>
+    <title><?php echo htmlspecialchars($project['name']); ?> - Projekt | TeenCollab</title>
     <link rel="shortcut icon" href="../photos/website-logo.jpg" type="image/x-icon">
     <link rel="stylesheet" href="../styles/project_style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -20,15 +305,15 @@
                     <img src="../photos/website-logo.jpg" alt="Logo TeenCollab">
                     <span>TeenCollab</span>
                 </div>
-                
+
                 <ul class="nav-menu">
-                    <li><a href="index.html">Strona główna</a></li>
-                    <li><a href="projekty.html">Projekty</a></li>
-                    <li><a href="społeczność.html">Społeczność</a></li>
-                    <li><a href="o-projekcie.html">O projekcie</a></li>
-                    <li class="nav-cta"><a href="konto.html">Moje konto</a></li>
+                    <li><a href="index.php">Strona główna</a></li>
+                    <li><a href="projekty.php">Projekty</a></li>
+                    <li><a href="społeczność.php">Społeczność</a></li>
+                    <li><a href="o-projekcie.php">O projekcie</a></li>
+                    <li class="nav-cta"><a href="konto.php">Moje konto</a></li>
                 </ul>
-                
+
                 <button class="burger-menu" id="burger-menu" aria-label="Menu">
                     <span></span>
                     <span></span>
@@ -44,27 +329,38 @@
             <div class="container">
                 <div class="hero-content">
                     <div class="hero-image">
-                        <img src="../photos/project-sample.jpg" alt="EcoFuture - projekt ekologiczny">
+                        <?php if ($project['thumbnail']): ?>
+                            <img src="<?php echo htmlspecialchars($project['thumbnail']); ?>"
+                                alt="<?php echo htmlspecialchars($project['name']); ?>">
+                        <?php else: ?>
+                            <img src="../photos/project-sample.jpg" alt="<?php echo htmlspecialchars($project['name']); ?>">
+                        <?php endif; ?>
                     </div>
                     <div class="hero-info">
-                        <div class="project-status status-active">
+                        <div class="project-status status-<?php echo $project['status'] ?? 'active'; ?>">
                             <span class="status-dot"></span>
-                            Aktywny
+                            <?php echo getStatus($project['status'] ?? '', $statusMap); ?>
                         </div>
-                        <h1 class="project-title">EcoFuture</h1>
-                        <p class="project-tagline">Innowacyjna platforma edukacyjna promująca zrównoważony rozwój wśród młodzieży</p>
-                        
+                        <h1 class="project-title"><?php echo htmlspecialchars($project['name']); ?></h1>
+                        <p class="project-tagline"><?php echo htmlspecialchars($project['short_description']); ?></p>
+
                         <div class="project-categories">
-                            <span class="category-tag">🌱 Ekologia</span>
-                            <span class="category-tag">💻 Technologia</span>
-                            <span class="category-tag">🎓 Edukacja</span>
+                            <?php foreach ($categories as $category): ?>
+                                <span class="category-tag"><?php echo htmlspecialchars($category); ?></span>
+                            <?php endforeach; ?>
                         </div>
-                        
+
                         <div class="hero-actions">
-                            <button class="btn-primary btn-join" id="joinProjectBtn">
-                                <span>Dołącz do projektu</span>
-                            </button>
-                            <button class="btn-secondary">
+                            <?php if (!$isMember && !$isOwner): ?>
+                                <button class="btn-primary btn-join" id="joinProjectBtn">
+                                    <span>Dołącz do projektu</span>
+                                </button>
+                            <?php elseif ($isMember): ?>
+                                <button class="btn-secondary" disabled>
+                                    <span>✅ Jesteś członkiem</span>
+                                </button>
+                            <?php endif; ?>
+                            <button class="btn-secondary" id="followBtn">
                                 <span>❤️ Obserwuj</span>
                             </button>
                         </div>
@@ -84,188 +380,124 @@
                         </div>
                         <div class="creator-card">
                             <div class="creator-avatar">
-                                <img src="../photos/sample_person.png" alt="Anna Nowak">
+                                <img src="../photos/sample_person.png"
+                                    alt="<?php echo htmlspecialchars($project['founder_name']); ?>">
                             </div>
                             <div class="creator-info">
-                                <h3 class="creator-name">Anna Nowak</h3>
-                                <p class="creator-role">Założycielka projektu</p>
+                                <h3 class="creator-name"><?php echo htmlspecialchars($project['founder_name']); ?></h3>
+                                <p class="creator-role">Założyciel projektu</p>
                                 <div class="creator-meta">
-                                    <span class="meta-item">📅 Projekt utworzony: 15.01.2025</span>
-                                    <span class="meta-item">👥 3 członków zespołu</span>
+                                    <span class="meta-item">📅 Projekt utworzony:
+                                        <?php echo formatDate($project['created_at']); ?></span>
+                                    <span class="meta-item">👥 <?php echo count($teamMembers); ?> członków
+                                        zespołu</span>
                                 </div>
-                                <a href="profil.html" class="creator-link">Zobacz profil twórcy →</a>
+                                <a href="profil.php?id=<?php echo $project['founder_id']; ?>"
+                                    class="creator-link">Zobacz profil twórcy →</a>
                             </div>
                         </div>
                     </section>
 
                     <!-- 📝 Pełny opis projektu -->
-                    <section class="content-section description-section">
-                        <div class="section-header">
-                            <h2>O projekcie</h2>
-                        </div>
-                        <div class="project-description">
-                            <h3>🌍 Problem, który rozwiązujemy</h3>
-                            <p>Młodzież często czuje się bezsilna wobec zmian klimatycznych. Brakuje platform, które w przystępny sposób edukują i dają konkretne narzędzia do działania.</p>
-                            
-                            <h3>💡 Nasze rozwiązanie</h3>
-                            <p>EcoFuture to interaktywna platforma z gamifikacją, która:</p>
-                            <ul>
-                                <li>Uczy przez zabawę - questy i wyzwania ekologiczne</li>
-                                <li>Łączy społeczność - wspólne akcje i projekty</li>
-                                <li>Daje realny wpływ - tracking zmniejszonego śladu węglowego</li>
-                            </ul>
-                            
-                            <h3>🛠️ Technologie</h3>
-                            <div class="tech-stack">
-                                <span class="tech-tag">React</span>
-                                <span class="tech-tag">Node.js</span>
-                                <span class="tech-tag">MongoDB</span>
-                                <span class="tech-tag">Figma</span>
+                    <?php if ($project['full_description']): ?>
+                        <section class="content-section description-section">
+                            <div class="section-header">
+                                <h2>O projekcie</h2>
                             </div>
-                            
-                            <h3>🚀 Plany rozwoju</h3>
-                            <p>Chcemy dotrzeć do 10,000 użytkowników w ciągu roku i zorganizować 50 lokalnych akcji sprzątania świata.</p>
-                        </div>
-                    </section>
+                            <div class="project-description">
+                                <?php echo nl2br(htmlspecialchars($project['full_description'])); ?>
+                            </div>
+                        </section>
+                    <?php endif; ?>
 
                     <!-- 🎯 Cele projektu -->
-                    <section class="content-section goals-section">
-                        <div class="section-header">
-                            <h2>Cele projektu</h2>
-                            <span class="section-subtitle">Śledzimy nasz progres!</span>
-                        </div>
-                        <div class="goals-list">
-                            <div class="goal-item">
-                                <div class="goal-header">
-                                    <span class="goal-icon">🎯</span>
-                                    <span class="goal-text">Przygotować prototyp platformy</span>
-                                </div>
-                                <div class="progress-bar">
-                                    <div class="progress-fill" style="width: 75%"></div>
-                                </div>
-                                <span class="progress-text">75% ukończono</span>
+                    <?php if (!empty($goals)): ?>
+                        <section class="content-section goals-section">
+                            <div class="section-header">
+                                <h2>Cele projektu</h2>
                             </div>
-                            
-                            <div class="goal-item">
-                                <div class="goal-header">
-                                    <span class="goal-icon">👥</span>
-                                    <span class="goal-text">Zebrać 5-osobowy zespół</span>
-                                </div>
-                                <div class="progress-bar">
-                                    <div class="progress-fill" style="width: 60%"></div>
-                                </div>
-                                <span class="progress-text">3/5 osób</span>
+                            <div class="goals-list">
+                                <?php foreach ($goals as $goal): ?>
+                                    <div class="goal-item">
+                                        <div class="goal-header">
+                                            <span class="goal-icon">🎯</span>
+                                            <span class="goal-text"><?php echo htmlspecialchars($goal); ?></span>
+                                        </div>
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: 0%"></div>
+                                        </div>
+                                        <span class="progress-text">0% ukończono</span>
+                                    </div>
+                                <?php endforeach; ?>
                             </div>
-                            
-                            <div class="goal-item">
-                                <div class="goal-header">
-                                    <span class="goal-icon">🌐</span>
-                                    <span class="goal-text">Stworzyć landing page</span>
-                                </div>
-                                <div class="progress-bar">
-                                    <div class="progress-fill" style="width: 20%"></div>
-                                </div>
-                                <span class="progress-text">20% ukończono</span>
-                            </div>
-                        </div>
-                    </section>
+                        </section>
+                    <?php endif; ?>
 
                     <!-- 🔧 Lista zadań -->
-                    <section class="content-section tasks-section">
-                        <div class="section-header">
-                            <h2>Zadania do wykonania</h2>
-                            <div class="task-filters">
-                                <button class="filter-btn active" data-filter="all">Wszystkie</button>
-                                <button class="filter-btn" data-filter="open">Otwarte</button>
-                                <button class="filter-btn" data-filter="in-progress">W trakcie</button>
-                                <button class="filter-btn" data-filter="done">Zrobione</button>
-                            </div>
-                        </div>
-                        <div class="tasks-list">
-                            <div class="task-card" data-status="open" data-priority="high">
-                                <div class="task-main">
-                                    <h3 class="task-title">Projekt interfejsu użytkownika</h3>
-                                    <p class="task-description">Stworzyć wireframe'y i mockupy głównych ekranów aplikacji</p>
-                                </div>
-                                <div class="task-meta">
-                                    <span class="task-priority priority-high">Wysoki</span>
-                                    <span class="task-status status-open">Otwarte</span>
-                                    <span class="task-deadline">📅 Do 28.02.2025</span>
+                    <?php if (!empty($tasks)): ?>
+                        <section class="content-section tasks-section">
+                            <div class="section-header">
+                                <h2>Zadania do wykonania</h2>
+                                <div class="task-filters">
+                                    <button class="filter-btn active" data-filter="all">Wszystkie</button>
+                                    <button class="filter-btn" data-filter="open">Otwarte</button>
+                                    <button class="filter-btn" data-filter="in-progress">W trakcie</button>
+                                    <button class="filter-btn" data-filter="done">Zrobione</button>
                                 </div>
                             </div>
-                            
-                            <div class="task-card" data-status="in-progress" data-priority="medium">
-                                <div class="task-main">
-                                    <h3 class="task-title">Backend API</h3>
-                                    <p class="task-description">Implementacja endpointów dla użytkowników i questów</p>
-                                </div>
-                                <div class="task-meta">
-                                    <span class="task-priority priority-medium">Średni</span>
-                                    <span class="task-status status-in-progress">W trakcie</span>
-                                    <span class="task-assignee">👤 Anna Nowak</span>
-                                </div>
+                            <div class="tasks-list">
+                                <?php foreach ($tasks as $task): ?>
+                                    <div class="task-card" data-status="open" data-priority="<?php echo $task['priority']; ?>">
+                                        <div class="task-main">
+                                            <h3 class="task-title"><?php echo htmlspecialchars($task['name']); ?></h3>
+                                            <?php if ($task['description']): ?>
+                                                <p class="task-description"><?php echo htmlspecialchars($task['description']); ?>
+                                                </p>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="task-meta">
+                                            <span class="task-priority priority-<?php echo $task['priority']; ?>">
+                                                <?php echo $priorityMap[$task['priority']] ?? 'Średni'; ?>
+                                            </span>
+                                            <span class="task-status status-open">Otwarte</span>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
                             </div>
-                            
-                            <div class="task-card" data-status="done" data-priority="low">
-                                <div class="task-main">
-                                    <h3 class="task-title">Research konkurencji</h3>
-                                    <p class="task-description">Analiza istniejących rozwiązań ekologicznych</p>
-                                </div>
-                                <div class="task-meta">
-                                    <span class="task-priority priority-low">Niski</span>
-                                    <span class="task-status status-done">Zrobione</span>
-                                    <span class="task-completed">✅ Ukończono 10.01.2025</span>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
+                        </section>
+                    <?php endif; ?>
 
                     <!-- 👥 Zespół projektu -->
                     <section class="content-section team-section">
                         <div class="section-header">
                             <h2>Nasz zespół</h2>
-                            <span class="section-subtitle">Dołącz do nas!</span>
+                            <span class="section-subtitle"><?php echo count($teamMembers); ?> członków</span>
                         </div>
                         <div class="team-grid">
-                            <div class="team-member-card">
-                                <div class="member-avatar">
-                                    <img src="../photos/sample_person.png" alt="Anna Nowak">
+                            <?php foreach ($teamMembers as $member): ?>
+                                <div class="team-member-card">
+                                    <div class="member-avatar">
+                                        <img src="../photos/sample_person.png"
+                                            alt="<?php echo htmlspecialchars($member['nick']); ?>">
+                                    </div>
+                                    <div class="member-info">
+                                        <h3 class="member-name"><?php echo htmlspecialchars($member['nick']); ?></h3>
+                                        <p class="member-role"><?php echo htmlspecialchars($member['role']); ?></p>
+                                        <span class="member-tenure">
+                                            W zespole od <?php echo formatDate($member['joined_at']); ?>
+                                        </span>
+                                    </div>
                                 </div>
-                                <div class="member-info">
-                                    <h3 class="member-name">Anna Nowak</h3>
-                                    <p class="member-role">Project Lead & Developer</p>
-                                    <span class="member-tenure">W zespole od początku</span>
+                            <?php endforeach; ?>
+
+                            <?php if (!$isMember && !$isOwner && $project['allow_applications']): ?>
+                                <div class="team-join-card">
+                                    <div class="join-icon">➕</div>
+                                    <h3>Dołącz do zespołu!</h3>
+                                    <p>Szukamy nowych członków</p>
+                                    <button class="btn-secondary btn-apply" id="applyBtn">Aplikuj do projektu</button>
                                 </div>
-                            </div>
-                            
-                            <div class="team-member-card">
-                                <div class="member-avatar">
-                                    <img src="../photos/sample_person2.png" alt="Jan Kowalski">
-                                </div>
-                                <div class="member-info">
-                                    <h3 class="member-name">Jan Kowalski</h3>
-                                    <p class="member-role">UI/UX Designer</p>
-                                    <span class="member-tenure">W zespole 2 miesiące</span>
-                                </div>
-                            </div>
-                            
-                            <div class="team-member-card">
-                                <div class="member-avatar">
-                                    <img src="../photos/sample_person3.png" alt="Maria Wiśniewska">
-                                </div>
-                                <div class="member-info">
-                                    <h3 class="member-name">Maria Wiśniewska</h3>
-                                    <p class="member-role">Content Specialist</p>
-                                    <span class="member-tenure">W zespole 1 miesiąc</span>
-                                </div>
-                            </div>
-                            
-                            <div class="team-join-card">
-                                <div class="join-icon">➕</div>
-                                <h3>Dołącz do zespołu!</h3>
-                                <p>Szukamy developerów i ekologów</p>
-                                <button class="btn-secondary btn-apply">Aplikuj do projektu</button>
-                            </div>
+                            <?php endif; ?>
                         </div>
                     </section>
 
@@ -274,97 +506,35 @@
                         <div class="section-header">
                             <h2>Dyskusja</h2>
                             <div class="comments-stats">
-                                <span class="stat-item">💬 14 komentarzy</span>
-                                <span class="stat-item">👁️ 2390 wyświetleń</span>
+                                <span class="stat-item">💬 0 komentarzy</span>
+                                <span class="stat-item">👁️ <?php echo $currentViews; ?> wyświetleń</span>
                             </div>
                         </div>
-                        
-                        <div class="comment-form">
-                            <div class="comment-avatar">
-                                <img src="../photos/sample_person.png" alt="Twój avatar">
-                            </div>
-                            <div class="comment-input-container">
-                                <textarea class="comment-input" placeholder="Podziel się swoją opinią lub zadaj pytanie..."></textarea>
-                                <div class="comment-actions">
-                                    <button class="btn-primary btn-comment">Dodaj komentarz</button>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="comments-list">
-                            <div class="comment">
-                                <div class="comment-avatar">
-                                    <img src="../photos/sample_person2.png" alt="Jan Kowalski">
-                                </div>
-                                <div class="comment-content">
-                                    <div class="comment-header">
-                                        <span class="comment-author">Jan Kowalski</span>
-                                        <span class="comment-date">2 godziny temu</span>
-                                    </div>
-                                    <p class="comment-text">Świetny projekt! Czy planujecie integrację z popularnymi platformami społecznościowymi?</p>
-                                    <div class="comment-actions">
-                                        <button class="comment-like">❤️ 5</button>
-                                        <button class="comment-reply">Odpowiedz</button>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="comment">
-                                <div class="comment-avatar">
-                                    <img src="../photos/sample_person3.png" alt="Maria Wiśniewska">
-                                </div>
-                                <div class="comment-content">
-                                    <div class="comment-header">
-                                        <span class="comment-author">Maria Wiśniewska</span>
-                                        <span class="comment-date">1 dzień temu</span>
-                                    </div>
-                                    <p class="comment-text">Bardzo podoba mi się koncepcja gamifikacji w edukacji ekologicznej. Czy mogłabym pomóc w tworzeniu treści?</p>
-                                    <div class="comment-actions">
-                                        <button class="comment-like">❤️ 8</button>
-                                        <button class="comment-reply">Odpowiedz</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
 
-                    <!-- 📎 Załączniki -->
-                    <section class="content-section attachments-section">
-                        <div class="section-header">
-                            <h2>Materiały projektu</h2>
-                        </div>
-                        <div class="attachments-grid">
-                            <a href="#" class="attachment-card">
-                                <div class="attachment-icon">📋</div>
-                                <div class="attachment-info">
-                                    <h3>Dokumentacja projektu</h3>
-                                    <p>PDF • 2.4 MB</p>
+                        <?php if ($isMember || $isOwner): ?>
+                            <div class="comment-form">
+                                <div class="comment-avatar">
+                                    <img src="../photos/sample_person.png" alt="Twój avatar">
                                 </div>
-                            </a>
-                            
-                            <a href="#" class="attachment-card">
-                                <div class="attachment-icon">🎨</div>
-                                <div class="attachment-info">
-                                    <h3>Projekt w Figma</h3>
-                                    <p>Link • Ostatnia aktualizacja: wczoraj</p>
+                                <div class="comment-input-container">
+                                    <textarea class="comment-input"
+                                        placeholder="Podziel się swoją opinią lub zadaj pytanie..."></textarea>
+                                    <div class="comment-actions">
+                                        <button class="btn-primary btn-comment">Dodaj komentarz</button>
+                                    </div>
                                 </div>
-                            </a>
-                            
-                            <a href="#" class="attachment-card">
-                                <div class="attachment-icon">💻</div>
-                                <div class="attachment-info">
-                                    <h3>Kod źródłowy</h3>
-                                    <p>GitHub • Publiczny repozytorium</p>
-                                </div>
-                            </a>
-                            
-                            <a href="#" class="attachment-card">
-                                <div class="attachment-icon">📊</div>
-                                <div class="attachment-info">
-                                    <h3>Prezentacja</h3>
-                                    <p>Google Slides • Dostęp do odczytu</p>
-                                </div>
-                            </a>
+                            </div>
+                        <?php else: ?>
+                            <div class="comment-restricted">
+                                <p>💬 Dołącz do projektu, aby uczestniczyć w dyskusji</p>
+                            </div>
+                        <?php endif; ?>
+
+                        <div class="comments-list">
+                            <!-- Komentarze będą ładowane dynamicznie -->
+                            <div class="no-comments">
+                                <p>Brak komentarzy. Bądź pierwszy, który skomentuje!</p>
+                            </div>
                         </div>
                     </section>
                 </div>
@@ -372,19 +542,24 @@
                 <!-- Prawa kolumna - sidebar -->
                 <div class="sidebar-column">
                     <!-- 🏷️ Tagi projektu -->
-                    <div class="sidebar-card tags-card">
-                        <h3>Tagi projektu</h3>
-                        <div class="tags-cloud">
-                            <span class="project-tag">edukacja</span>
-                            <span class="project-tag">AI</span>
-                            <span class="project-tag">społeczność</span>
-                            <span class="project-tag">młodzież</span>
-                            <span class="project-tag">szkoła</span>
-                            <span class="project-tag">ekologia</span>
-                            <span class="project-tag">technologia</span>
-                            <span class="project-tag">zrównoważony rozwój</span>
+                    <?php if ($project['seo_tags']): ?>
+                        <div class="sidebar-card tags-card">
+                            <h3>Tagi projektu</h3>
+                            <div class="tags-cloud">
+                                <?php
+                                $tags = explode(',', $project['seo_tags']);
+                                foreach ($tags as $tag):
+                                    $tag = trim($tag);
+                                    if ($tag):
+                                        ?>
+                                        <span class="project-tag"><?php echo htmlspecialchars($tag); ?></span>
+                                        <?php
+                                    endif;
+                                endforeach;
+                                ?>
+                            </div>
                         </div>
-                    </div>
+                    <?php endif; ?>
 
                     <!-- ❤️ Reakcje -->
                     <div class="sidebar-card reactions-card">
@@ -392,15 +567,15 @@
                         <div class="reactions-stats">
                             <div class="reaction-item">
                                 <span class="reaction-icon">❤️</span>
-                                <span class="reaction-count">132</span>
+                                <span class="reaction-count">0</span>
                             </div>
                             <div class="reaction-item">
                                 <span class="reaction-icon">👁️</span>
-                                <span class="reaction-count">2390</span>
+                                <span class="reaction-count"><?php echo $currentViews; ?></span>
                             </div>
                             <div class="reaction-item">
                                 <span class="reaction-icon">💬</span>
-                                <span class="reaction-count">14</span>
+                                <span class="reaction-count">0</span>
                             </div>
                         </div>
                         <div class="reaction-actions">
@@ -415,123 +590,66 @@
                         <div class="info-list">
                             <div class="info-item">
                                 <span class="info-label">Status:</span>
-                                <span class="info-value status-active">Aktywny</span>
+                                <span class="info-value status-<?php echo $project['status'] ?? 'active'; ?>">
+                                    <?php echo getStatus($project['status'] ?? '', $statusMap); ?>
+                                </span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Data utworzenia:</span>
-                                <span class="info-value">15.01.2025</span>
+                                <span class="info-value"><?php echo formatDate($project['created_at']); ?></span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Członkowie:</span>
-                                <span class="info-value">3 osoby</span>
+                                <span class="info-value"><?php echo count($teamMembers); ?> osób</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Widoczność:</span>
-                                <span class="info-value">Publiczny</span>
+                                <span class="info-value">
+                                    <?php echo getVisibility($project['visibility'] ?? '', $visibilityMap); ?>
+                                </span>
                             </div>
+                            <?php if ($project['deadline'] && $project['deadline'] != '0000-00-00'): ?>
+                                <div class="info-item">
+                                    <span class="info-label">Termin:</span>
+                                    <span class="info-value"><?php echo formatDate($project['deadline']); ?></span>
+                                </div>
+                            <?php endif; ?>
                             <div class="info-item">
                                 <span class="info-label">Ostatnia aktywność:</span>
-                                <span class="info-value">2 godziny temu</span>
+                                <span
+                                    class="info-value"><?php echo formatDateTime($project['updated_at'] ?? $project['created_at']); ?></span>
                             </div>
                         </div>
                     </div>
 
                     <!-- 🔒 Narzędzia (dla właściciela) -->
-                    <div class="sidebar-card tools-card" id="ownerTools" style="display: none;">
-                        <h3>Narzędzia projektu</h3>
-                        <div class="tools-list">
-                            <button class="tool-btn">✏️ Edytuj projekt</button>
-                            <button class="tool-btn">👥 Zarządzaj zespołem</button>
-                            <button class="tool-btn">✅ Zarządzaj zadaniami</button>
-                            <button class="tool-btn danger">🗑️ Usuń projekt</button>
+                    <?php if ($isOwner): ?>
+                        <div class="sidebar-card tools-card">
+                            <h3>Narzędzia projektu</h3>
+                            <div class="tools-list">
+                                <a href="edit_project.php?id=<?php echo $projectId; ?>" class="tool-btn">✏️ Edytuj
+                                    projekt</a>
+                                <button class="tool-btn">👥 Zarządzaj zespołem</button>
+                                <button class="tool-btn">✅ Zarządzaj zadaniami</button>
+                                <button class="tool-btn danger">🗑️ Usuń projekt</button>
+                            </div>
                         </div>
-                    </div>
+                    <?php endif; ?>
 
-                    <!-- 📅 Nadchodzące wydarzenia -->
-                    <div class="sidebar-card events-card">
-                        <h3>Nadchodzące wydarzenia</h3>
-                        <div class="events-list">
-                            <div class="event-item">
-                                <div class="event-date">
-                                    <span class="event-day">28</span>
-                                    <span class="event-month">LUT</span>
-                                </div>
-                                <div class="event-info">
-                                    <h4>Spotkanie zespołu</h4>
-                                    <p>Omówienie postępów</p>
-                                </div>
-                            </div>
-                            <div class="event-item">
-                                <div class="event-date">
-                                    <span class="event-day">05</span>
-                                    <span class="event-month">MAR</span>
-                                </div>
-                                <div class="event-info">
-                                    <h4>Premiera prototypu</h4>
-                                    <p>Testy z użytkownikami</p>
-                                </div>
+                    <!-- 🛠️ Wymagane umiejętności -->
+                    <?php if (!empty($skills)): ?>
+                        <div class="sidebar-card skills-card">
+                            <h3>Wymagane umiejętności</h3>
+                            <div class="skills-list">
+                                <?php foreach ($skills as $skill): ?>
+                                    <span class="skill-tag"><?php echo htmlspecialchars($skill); ?></span>
+                                <?php endforeach; ?>
                             </div>
                         </div>
-                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
-
-        <!-- 🚀 Podobne projekty -->
-        <section class="similar-projects">
-            <div class="container">
-                <div class="section-header">
-                    <h2>Podobne projekty</h2>
-                    <a href="projekty.html" class="see-all-link">Zobacz wszystkie →</a>
-                </div>
-                <div class="projects-grid">
-                    <div class="project-card">
-                        <div class="project-image">
-                            <img src="../photos/project-sample2.jpg" alt="TechEdu">
-                        </div>
-                        <div class="project-info">
-                            <span class="project-category">💻 Technologia</span>
-                            <h3>TechEdu</h3>
-                            <p>Platforma do nauki programowania dla młodzieży</p>
-                            <div class="project-stats">
-                                <span>❤️ 89</span>
-                                <span>👥 12</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="project-card">
-                        <div class="project-image">
-                            <img src="../photos/project-sample3.jpg" alt="GreenCity">
-                        </div>
-                        <div class="project-info">
-                            <span class="project-category">🌱 Ekologia</span>
-                            <h3>GreenCity</h3>
-                            <p>Aplikacja do zarządzania odpadami w mieście</p>
-                            <div class="project-stats">
-                                <span>❤️ 156</span>
-                                <span>👥 8</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="project-card">
-                        <div class="project-image">
-                            <img src="../photos/project-sample4.jpg" alt="ArtHub">
-                        </div>
-                        <div class="project-info">
-                            <span class="project-category">🎨 Sztuka</span>
-                            <h3>ArtHub</h3>
-                            <p>Społeczność młodych artystów i twórców</p>
-                            <div class="project-stats">
-                                <span>❤️ 234</span>
-                                <span>👥 25</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
     </main>
 
     <footer>
@@ -555,7 +673,7 @@
     <div class="modal" id="joinModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Dołącz do projektu EcoFuture</h3>
+                <h3>Dołącz do projektu "<?php echo htmlspecialchars($project['name']); ?>"</h3>
                 <button class="modal-close" onclick="closeJoinModal()">×</button>
             </div>
             <div class="modal-body">
@@ -591,6 +709,17 @@
     </div>
 
     <script src="../scripts/project.js"></script>
+    <script>
+        // Przekazanie danych do JavaScript
+        const projectData = {
+            id: <?php echo $projectId; ?>,
+            name: "<?php echo addslashes($project['name']); ?>",
+            isOwner: <?php echo $isOwner ? 'true' : 'false'; ?>,
+            isMember: <?php echo $isMember ? 'true' : 'false'; ?>,
+            allowApplications: <?php echo $project['allow_applications'] ? 'true' : 'false'; ?>,
+            autoAccept: <?php echo $project['auto_accept'] ? 'true' : 'false'; ?>
+        };
+    </script>
 </body>
 
 </html>

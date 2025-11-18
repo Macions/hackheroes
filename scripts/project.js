@@ -1,182 +1,203 @@
-// project.js
-document.addEventListener('DOMContentLoaded', function() {
-    initProjectPage();
-    initTaskFilters();
-    initJoinModal();
-    initComments();
-    initReactions();
+document.addEventListener("DOMContentLoaded", function () {
+	initializeProjectPage();
+	setupEventListeners();
 });
 
-function initProjectPage() {
-    // Sprawdź czy użytkownik jest właścicielem projektu
-    const isOwner = Math.random() > 0.7; // Symulacja - w rzeczywistości sprawdzać z backendu
-    if (isOwner) {
-        document.getElementById('ownerTools').style.display = 'block';
-    }
+function initializeProjectPage() {
+	// Sprawdź czy użytkownik jest właścicielem lub członkiem
+	if (projectData.isOwner) {
+		console.log("Jesteś właścicielem tego projektu");
+	} else if (projectData.isMember) {
+		console.log("Jesteś członkiem tego projektu");
+	}
 }
 
-function initTaskFilters() {
-    const filterBtns = document.querySelectorAll('.filter-btn');
-    const taskCards = document.querySelectorAll('.task-card');
-    
-    filterBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const filter = this.dataset.filter;
-            
-            // Aktualizuj aktywne przyciski
-            filterBtns.forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            
-            // Filtruj zadania
-            taskCards.forEach(card => {
-                if (filter === 'all' || card.dataset.status === filter) {
-                    card.style.display = 'block';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-        });
-    });
+function setupEventListeners() {
+	// Przycisk dołączania do projektu
+	const joinBtn = document.getElementById("joinProjectBtn");
+	const applyBtn = document.getElementById("applyBtn");
+
+	if (joinBtn) {
+		joinBtn.addEventListener("click", openJoinModal);
+	}
+
+	if (applyBtn) {
+		applyBtn.addEventListener("click", openJoinModal);
+	}
+
+	// Filtrowanie zadań
+	const filterBtns = document.querySelectorAll(".filter-btn");
+	filterBtns.forEach((btn) => {
+		btn.addEventListener("click", function () {
+			filterTasks(this.dataset.filter);
+
+			// Aktualizacja aktywnych przycisków
+			filterBtns.forEach((b) => b.classList.remove("active"));
+			this.classList.add("active");
+		});
+	});
+
+	// Obsługa like'ów
+	const likeBtn = document.querySelector(".like-btn");
+	if (likeBtn) {
+		likeBtn.addEventListener("click", toggleLike);
+	}
+
+	// Obsługa udostępniania
+	const shareBtn = document.querySelector(".share-btn");
+	if (shareBtn) {
+		shareBtn.addEventListener("click", shareProject);
+	}
 }
 
-function initJoinModal() {
-    const joinBtn = document.getElementById('joinProjectBtn');
-    const modal = document.getElementById('joinModal');
-    
-    joinBtn.addEventListener('click', function() {
-        modal.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-    });
+function openJoinModal() {
+	if (!projectData.allowApplications) {
+		alert("Ten projekt nie przyjmuje obecnie nowych zgłoszeń.");
+		return;
+	}
+
+	document.getElementById("joinModal").style.display = "flex";
 }
 
 function closeJoinModal() {
-    const modal = document.getElementById('joinModal');
-    modal.style.display = 'none';
-    document.body.style.overflow = 'auto';
+	document.getElementById("joinModal").style.display = "none";
 }
 
 function submitApplication() {
-    const textarea = document.querySelector('.modal-textarea');
-    const motivation = textarea.value.trim();
-    
-    if (!motivation) {
-        alert('Proszę opisać swoje motywacje do dołączenia do projektu');
-        return;
-    }
-    
-    // Symulacja wysłania zgłoszenia
-    showNotification('Twoje zgłoszenie zostało wysłane! Otrzymasz odpowiedź wkrótce.', 'success');
-    closeJoinModal();
-    
-    // Reset formularza
-    textarea.value = '';
-    document.querySelector('.modal-select').selectedIndex = 0;
+	const motivation = document.querySelector(".modal-textarea").value.trim();
+	const role = document.querySelector(".modal-select").value;
+	const availability = document.querySelectorAll(".modal-select")[1].value;
+
+	if (!motivation) {
+		alert("Proszę opisać swoje motywacje do dołączenia do projektu.");
+		return;
+	}
+
+	if (!role) {
+		alert("Proszę wybrać rolę.");
+		return;
+	}
+
+	if (!availability) {
+		alert("Proszę wybrać poziom zaangażowania.");
+		return;
+	}
+
+	// Tutaj wyślij zgłoszenie do serwera
+	const formData = new FormData();
+	formData.append("project_id", projectData.id);
+	formData.append("motivation", motivation);
+	formData.append("role", role);
+	formData.append("availability", availability);
+
+	fetch("apply_to_project.php", {
+		method: "POST",
+		body: formData,
+	})
+		.then((response) => response.json())
+		.then((data) => {
+			if (data.success) {
+				alert("Twoje zgłoszenie zostało wysłane!");
+				closeJoinModal();
+			} else {
+				alert("Błąd: " + data.message);
+			}
+		})
+		.catch((error) => {
+			console.error("Error:", error);
+			alert("Wystąpił błąd podczas wysyłania zgłoszenia.");
+		});
 }
 
-function initComments() {
-    const commentBtn = document.querySelector('.btn-comment');
-    const commentInput = document.querySelector('.comment-input');
-    
-    commentBtn.addEventListener('click', function() {
-        const comment = commentInput.value.trim();
-        
-        if (!comment) {
-            alert('Proszę wpisać komentarz');
-            return;
-        }
-        
-        // Symulacja dodania komentarza
-        addNewComment(comment);
-        commentInput.value = '';
-        
-        showNotification('Komentarz został dodany!', 'success');
-    });
+function filterTasks(filter) {
+	const tasks = document.querySelectorAll(".task-card");
+
+	tasks.forEach((task) => {
+		switch (filter) {
+			case "all":
+				task.style.display = "flex";
+				break;
+			case "open":
+				task.style.display = task.dataset.status === "open" ? "flex" : "none";
+				break;
+			case "in-progress":
+				task.style.display =
+					task.dataset.status === "in-progress" ? "flex" : "none";
+				break;
+			case "done":
+				task.style.display = task.dataset.status === "done" ? "flex" : "none";
+				break;
+		}
+	});
 }
 
-function addNewComment(text) {
-    const commentsList = document.querySelector('.comments-list');
-    const newComment = document.createElement('div');
-    newComment.className = 'comment';
-    
-    newComment.innerHTML = `
-        <div class="comment-avatar">
-            <img src="../photos/sample_person.png" alt="Twój avatar">
-        </div>
-        <div class="comment-content">
-            <div class="comment-header">
-                <span class="comment-author">Ty</span>
-                <span class="comment-date">Teraz</span>
-            </div>
-            <p class="comment-text">${text}</p>
-            <div class="comment-actions">
-                <button class="comment-like">❤️ 0</button>
-                <button class="comment-reply">Odpowiedz</button>
-            </div>
-        </div>
-    `;
-    
-    commentsList.prepend(newComment);
+function toggleLike() {
+	const likeBtn = document.querySelector(".like-btn");
+	const likeCount = document.querySelector(".reaction-item .reaction-count");
+
+	fetch("toggle_like.php", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			project_id: projectData.id,
+		}),
+	})
+		.then((response) => response.json())
+		.then((data) => {
+			if (data.success) {
+				likeBtn.textContent = data.liked ? "❤️ Lubisz" : "❤️ Polub";
+				likeCount.textContent = data.likeCount;
+			}
+		})
+		.catch((error) => {
+			console.error("Error:", error);
+		});
 }
 
-function initReactions() {
-    const likeBtn = document.querySelector('.like-btn');
-    let liked = false;
-    
-    likeBtn.addEventListener('click', function() {
-        liked = !liked;
-        this.textContent = liked ? '❤️ Polubione' : '❤️ Polub';
-        this.style.background = liked ? 'var(--primary)' : 'white';
-        this.style.color = liked ? 'white' : 'inherit';
-        
-        showNotification(liked ? 'Dodałeś polubienie!' : 'Usunąłeś polubienie', 'info');
-    });
+function shareProject() {
+	const url = window.location.href;
+	const title = projectData.name;
+
+	if (navigator.share) {
+		navigator
+			.share({
+				title: title,
+				text: "Zobacz ten projekt na TeenCollab:",
+				url: url,
+			})
+			.catch((error) => console.log("Błąd udostępniania:", error));
+	} else {
+		// Fallback - kopiowanie do schowka
+		navigator.clipboard.writeText(url).then(() => {
+			alert("Link skopiowany do schowka!");
+		});
+	}
 }
 
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = 'notification';
-    notification.textContent = message;
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 1rem 1.5rem;
-        background: ${type === 'success' ? 'var(--primary)' : type === 'error' ? 'var(--danger)' : 'var(--secondary)'};
-        color: white;
-        border-radius: 0.75rem;
-        z-index: 10000;
-        transform: translateX(400px);
-        transition: transform 0.3s ease;
-        font-weight: 500;
-    `;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.style.transform = 'translateX(0)';
-    }, 100);
-    
-    setTimeout(() => {
-        notification.style.transform = 'translateX(400px)';
-        setTimeout(() => notification.remove(), 300);
-    }, 3000);
-}
-
-// Obsługa menu mobilnego
-const burgerMenu = document.getElementById('burger-menu');
-const navMenu = document.querySelector('.nav-menu');
-
-if (burgerMenu) {
-    burgerMenu.addEventListener('click', function() {
-        this.classList.toggle('active');
-        navMenu.classList.toggle('active');
-    });
-}
-
-// Zamknij menu po kliknięciu w link
-document.querySelectorAll('.nav-menu a').forEach(link => {
-    link.addEventListener('click', () => {
-        burgerMenu.classList.remove('active');
-        navMenu.classList.remove('active');
-    });
+// Obsługa modalów
+document.addEventListener("click", function (event) {
+	if (event.target.classList.contains("modal")) {
+		event.target.style.display = "none";
+	}
 });
+
+document.addEventListener("keydown", function (event) {
+	if (event.key === "Escape") {
+		document.querySelectorAll(".modal").forEach((modal) => {
+			modal.style.display = "none";
+		});
+	}
+});
+
+// Menu burger
+const burgerMenu = document.getElementById("burger-menu");
+const navMenu = document.querySelector(".nav-menu");
+
+if (burgerMenu && navMenu) {
+	burgerMenu.addEventListener("click", () => {
+		burgerMenu.classList.toggle("active");
+		navMenu.classList.toggle("active");
+	});
+}

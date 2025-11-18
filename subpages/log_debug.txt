@@ -1,6 +1,0 @@
-2025-11-16 22:07:17 - Rozpoczęcie log_action.php
-Dane: user_id=5, email=maciejkaczarnecka4@gmail.com, action=profile_update, details=Zmiana Nick: "4" → "5"
-Sukces: Zalogowano akcję ID: 67
-2025-11-16 22:07:59 - Rozpoczęcie log_action.php
-Dane: user_id=5, email=maciejkaczarnecka4@gmail.com, action=profile_update, details=Zmiana Nick: "6" → "7"
-Sukces: Zalogowano akcję ID: 71

@@ -1,3 +1,260 @@
+<?php
+session_start();
+include("global/connection.php");
+
+// Sprawdź czy użytkownik jest zalogowany
+if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
+    header("Location: login.php");
+    exit();
+}
+
+$userId = $_SESSION["user_id"];
+$userEmail = $_SESSION["user_email"] ?? '';
+
+// Obsługa formularza
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    $projectName = trim($_POST['projectName'] ?? '');
+    $shortDescription = trim($_POST['shortDescription'] ?? '');
+    $fullDescription = trim($_POST['fullDescription'] ?? '');
+    $deadline = $_POST['deadline'] ?? null;
+    $visibility = $_POST['visibility'] ?? 'public';
+    $allowApplications = isset($_POST['allowApplications']) ? 1 : 0;
+    $autoAccept = isset($_POST['autoAccept']) ? 1 : 0;
+    $seoTags = trim($_POST['seoTags'] ?? '');
+
+    if (empty($projectName) || empty($shortDescription)) {
+        echo json_encode(['success' => false, 'message' => 'Puste dane']);
+        exit();
+    }
+
+    if (strlen($projectName) > 80) {
+        echo json_encode(['success' => false, 'message' => 'Nazwa projektu jest zbyt długa']);
+        exit();
+    }
+
+    if (strlen($shortDescription) > 300) {
+        echo json_encode(['success' => false, 'message' => 'Krótki opis jest zbyt długi']);
+        exit();
+    }
+
+    try {
+        $conn->begin_transaction();
+
+        $stmt = $conn->prepare("
+            INSERT INTO projects 
+            (name, short_description, full_description, deadline, visibility, founder_id, allow_applications, auto_accept, seo_tags, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        ");
+
+        if ($stmt === false) {
+            throw new Exception("Błąd przygotowania zapytania: " . $conn->error);
+        }
+
+        if (!$stmt->bind_param("sssssiiis", $projectName, $shortDescription, $fullDescription, $deadline, $visibility, $userId, $allowApplications, $autoAccept, $seoTags)) {
+            throw new Exception("Błąd powiązania parametrów: " . $stmt->error);
+        }
+
+        if (!$stmt->execute()) {
+            throw new Exception("Błąd wykonania zapytania: " . $stmt->error);
+        }
+
+        $projectId = $conn->insert_id;
+        $stmt->close();
+
+        // Kategorie
+        if (isset($_POST['categories'])) {
+            // Upewnij się, że categories jest tablicą
+            $categories = is_array($_POST['categories']) ? $_POST['categories'] : [$_POST['categories']];
+
+            $categoryMap = [
+                'technology' => 'Technologia',
+                'social' => 'Społeczne',
+                'education' => 'Edukacja',
+                'ecology' => 'Ekologia',
+                'business' => 'Biznes',
+                'art' => 'Sztuka',
+                'media' => 'Media'
+            ];
+
+            $categoryStmt = $conn->prepare("INSERT INTO categories (name) VALUES (?)");
+            $projectCategoryStmt = $conn->prepare("INSERT INTO project_categories (project_id, category_id) VALUES (?, ?)");
+
+            foreach ($categories as $categoryKey) {
+                if (!isset($categoryMap[$categoryKey])) {
+                    continue;
+                }
+
+                $categoryName = $categoryMap[$categoryKey];
+
+                $checkCat = $conn->prepare("SELECT id FROM categories WHERE name = ?");
+                $checkCat->bind_param("s", $categoryName);
+                $checkCat->execute();
+                $checkCat->bind_result($categoryId);
+
+                if ($checkCat->fetch()) {
+                    $projectCategoryStmt->bind_param("ii", $projectId, $categoryId);
+                    $projectCategoryStmt->execute();
+                } else {
+                    $categoryStmt->bind_param("s", $categoryName);
+                    $categoryStmt->execute();
+                    $newCategoryId = $conn->insert_id;
+
+                    $projectCategoryStmt->bind_param("ii", $projectId, $newCategoryId);
+                    $projectCategoryStmt->execute();
+                }
+
+                $checkCat->close();
+            }
+
+            $categoryStmt->close();
+            $projectCategoryStmt->close();
+        }
+
+        // Cele
+        if (isset($_POST['goals'])) {
+            $goalStmt = $conn->prepare("INSERT INTO goals (project_id, description) VALUES (?, ?)");
+
+            foreach ($_POST['goals'] as $goal) {
+                $goal = trim($goal);
+                if (!empty($goal)) {
+                    $goalStmt->bind_param("is", $projectId, $goal);
+                    $goalStmt->execute();
+                }
+            }
+            $goalStmt->close();
+        }
+
+        // Skills
+        if (isset($_POST['skills'])) {
+            // Upewnij się, że skills jest tablicą
+            $skills = is_array($_POST['skills']) ? $_POST['skills'] : [$_POST['skills']];
+
+            $skillMap = [
+                'programming' => 'Programowanie',
+                'design' => 'Grafika',
+                'social-media' => 'Social Media',
+                'logistics' => 'Logistyka',
+                'copywriting' => 'Copywriting',
+                'video' => 'Obsługa kamer',
+                'ai' => 'AI Tools'
+            ];
+
+            $skillStmt = $conn->prepare("INSERT INTO skills (name) VALUES (?)");
+            $projectSkillStmt = $conn->prepare("INSERT INTO project_skills (project_id, skill_id) VALUES (?, ?)");
+
+            foreach ($skills as $skillKey) {
+                if (!isset($skillMap[$skillKey])) {
+                    continue;
+                }
+
+                $skillName = $skillMap[$skillKey];
+
+                $checkSkill = $conn->prepare("SELECT id FROM skills WHERE name = ?");
+                $checkSkill->bind_param("s", $skillName);
+                $checkSkill->execute();
+                $checkSkill->bind_result($skillId);
+
+                if ($checkSkill->fetch()) {
+                    $projectSkillStmt->bind_param("ii", $projectId, $skillId);
+                    $projectSkillStmt->execute();
+                } else {
+                    $skillStmt->bind_param("s", $skillName);
+                    $skillStmt->execute();
+                    $newSkillId = $conn->insert_id;
+
+                    $projectSkillStmt->bind_param("ii", $projectId, $newSkillId);
+                    $projectSkillStmt->execute();
+                }
+
+                $checkSkill->close();
+            }
+
+            $skillStmt->close();
+            $projectSkillStmt->close();
+        }
+
+        // Tasks
+        if (isset($_POST['tasks'])) {
+            $taskStmt = $conn->prepare("
+                INSERT INTO tasks (project_id, name, description, priority)
+                VALUES (?, ?, ?, ?)
+            ");
+
+            foreach ($_POST['tasks'] as $task) {
+                if (!empty(trim($task['name'] ?? ''))) {
+                    $name = trim($task['name']);
+                    $description = trim($task['description'] ?? '');
+                    $priority = $task['priority'] ?? 'medium';
+
+                    $taskStmt->bind_param("isss", $projectId, $name, $description, $priority);
+                    $taskStmt->execute();
+                }
+            }
+
+            $taskStmt->close();
+        }
+
+        // Thumbnail
+        if (isset($_FILES['thumbnail'])) {
+            if ($_FILES['thumbnail']['error'] === UPLOAD_ERR_OK) {
+                $allowed = ['image/jpeg', 'image/png', 'image/gif'];
+                if (in_array($_FILES['thumbnail']['type'], $allowed)) {
+
+                    $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/Konkurs/photos/projects/';
+
+                    if (!file_exists($uploadDir)) {
+                        mkdir($uploadDir, 0755, true);
+                    }
+
+                    $ext = pathinfo($_FILES['thumbnail']['name'], PATHINFO_EXTENSION);
+                    $fileName = "project_{$projectId}_" . time() . ".$ext";
+                    $filePath = $uploadDir . $fileName;
+
+                    if (move_uploaded_file($_FILES['thumbnail']['tmp_name'], $filePath)) {
+                        $thumbnailUrl = "../photos/projects/$fileName";
+                        $thumbStmt = $conn->prepare("UPDATE projects SET thumbnail=? WHERE id=?");
+                        $thumbStmt->bind_param("si", $thumbnailUrl, $projectId);
+                        $thumbStmt->execute();
+                        $thumbStmt->close();
+                    }
+                }
+            }
+        }
+
+        // Founder to project_team
+        $memberStmt = $conn->prepare("
+            INSERT INTO project_team (project_id, user_id, role)
+            VALUES (?, ?, 'Założyciel')
+        ");
+        $memberStmt->bind_param("ii", $projectId, $userId);
+        $memberStmt->execute();
+        $memberStmt->close();
+
+        $conn->commit();
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Projekt został utworzony pomyślnie!',
+            'projectId' => $projectId,
+            'redirect' => 'project.php?id=' . $projectId
+        ]);
+        exit();
+
+    } catch (Exception $e) {
+        $conn->rollback();
+
+        echo json_encode([
+            'success' => false,
+            'message' => "Wystąpił błąd: " . $e->getMessage()
+        ]);
+        exit();
+    }
+}
+
+?>
+
+
 <!DOCTYPE html>
 <html lang="pl">
 
@@ -20,7 +277,7 @@
                     <img src="../photos/website-logo.jpg" alt="Logo TeenCollab">
                     <span>TeenCollab</span>
                 </div>
-                
+
                 <ul class="nav-menu">
                     <li><a href="index.html">Strona główna</a></li>
                     <li><a href="projekty.html">Projekty</a></li>
@@ -28,7 +285,7 @@
                     <li><a href="o-projekcie.html">O projekcie</a></li>
                     <li class="nav-cta"><a href="konto.html">Moje konto</a></li>
                 </ul>
-                
+
                 <button class="burger-menu" id="burger-menu" aria-label="Menu">
                     <span></span>
                     <span></span>
@@ -48,15 +305,15 @@
                         <p>Wypełnij formularz, aby rozpocząć swoją przygodę z tworzeniem projektów</p>
                     </div>
 
-                    <form id="createProjectForm" class="project-form">
+                    <form id="createProjectForm" class="project-form" enctype="multipart/form-data">
                         <!-- Nazwa projektu -->
                         <section class="form-section">
                             <div class="section-header">
                                 <h2>Nazwa projektu</h2>
                                 <span class="required">*</span>
                             </div>
-                            <input type="text" id="projectName" name="projectName" maxlength="80" required 
-                                   placeholder="Podaj krótki i treściwy tytuł projektu, np. 'EkoDom', 'SmartCity', 'AI Helper'">
+                            <input type="text" id="projectName" name="projectName" maxlength="80" required
+                                placeholder="Podaj krótki i treściwy tytuł projektu, np. 'EkoDom', 'SmartCity', 'AI Helper'">
                             <div class="char-counter">
                                 <span id="nameCounter">0</span>/80 znaków
                             </div>
@@ -68,8 +325,8 @@
                                 <h2>Krótki opis projektu</h2>
                                 <span class="required">*</span>
                             </div>
-                            <textarea id="shortDescription" name="shortDescription" maxlength="300" required 
-                                      placeholder="Opisz swój projekt w kilku zdaniach - to będzie Twój główny 'pitch'"></textarea>
+                            <textarea id="shortDescription" name="shortDescription" maxlength="300" required
+                                placeholder="Opisz swój projekt w kilku zdaniach - to będzie Twój główny 'pitch'"></textarea>
                             <div class="char-counter">
                                 <span id="descCounter">0</span>/300 znaków
                             </div>
@@ -81,8 +338,8 @@
                                 <h2>Pełny opis projektu</h2>
                                 <span class="optional">opcjonalne</span>
                             </div>
-                            <textarea id="fullDescription" name="fullDescription" 
-                                      placeholder="Opisz szczegóły projektu: cele, kontekst, problemy, inspiracje..."></textarea>
+                            <textarea id="fullDescription" name="fullDescription"
+                                placeholder="Opisz szczegóły projektu: cele, kontekst, problemy, inspiracje..."></textarea>
                         </section>
 
                         <!-- Kategorie -->
@@ -347,19 +604,20 @@
                             </div>
                             <div class="preview-details">
                                 <h3 id="previewTitle">Nazwa projektu</h3>
-                                <p id="previewDescription" class="preview-description">Krótki opis projektu pojawi się tutaj...</p>
-                                
+                                <p id="previewDescription" class="preview-description">Krótki opis projektu pojawi się
+                                    tutaj...</p>
+
                                 <div class="preview-categories" id="previewCategories">
                                     <span class="no-categories">Brak kategorii</span>
                                 </div>
-                                
+
                                 <div class="preview-goals" id="previewGoals">
                                     <h4>Cele projektu</h4>
                                     <div class="goals-list">
                                         <span class="no-goals">Brak dodanych celów</span>
                                     </div>
                                 </div>
-                                
+
                                 <div class="preview-meta">
                                     <div class="meta-item">
                                         <span class="meta-label">Status:</span>
@@ -396,7 +654,8 @@
                 </div>
                 <div class="form-group">
                     <label>Opis zadania</label>
-                    <textarea id="taskDescription" class="modal-textarea" placeholder="Opisz szczegóły zadania"></textarea>
+                    <textarea id="taskDescription" class="modal-textarea"
+                        placeholder="Opisz szczegóły zadania"></textarea>
                 </div>
                 <div class="form-group">
                     <label>Priorytet</label>

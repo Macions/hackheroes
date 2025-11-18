@@ -1195,58 +1195,9 @@ document.getElementById("deleteModal").addEventListener("click", function (e) {
 	}
 });
 
-function showAvatarFeedback(message, type) {
-	let feedback = document.querySelector(".avatar-feedback");
-	if (!feedback) {
-		feedback = document.createElement("div");
-		feedback.className = "avatar-feedback";
-		const modalContent = document.querySelector("#avatarModal .modal-content");
-		modalContent.appendChild(feedback);
-	}
-
-	feedback.textContent = message;
-	feedback.className = `avatar-feedback ${type}`;
-
-	setTimeout(() => {
-		feedback.remove();
-	}, 3000);
-}
-
-// Ulepszona funkcja preview
-function previewAvatar(input) {
-	const feedback = document.querySelector(".avatar-feedback");
-	if (feedback) feedback.remove();
-
-	if (input.files && input.files[0]) {
-		const file = input.files[0];
-
-		// Walidacja rozmiaru
-		if (file.size > 5 * 1024 * 1024) {
-			showAvatarFeedback("Plik jest za duży (max 5MB)", "error");
-			input.value = "";
-			return;
-		}
-
-		// Walidacja typu
-		const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif"];
-		if (!allowedTypes.includes(file.type)) {
-			showAvatarFeedback("Dozwolone formaty: JPG, PNG, GIF", "error");
-			input.value = "";
-			return;
-		}
-
-		const reader = new FileReader();
-		reader.onload = function (e) {
-			document.getElementById("avatarPreview").src = e.target.result;
-		};
-		reader.readAsDataURL(input.files[0]);
-	}
-}
-
 function saveAvatar() {
 	console.log("🔄 saveAvatar function started");
 
-	// ✅ UŻYJ TEGO SAMEGO SELEKTORA CO W initializeAvatarModal()
 	const saveBtn = document.querySelector("#avatarModal .modal-btn.primary");
 	console.log("🔍 Save button in saveAvatar:", saveBtn);
 
@@ -1270,7 +1221,7 @@ function saveAvatar() {
 
 	// Walidacja pliku
 	const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif"];
-	const maxFileSize = 5 * 1024 * 1024; // 5MB
+	const maxFileSize = 5 * 1024 * 1024;
 
 	if (!allowedTypes.includes(file.type)) {
 		showAvatarFeedback("Dozwolone formaty: JPG, PNG, GIF", "error");
@@ -1289,8 +1240,6 @@ function saveAvatar() {
 		saveBtn.textContent = "Zapisywanie...";
 		saveBtn.disabled = true;
 		console.log("🔘 Przycisk zablokowany");
-	} else {
-		console.warn("⚠️ Save button not found, continuing without UI update");
 	}
 
 	// PRZYGOTUJ DANE
@@ -1304,8 +1253,6 @@ function saveAvatar() {
 	} else {
 		console.error("❌ Brak user ID");
 		showAvatarFeedback("Błąd sesji", "error");
-
-		// Przywróć przycisk jeśli istnieje
 		if (saveBtn) {
 			saveBtn.textContent = originalText;
 			saveBtn.disabled = false;
@@ -1320,7 +1267,7 @@ function saveAvatar() {
 	xhr.onload = function () {
 		console.log("📡 Odpowiedź serwera:", xhr.status);
 
-		// ✅ PRZYWRÓĆ PRZYCISK - ZABEZPIECZONE
+		// ✅ PRZYWRÓĆ PRZYCISK
 		if (saveBtn) {
 			saveBtn.textContent = originalText;
 			saveBtn.disabled = false;
@@ -1333,43 +1280,19 @@ function saveAvatar() {
 				console.log("📄 Odpowiedź JSON:", response);
 
 				if (response.success) {
-					// ✅ DODAJ / NA POCZĄTKU ŚCIEŻKI
-					const fullAvatarUrl = response.avatarUrl.startsWith("/")
-						? response.avatarUrl
-						: "/" + response.avatarUrl;
-					console.log("✅ Pełna ścieżka do avatara:", fullAvatarUrl);
+					// ✅ TYLKO ODSWIERZENIE STRONY - USUŃ CAŁĄ RESZTĘ
+					console.log("✅ Sukces! Odświeżam stronę...");
 
-					// AKTUALIZACJA AVATARA
-					const profileAvatar = document.getElementById("profileAvatar");
-					if (profileAvatar) {
-						profileAvatar.src = fullAvatarUrl + "?t=" + new Date().getTime(); // Cache bust
-						console.log("✅ Avatar zaktualizowany:", fullAvatarUrl);
-					} else {
-						console.error("❌ Element profileAvatar nie znaleziony");
-					}
-
-					// Avatar w navbarze
-					const navAvatar = document.querySelector(
-						".nav-user-dropdown .user-avatar, .user-avatar"
-					);
-					if (navAvatar) {
-						navAvatar.src = fullAvatarUrl + "?t=" + new Date().getTime(); // Cache bust
-						console.log("✅ Avatar w navbarze zaktualizowany");
-					}
-
-					// Avatar w innych miejscach
-					const allAvatars = document.querySelectorAll(
-						'img[src*="avatar"], .user-avatar, .avatar-img'
-					);
-					allAvatars.forEach((img) => {
-						if (img !== profileAvatar && img !== navAvatar) {
-							img.src = fullAvatarUrl + "?t=" + new Date().getTime();
-						}
-					});
-
-					logUserAction("avatar_change", "Zdjęcie profilowe zostało zmienione");
+					// Zamknij modal
 					closeAvatarModal();
-					showAvatarFeedback("✅ Avatar został zmieniony pomyślnie", "success");
+
+					// Pokaz komunikat
+					showAvatarFeedback(
+						"✅ Avatar został zmieniony! Odświeżam stronę...",
+						"success"
+					);
+
+					window.location.reload();
 				} else {
 					console.error("❌ Błąd z serwera:", response.message);
 					showAvatarFeedback(
@@ -1379,7 +1302,6 @@ function saveAvatar() {
 				}
 			} catch (e) {
 				console.error("❌ Błąd parsowania JSON:", e);
-				console.error("📄 Surowa odpowiedź:", xhr.responseText);
 				showAvatarFeedback("Błąd serwera - nieprawidłowa odpowiedź", "error");
 			}
 		} else {
@@ -1408,28 +1330,46 @@ function saveAvatar() {
 	xhr.send(formData);
 }
 
-// W account.js, znajdź tę funkcję i zmodyfikuj:
-function updateAvatarInUI(avatarUrl) {
-	console.log("🔄 Aktualizacja avatar w UI:", avatarUrl);
+function showAvatarFeedback(message, type) {
+	let feedback = document.querySelector(".avatar-feedback");
+	if (!feedback) {
+		feedback = document.createElement("div");
+		feedback.className = "avatar-feedback";
+		const modalContent = document.querySelector("#avatarModal .modal-content");
+		if (modalContent) {
+			modalContent.appendChild(feedback);
+		} else {
+			console.error("❌ Nie znaleziono modal-content");
+			return;
+		}
+	}
 
-	// ✅ DODAJ / na początku ścieżki
-	const fullAvatarUrl = "/" + avatarUrl;
-	console.log("✅ Pełna ścieżka do avatara:", fullAvatarUrl);
+	feedback.textContent = message;
+	feedback.className = `avatar-feedback ${type}`;
 
-	// Aktualizuj wszystkie obrazki avatara
-	const avatarImages = document.querySelectorAll(
-		'.user-avatar, .avatar-image, .avatar-img, img[src*="avatar"]'
-	);
-
-	avatarImages.forEach((img) => {
-		const oldSrc = img.src;
-		img.src = fullAvatarUrl + "?t=" + new Date().getTime(); // Cache bust
-		console.log("🖼️ Zaktualizowano obrazek:", oldSrc, "→", img.src);
-	});
-
-	// Aktualizuj w modalach, dropdownach itp.
-	updateAvatarInAllElements(fullAvatarUrl);
+	// Automatyczne usunięcie po 3 sekundach
+	setTimeout(() => {
+		if (feedback && feedback.parentNode) {
+			feedback.remove();
+		}
+	}, 3000);
 }
+
+// Odblokowanie przycisku po wybraniu pliku
+avatarUpload.addEventListener('change', function() {
+    const saveBtn = document.getElementById('saveAvatarBtn');
+    saveBtn.disabled = !this.files.length;
+    
+    if (this.files.length) {
+        // Tutaj też można dodać walidację pliku
+        const file = this.files[0];
+        if (file.size > 5 * 1024 * 1024) { // 5MB
+            saveBtn.disabled = true;
+            showError('Plik jest za duży');
+        }
+    }
+});
+
 const burgerMenu = document.getElementById("burger-menu");
 const navMenu = document.querySelector(".nav-menu");
 
