@@ -1,6 +1,11 @@
 document.addEventListener("DOMContentLoaded", function () {
 	initializeProjectPage();
 	setupEventListeners();
+
+	const followBtn = document.getElementById("followBtn");
+	if (followBtn) {
+		followBtn.addEventListener("click", toggleFollow);
+	}
 });
 
 function initializeProjectPage() {
@@ -190,6 +195,94 @@ document.addEventListener("keydown", function (event) {
 		});
 	}
 });
+
+function toggleFollow() {
+	const projectId = projectData.id;
+	const followBtn = document.getElementById("followBtn");
+
+	fetch("follow_project.php", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/x-www-form-urlencoded",
+		},
+		body: `project_id=${projectId}`,
+	})
+		.then((response) => response.json())
+		.then((data) => {
+			if (data.success) {
+				// Aktualizuj tekst i styl przycisku
+				if (data.action === "follow") {
+					followBtn.innerHTML =
+						"<span title='Przestań obserwować'>Obserwujesz</span>";
+					followBtn.classList.add("following");
+					showNotification(data.message, "success");
+				} else {
+					followBtn.innerHTML = "<span>❤️ Obserwuj</span>";
+					followBtn.classList.remove("following");
+					showNotification(data.message, "info");
+				}
+			} else {
+				showNotification(data.message, "error");
+			}
+		})
+		.catch((error) => {
+			console.error("Error:", error);
+			showNotification("Wystąpił błąd!", "error");
+		});
+}
+
+function showNotification(message, type) {
+	// Tworzenie i wyświetlanie powiadomienia
+	const notification = document.createElement("div");
+	notification.className = `notification notification-${type}`;
+	notification.textContent = message;
+
+	document.body.appendChild(notification);
+
+	setTimeout(() => {
+		notification.remove();
+	}, 3000);
+}
+
+document
+	.getElementById("btnAddComment")
+	.addEventListener("click", function (e) {
+		e.preventDefault();
+		const comment = document.getElementById("commentInput").value.trim();
+		if (!comment) return alert("Komentarz nie może być pusty!");
+
+		fetch("add_comment.php", {
+			method: "POST",
+			headers: { "Content-Type": "application/x-www-form-urlencoded" },
+			body:
+				"project_id=<?php echo $projectId; ?>&comment=" +
+				encodeURIComponent(comment),
+		})
+			.then((response) => response.json())
+			.then((data) => {
+				if (data.success) {
+					// Dodaj komentarz do listy bez przeładowania
+					const list = document.querySelector(".comments-list");
+					const newComment = document.createElement("div");
+					newComment.classList.add("comment-item");
+					newComment.innerHTML = `
+                <div class="comment-avatar">
+                    <img src="<?php echo $userAvatarUrl; ?>" alt="Twój avatar">
+                </div>
+                <div class="comment-content">
+                    <h4>Ty</h4>
+                    <p>${comment.replace(/\n/g, "<br>")}</p>
+                    <span class="comment-date">Właśnie teraz</span>
+                </div>
+            `;
+					list.prepend(newComment);
+					document.getElementById("commentInput").value = "";
+				} else {
+					alert("Błąd przy dodawaniu komentarza!");
+				}
+			})
+			.catch(() => alert("Coś poszło nie tak..."));
+	});
 
 // Menu burger
 const burgerMenu = document.getElementById("burger-menu");

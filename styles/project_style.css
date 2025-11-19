@@ -7,7 +7,7 @@
 	--text: #1f2937;
 	--text-light: #6b7280;
 	--background: #ffffff;
-	--surface: #f8fafc;
+	--surface: #e2e2e2;
 	--border: #e5e7eb;
 	--shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
 	--shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
@@ -655,7 +655,6 @@ header {
 .btn-apply {
 	margin-top: 0.5rem;
 }
-
 /* 💬 Komentarze */
 .comments-stats {
 	display: flex;
@@ -671,6 +670,7 @@ header {
 	display: flex;
 	gap: 1rem;
 	margin-bottom: 2rem;
+	align-items: flex-start; /* wyrównanie avatarów i textarea */
 }
 
 .comment-avatar img {
@@ -717,15 +717,22 @@ header {
 	gap: 1.5rem;
 }
 
-.comment {
+/* Ustawienie avatar i treści obok siebie */
+.comment-item {
 	display: flex;
 	gap: 1rem;
+	align-items: flex-start; /* wyrównanie avataru z górą komentarza */
+}
+
+.comment-item .comment-avatar img {
+	width: 50px;
+	height: 50px;
 }
 
 .comment-content {
 	flex: 1;
-	background: white;
-	padding: 1.5rem;
+	background: rgb(208, 208, 208);
+	padding: 1rem 1.5rem;
 	border-radius: 1rem;
 	border: 1px solid var(--border);
 }
@@ -734,7 +741,7 @@ header {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	margin-bottom: 0.75rem;
+	margin-bottom: 0.5rem;
 	flex-wrap: wrap;
 	gap: 0.5rem;
 }
@@ -752,7 +759,7 @@ header {
 .comment-text {
 	line-height: 1.6;
 	color: var(--text);
-	margin-bottom: 1rem;
+	margin-bottom: 0.5rem;
 }
 
 .comment-actions {
@@ -1442,6 +1449,49 @@ footer {
 	height: 2px;
 	background: linear-gradient(90deg, #3b82f6, #8b5cf6, #10b981, #f59e0b);
 	opacity: 0.7;
+}
+
+/* project_style.css */
+.btn-secondary.following {
+	background-color: #dc3545;
+	color: white;
+}
+
+.btn-secondary.following:hover {
+	background-color: #c82333;
+}
+
+/* Style dla powiadomień */
+.notification {
+	position: fixed;
+	top: 20px;
+	right: 20px;
+	padding: 12px 20px;
+	border-radius: 4px;
+	color: white;
+	z-index: 1000;
+	animation: slideIn 0.3s ease;
+}
+
+.notification-success {
+	background-color: #28a745;
+}
+
+.notification-error {
+	background-color: #dc3545;
+}
+
+.notification-info {
+	background-color: #17a2b8;
+}
+
+@keyframes slideIn {
+	from {
+		transform: translateX(100%);
+	}
+	to {
+		transform: translateX(0);
+	}
 }
 
 /* Responsywność */

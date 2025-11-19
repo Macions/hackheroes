@@ -41,8 +41,7 @@ function formatDateTime($dateString)
     return $date->format('d.m.Y H:i');
 }
 
-// Funkcja do zwiększania licznika wyświetleń (prosta wersja z sesją)
-// Zmodyfikowana funkcja
+// Funkcja do zwiększania licznika wyświetleń
 function incrementProjectViews($conn, $projectId, $userId)
 {
     $viewKey = 'project_view_' . $projectId;
@@ -195,6 +194,40 @@ try {
         $goalStmt->close();
     }
 
+    // Pobierz liczbę polubień projektu
+    $likeCount = 0;
+
+    // Pobierz liczbę polubień
+    $likeCountStmt = $conn->prepare("SELECT COUNT(*) as like_count FROM likes WHERE project_id = ?");
+    $likeCountStmt->bind_param("i", $projectId);
+    $likeCountStmt->execute();
+    $likeCountResult = $likeCountStmt->get_result();
+    $likeCountData = $likeCountResult->fetch_assoc();
+    $likeCount = $likeCountData['like_count'] ?? 0;
+    $likeCountStmt->close();
+
+    // POPRAWIONE: Sprawdź czy użytkownik obserwuje projekt - używaj $conn zamiast $pdo
+    $isFollowing = false;
+    if (isset($_SESSION['user_id'])) {
+        $followStmt = $conn->prepare("SELECT id FROM follows WHERE user_id = ? AND project_id = ?");
+        $followStmt->bind_param("ii", $_SESSION['user_id'], $projectId);
+        $followStmt->execute();
+        $followResult = $followStmt->get_result();
+        $isFollowing = $followResult->fetch_assoc() !== null;
+        $followStmt->close();
+    }
+
+    $userAvatarUrlStmt = $conn->prepare('SELECT avatar FROM users WHERE id = ?');
+    $userAvatarUrlStmt->bind_param('s', $_SESSION['user_id']);
+    $userAvatarUrlStmt->execute();
+
+    $userAvatarUrlResult = $userAvatarUrlStmt->get_result();
+    $userAvatarUrlRow = $userAvatarUrlResult->fetch_assoc(); // tutaj fetch_assoc na wyniku, nie na stmt
+    $userAvatarUrl = $userAvatarUrlRow['avatar'] ?? 'd'; // domyślny avatar, jeśli brak
+
+    $userAvatarUrlStmt->close();
+
+
     // Pobierz umiejętności projektu
     $skills = [];
     $skillSql = "
@@ -247,11 +280,8 @@ try {
     }
 
     // Potem pobierz pozostałych członków z project_team
-    $teamSql = "
-        SELECT u.id, u.nick, u.email, pt.role, pt.joined_at 
-        FROM project_team pt 
-        JOIN users u ON pt.user_id = u.id 
-        WHERE pt.project_id = ? AND pt.user_id != ?
+    $teamSql = " SELECT u.id, u.nick, u.email, u.avatar, pt.role, pt.joined_at FROM project_team pt JOIN users u ON pt.user_id = u.id WHERE pt.project_id = ? AND pt.user_id != ?
+
     ";
     $teamStmt = $conn->prepare($teamSql);
     if ($teamStmt) {
@@ -276,11 +306,27 @@ try {
         }
     }
 
+    $comments = [];
+    $commentStmt = $conn->prepare("SELECT c.comment, c.created_at, u.nick, u.avatar 
+                               FROM comments c 
+                               JOIN users u ON c.user_id = u.id 
+                               WHERE c.project_id = ? 
+                               ORDER BY c.created_at ASC");
+    if ($commentStmt) {
+        $commentStmt->bind_param("i", $projectId);
+        $commentStmt->execute();
+        $commentResult = $commentStmt->get_result();
+        while ($row = $commentResult->fetch_assoc()) {
+            $comments[] = $row;
+        }
+        $commentStmt->close();
+    }
+
+
+
 } catch (Exception $e) {
     die("Błąd: " . $e->getMessage());
 }
-
-// Tutaj zaczyna się HTML - reszta kodu pozostaje bez zmian
 ?>
 
 <!DOCTYPE html>
@@ -360,8 +406,8 @@ try {
                                     <span>✅ Jesteś członkiem</span>
                                 </button>
                             <?php endif; ?>
-                            <button class="btn-secondary" id="followBtn">
-                                <span>❤️ Obserwuj</span>
+                            <button class="btn-secondary <?php echo $isFollowing ? 'following' : ''; ?>" id="followBtn">
+                                <span><?php echo $isFollowing ? 'Obserwujesz' : '❤️ Obserwuj'; ?></span>
                             </button>
                         </div>
                     </div>
@@ -380,7 +426,7 @@ try {
                         </div>
                         <div class="creator-card">
                             <div class="creator-avatar">
-                                <img src="../photos/sample_person.png"
+                                <img src="<?php echo $userAvatarUrl; ?>"
                                     alt="<?php echo htmlspecialchars($project['founder_name']); ?>">
                             </div>
                             <div class="creator-info">
@@ -477,7 +523,7 @@ try {
                             <?php foreach ($teamMembers as $member): ?>
                                 <div class="team-member-card">
                                     <div class="member-avatar">
-                                        <img src="../photos/sample_person.png"
+                                        <img src="<?php echo $userAvatarUrl; ?>"
                                             alt="<?php echo htmlspecialchars($member['nick']); ?>">
                                     </div>
                                     <div class="member-info">
@@ -506,7 +552,7 @@ try {
                         <div class="section-header">
                             <h2>Dyskusja</h2>
                             <div class="comments-stats">
-                                <span class="stat-item">💬 0 komentarzy</span>
+                                <span class="stat-item">💬 <?php echo count($comments); ?> komentarzy</span>
                                 <span class="stat-item">👁️ <?php echo $currentViews; ?> wyświetleń</span>
                             </div>
                         </div>
@@ -514,13 +560,13 @@ try {
                         <?php if ($isMember || $isOwner): ?>
                             <div class="comment-form">
                                 <div class="comment-avatar">
-                                    <img src="../photos/sample_person.png" alt="Twój avatar">
+                                    <img src="<?php echo $userAvatarUrl; ?>" alt="Twój avatar">
                                 </div>
                                 <div class="comment-input-container">
-                                    <textarea class="comment-input"
+                                    <textarea id="commentInput" class="comment-input"
                                         placeholder="Podziel się swoją opinią lub zadaj pytanie..."></textarea>
                                     <div class="comment-actions">
-                                        <button class="btn-primary btn-comment">Dodaj komentarz</button>
+                                        <button id="btnAddComment" class="btn-primary btn-comment">Dodaj komentarz</button>
                                     </div>
                                 </div>
                             </div>
@@ -531,12 +577,68 @@ try {
                         <?php endif; ?>
 
                         <div class="comments-list">
-                            <!-- Komentarze będą ładowane dynamicznie -->
-                            <div class="no-comments">
-                                <p>Brak komentarzy. Bądź pierwszy, który skomentuje!</p>
-                            </div>
+                            <?php if (!empty($comments)): ?>
+                                <?php foreach ($comments as $comment): ?>
+                                    <div class="comment-item">
+                                        <div class="comment-avatar">
+                                            <img src="<?php echo $comment['avatar'] ?? 'default-avatar.jpg'; ?>"
+                                                alt="<?php echo htmlspecialchars($comment['nick']); ?>">
+                                        </div>
+                                        <div class="comment-content">
+                                            <h4><?php echo htmlspecialchars($comment['nick']); ?></h4>
+                                            <p><?php echo nl2br(htmlspecialchars($comment['comment'])); ?></p>
+                                            <span
+                                                class="comment-date"><?php echo formatDateTime($comment['created_at']); ?></span>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="no-comments">
+                                    <p>Brak komentarzy. Bądź pierwszy, który skomentuje!</p>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </section>
+
+                    <script>
+                        document.getElementById('btnAddComment')?.addEventListener('click', function (e) {
+                            e.preventDefault();
+                            const comment = document.getElementById('commentInput').value.trim();
+                            if (!comment) return alert('Komentarz nie może być pusty!');
+
+                            fetch('add_comment.php', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                body: 'project_id=<?php echo $projectId; ?>&comment=' + encodeURIComponent(comment)
+                            })
+                                .then(res => res.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        const list = document.querySelector('.comments-list');
+                                        const newComment = document.createElement('div');
+                                        newComment.classList.add('comment-item');
+                                        newComment.innerHTML = `
+                <div class="comment-avatar">
+                    <img src="<?php echo $userAvatarUrl; ?>" alt="Twój avatar">
+                </div>
+                <div class="comment-content">
+                    <h4>Ty</h4>
+                    <p>${comment.replace(/\n/g, '<br>')}</p>
+                    <span class="comment-date">Właśnie teraz</span>
+                </div>
+            `;
+                                        list.prepend(newComment);
+                                        document.getElementById('commentInput').value = '';
+                                        document.querySelector('.stat-item').innerText = `💬 ${list.querySelectorAll('.comment-item').length} komentarzy`;
+                                    } else {
+                                        alert('Błąd przy dodawaniu komentarza!');
+                                    }
+                                })
+                                .catch(() => alert('Coś poszło nie tak...'));
+                        });
+                    </script>
+
+
                 </div>
 
                 <!-- Prawa kolumna - sidebar -->
@@ -567,7 +669,7 @@ try {
                         <div class="reactions-stats">
                             <div class="reaction-item">
                                 <span class="reaction-icon">❤️</span>
-                                <span class="reaction-count">0</span>
+                                <span class="reaction-count"><?php echo $likeCount; ?></span>
                             </div>
                             <div class="reaction-item">
                                 <span class="reaction-icon">👁️</span>
@@ -629,12 +731,37 @@ try {
                             <div class="tools-list">
                                 <a href="edit_project.php?id=<?php echo $projectId; ?>" class="tool-btn">✏️ Edytuj
                                     projekt</a>
-                                <button class="tool-btn">👥 Zarządzaj zespołem</button>
-                                <button class="tool-btn">✅ Zarządzaj zadaniami</button>
-                                <button class="tool-btn danger">🗑️ Usuń projekt</button>
+                                <a href="manage_team.php?project_id=<?php echo $projectId; ?>" class="tool-btn">👥 Zarządzaj
+                                    zespołem</a>
+                                <a href="manage_tasks.php?project_id=<?php echo $projectId; ?>" class="tool-btn">✅ Zarządzaj
+                                    zadaniami</a>
+
+                                <!-- Usuwanie projektu przez formularz POST -->
+                                <form method="POST" action="" style="display:inline;">
+                                    <input type="hidden" name="delete_project_id" value="<?php echo $projectId; ?>">
+                                    <button type="submit" class="tool-btn danger"
+                                        onclick="return confirm('Na pewno chcesz usunąć projekt?');">🗑️ Usuń
+                                        projekt</button>
+                                </form>
                             </div>
                         </div>
+
+                        <?php
+                        // Obsługa usuwania projektu
+                        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_project_id'])) {
+                            $deleteId = (int) $_POST['delete_project_id'];
+
+                            // Tu wstaw kod do usuwania projektu z bazy danych
+                            $stmt = $db->prepare("DELETE FROM projects WHERE id = ?");
+                            $stmt->execute([$deleteId]);
+
+                            // Przekierowanie po usunięciu
+                            header("Location: projects_list.php");
+                            exit;
+                        }
+                        ?>
                     <?php endif; ?>
+
 
                     <!-- 🛠️ Wymagane umiejętności -->
                     <?php if (!empty($skills)): ?>
