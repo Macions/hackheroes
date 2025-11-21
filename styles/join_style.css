@@ -88,7 +88,7 @@ header {
 	color: var(--primary);
 }
 
-.nav-menu a.active::after {
+.nav-menu a.active:not(.cta-button)::after {
 	content: "";
 	position: absolute;
 	bottom: -0.5rem;

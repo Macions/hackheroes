@@ -1,25 +1,10 @@
 <?php
-
+include 'global/connection.php';
+include 'global/nav_global.php';
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
-// Konfiguracja bazy danych
-$hostname = "localhost";
-$username = "root";
-$password = "";
-$database = "teencollab";
-
-$conn = new mysqli($hostname, $username, $password, $database);
-if ($conn->connect_error) {
-    die("Błąd połączenia z bazą: " . $conn->connect_error);
-}
-
-$nav_cta_action = '';
 $benefits = 'Co zyskujesz dołączając do nas';
 
 if (isset($_SESSION['user_email'])) {
@@ -102,30 +87,7 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
 
     logAction($conn, $userId, $email, 'login');
 
-    $nav_cta_action = <<<HTML
-<li class="nav-user-dropdown">
-    <div class="user-menu-trigger">
-        <img src="$userAvatar" alt="Avatar" class="user-avatar">
-        <span class="user-greeting">Cześć, $firstName!</span>
-        <span class="dropdown-arrow">▼</span>
-    </div>
-    <div class="user-dropdown-menu">
-        <a href="profil.php?id=$userId" class="dropdown-item">
-            <span class="dropdown-icon">👤</span> Mój profil
-        </a>
-        <a href="konto.php" class="dropdown-item">
-            <span class="dropdown-icon">⚙️</span> Ustawienia konta
-        </a>
-        <div class="dropdown-divider"></div>
-        <a href="logout.php" class="dropdown-item logout-item">
-            <span class="dropdown-icon">🚪</span> Wyloguj się
-        </a>
-    </div>
-</li>
-HTML;
-
     echo "<script>window.loggedFlag = true;</script>";
-
 } else {
 
     /* ============================================================
@@ -259,8 +221,6 @@ HTML;
             $stmt->close();
         }
     }
-
-    $nav_cta_action = '<li class="nav-cta"><a href="dolacz.html" class="cta-button active">Dołącz</a></li>';
 }
 
 $conn->close();
@@ -298,6 +258,7 @@ $conn->close();
                     <li><a href="projekty.html">Projekty</a></li>
                     <li><a href="społeczność.html">Społeczność</a></li>
                     <li><a href="o-projekcie.html">O projekcie</a></li>
+                    <li><a href="notifications.php">Powiadomienia</a></li>
                     <?php echo $nav_cta_action; ?>
                 </ul>
 
@@ -724,7 +685,6 @@ $conn->close();
     </footer>
 
     <script>
-
         const nickInput = document.getElementById('nick');
         const nickFeedback = document.createElement('small');
         nickFeedback.style.display = 'block';
@@ -733,7 +693,7 @@ $conn->close();
 
         let nickTimeout = null;
 
-        nickInput.addEventListener('input', function () {
+        nickInput.addEventListener('input', function() {
             const nick = this.value.trim();
 
             if (nickTimeout) clearTimeout(nickTimeout);
@@ -800,21 +760,30 @@ $conn->close();
             document.querySelector('.auth-choice').style.display = 'none';
             document.querySelector('.register-form').style.display = 'block';
             document.querySelector('.login-form').style.display = 'none';
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
         }
 
         function showLogin() {
             document.querySelector('.auth-choice').style.display = 'none';
             document.querySelector('.register-form').style.display = 'none';
             document.querySelector('.login-form').style.display = 'block';
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
         }
 
         function showChoice() {
             document.querySelector('.auth-choice').style.display = 'block';
             document.querySelector('.register-form').style.display = 'none';
             document.querySelector('.login-form').style.display = 'none';
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
         }
 
         // Burger menu
@@ -833,7 +802,7 @@ $conn->close();
         // Obsługa formularza rejestracji
         const joinForm = document.getElementById('joinForm');
 
-        joinForm.addEventListener('submit', function (e) {
+        joinForm.addEventListener('submit', function(e) {
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
 
@@ -855,7 +824,7 @@ $conn->close();
 
         // Obsługa formularza logowania
         const loginForm = document.getElementById('loginFormData');
-        loginForm.addEventListener('submit', function (e) {
+        loginForm.addEventListener('submit', function(e) {
             // e.preventDefault();
 
             const formData = new FormData(this);
@@ -868,7 +837,7 @@ $conn->close();
 
         // Płynne przewijanie do formularza
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
+            anchor.addEventListener('click', function(e) {
                 // e.preventDefault();
                 const target = document.querySelector(this.getAttribute('href'));
                 if (target) {
