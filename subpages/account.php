@@ -358,8 +358,9 @@ $badgesStmt->close();
                             if ($myProjects->num_rows > 0) {
                                 while ($project = $myProjects->fetch_assoc()) {
                                     echo '<div class="project-item">
-                                                <h3>' . htmlspecialchars($project['project_name']) . '</h3>
-                                                <p>' . htmlspecialchars($project['description']) . '</p>
+                                                <a href = "https://teencollab.pl/project.php?id='. htmlspecialchars($project['id']) .'">
+                                                <h3>' . htmlspecialchars($project['name']) . '</h3></a>
+                                                <p>' . htmlspecialchars($project['short_description']) . '</p>
                                                 <span class="project-role">Rola: ' . htmlspecialchars($project['role']) . '</span>
                                             </div>';
                                 }

@@ -1,3 +1,140 @@
+<?php
+session_start();
+include("global/connection.php");
+
+// Sprawdź czy użytkownik jest zalogowany
+if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
+    // Nie przekierowujemy, bo strona projektów może być publiczna
+}
+
+$userId = $_SESSION["user_id"] ?? null;
+$userEmail = $_SESSION["user_email"] ?? '';
+
+// Pobierz projekty z bazy danych
+try {
+    // Pobierz wszystkie aktywne projekty
+    $projects = [];
+    $projectStmt = $conn->prepare("
+        SELECT 
+            p.*, 
+            u.nick AS founder_name, 
+            u.avatar AS founder_avatar,
+            COUNT(DISTINCT pt.user_id) as member_count,
+            COUNT(DISTINCT l.id) as like_count,
+            COUNT(DISTINCT f.id) as follows_count
+        FROM projects p
+        LEFT JOIN users u ON p.founder_id = u.id
+        LEFT JOIN project_team pt ON p.id = pt.project_id
+        LEFT JOIN likes l ON p.id = l.project_id
+        LEFT JOIN follows f ON p.id = f.project_id
+        WHERE p.status = 'active' OR p.status = 'Aktywny' AND p.visibility = 'public'
+        GROUP BY p.id
+        ORDER BY p.created_at DESC
+    ");
+
+    if ($projectStmt) {
+        $projectStmt->execute();
+        $projectResult = $projectStmt->get_result();
+        while ($row = $projectResult->fetch_assoc()) {
+            $projects[] = $row;
+        }
+        $projectStmt->close();
+    }
+
+    // Pobierz kategorie dla każdego projektu
+    foreach ($projects as &$project) {
+        $categories = [];
+        $catStmt = $conn->prepare("
+            SELECT c.name 
+            FROM categories c
+            JOIN project_categories pc ON c.id = pc.category_id
+            WHERE pc.project_id = ?
+        ");
+        if ($catStmt) {
+            $catStmt->bind_param("i", $project['id']);
+            $catStmt->execute();
+            $catResult = $catStmt->get_result();
+            while ($row = $catResult->fetch_assoc()) {
+                $categories[] = $row['name'];
+            }
+            $catStmt->close();
+        }
+        $project['categories'] = $categories;
+
+        // Jeśli nie ma lokalizacji, ustaw domyślną
+        if (empty($project['location'])) {
+            $project['location'] = 'Online';
+        }
+    }
+
+    // Statystyki
+    $totalProjects = count($projects);
+
+    // Liczba unikalnych użytkowników we wszystkich projektach
+    $usersStmt = $conn->prepare("SELECT COUNT(DISTINCT user_id) as total_users FROM project_team");
+    $usersStmt->execute();
+    $totalUsers = $usersStmt->get_result()->fetch_assoc()['total_users'] ?? 0;
+    $usersStmt->close();
+
+    // Liczba unikalnych miast (jeśli kolumna location istnieje)
+    $citiesStmt = $conn->prepare("SELECT COUNT(DISTINCT location) as total_cities FROM projects WHERE location IS NOT NULL AND location != ''");
+    if ($citiesStmt) {
+        $citiesStmt->execute();
+        $citiesResult = $citiesStmt->get_result();
+        $totalCities = $citiesResult->fetch_assoc()['total_cities'] ?? 0;
+        $citiesStmt->close();
+    } else {
+        $totalCities = 0;
+    }
+
+} catch (Exception $e) {
+    // W przypadku błędu, ustaw puste dane
+    $projects = [];
+    $totalProjects = 0;
+    $totalUsers = 0;
+    $totalCities = 0;
+    $error = "Błąd ładowania projektów: " . $e->getMessage();
+}
+
+// Mapowanie kategorii do klas CSS
+$categoryMap = [
+    'Ekologia' => 'ekologia',
+    'Zdrowie' => 'zdrowie',
+    'Społeczne' => 'społeczne',
+    'Technologia' => 'technologia',
+    'Edukacja' => 'edukacja',
+    'Sztuka' => 'sztuka',
+    'Biznes' => 'biznes',
+    'Media' => 'media'
+];
+
+function getCategoryClass($categories, $categoryMap)
+{
+    foreach ($categories as $category) {
+        if (isset($categoryMap[$category])) {
+            return $categoryMap[$category];
+        }
+    }
+    return 'inne';
+}
+
+function formatDate($dateString)
+{
+    if (!$dateString || $dateString == '0000-00-00') {
+        return 'Brak daty';
+    }
+    return (new DateTime($dateString))->format('d.m.Y');
+}
+
+function truncateText($text, $length = 150)
+{
+    if (strlen($text) <= $length) {
+        return $text;
+    }
+    return substr($text, 0, $length) . '...';
+}
+?>
+
 <!DOCTYPE html>
 <html lang="pl">
 
@@ -7,12 +144,11 @@
     <title>Projekty - TeenCollab</title>
     <meta name="description"
         content="Przeglądaj wszystkie projekty zrealizowane przez młodych kreatorów na platformie TeenCollab.">
-    <link rel="shortcut icon" href="photos/website-logo.jpg" type="image/x-icon">
+    <link rel="shortcut icon" href="../photos/website-logo.jpg" type="image/x-icon">
     <link rel="stylesheet" href="../styles/projects_style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="scripts/script_projects.js" defer></script>
 </head>
 
 <body>
@@ -23,15 +159,19 @@
                     <img src="../photos/website-logo.jpg" alt="Logo TeenCollab">
                     <span>TeenCollab</span>
                 </div>
-                
+
                 <ul class="nav-menu">
-                    <li><a href="index.html">Strona główna</a></li>
-                    <li><a href="projekty.html" class="active">Projekty</a></li>
-                    <li><a href="społeczność.html">Społeczność</a></li>
-                    <li><a href="o-projekcie.html">O projekcie</a></li>
-                    <li class="nav-cta"><a href="dolacz.html" class="cta-button">Dołącz</a></li>
+                    <li><a href="index.php">Strona główna</a></li>
+                    <li><a href="projekty.php" class="active">Projekty</a></li>
+                    <li><a href="społeczność.php">Społeczność</a></li>
+                    <li><a href="o-projekcie.php">O projekcie</a></li>
+                    <?php if (isset($_SESSION["logged_in"]) && $_SESSION["logged_in"] === true): ?>
+                        <li class="nav-cta"><a href="konto.php" class="cta-button">Moje konto</a></li>
+                    <?php else: ?>
+                        <li class="nav-cta"><a href="login.php" class="cta-button">Dołącz</a></li>
+                    <?php endif; ?>
                 </ul>
-                
+
                 <button class="burger-menu" id="burger-menu" aria-label="Menu">
                     <span></span>
                     <span></span>
@@ -49,15 +189,15 @@
                 <p class="hero-subtitle">Odkryj inspirujące inicjatywy młodych kreatorów z całej Polski. 🌱💡</p>
                 <div class="hero-stats">
                     <div class="stat">
-                        <span class="stat-number">50+</span>
+                        <span class="stat-number"><?php echo $totalProjects; ?>+</span>
                         <span class="stat-label">Projektów</span>
                     </div>
                     <div class="stat">
-                        <span class="stat-number">1000+</span>
+                        <span class="stat-number"><?php echo $totalUsers; ?>+</span>
                         <span class="stat-label">Uczestników</span>
                     </div>
                     <div class="stat">
-                        <span class="stat-number">15</span>
+                        <span class="stat-number"><?php echo $totalCities; ?>+</span>
                         <span class="stat-label">Miast</span>
                     </div>
                 </div>
@@ -65,7 +205,6 @@
             <div class="hero-gradient"></div>
         </section>
 
-        <!-- Filtry -->
         <section class="filters-section">
             <div class="container">
                 <div class="filters-wrapper">
@@ -81,130 +220,103 @@
                     <button class="filter-btn" data-category="społeczne">
                         <span>Społeczne</span>
                     </button>
+                    <button class="filter-btn" data-category="technologia">
+                        <span>Technologia</span>
+                    </button>
+                    <button class="filter-btn" data-category="edukacja">
+                        <span>Edukacja</span>
+                    </button>
                 </div>
             </div>
         </section>
+
+
 
         <!-- Projekty Grid -->
         <section class="projects-section">
             <div class="container">
-                <div class="projects-grid" id="projects-grid">
-                    <article class="project-card" data-category="ekologia">
-                        <div class="project-image">
-                            <img src="../photos/baner-photo.jpg" alt="Wolontariusze sprzątający las">
-                            <span class="project-category">Ekologia</span>
-                        </div>
-                        <div class="project-content">
-                            <h3>Sprzątanie lasu w Łowiczu</h3>
-                            <p>Akcja porządkowania lokalnego lasu, w pełni zorganizowana przez TeenCollab. Dołącz do nas i pomóż chronić przyrodę!</p>
-                            <div class="project-meta">
-                                <span class="project-location">📍 Łowicz</span>
-                                <span class="project-date">📅 15.06.2024</span>
-                            </div>
-                            <a href="articles/sprzatanie-lasu-w-łowiczu.html" class="project-link">
-                                <span>Zobacz szczegóły</span>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                    <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2"/>
-                                </svg>
-                            </a>
-                        </div>
-                    </article>
+                <?php if (isset($error)): ?>
+                    <div class="error-message">
+                        <p><?php echo $error; ?></p>
+                    </div>
+                <?php endif; ?>
 
-                    <article class="project-card" data-category="zdrowie">
-                        <div class="project-image">
-                            <img src="../photos/baner-photo.jpg" alt="Warsztaty o zdrowiu psychicznym">
-                            <span class="project-category">Zdrowie</span>
-                        </div>
-                        <div class="project-content">
-                            <h3>Zdrowe życie młodzieży</h3>
-                            <p>Projekt edukacyjny promujący zdrowe nawyki i dbanie o psychikę młodzieży. Warsztaty, spotkania z ekspertami.</p>
-                            <div class="project-meta">
-                                <span class="project-location">📍 Online</span>
-                                <span class="project-date">📅 Cyklicznie</span>
-                            </div>
-                            <a href="#" class="project-link">
-                                <span>Zobacz szczegóły</span>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                    <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2"/>
-                                </svg>
-                            </a>
-                        </div>
-                    </article>
-
-                    <article class="project-card" data-category="społeczne">
-                        <div class="project-image">
-                            <img src="../photos/baner-photo.jpg" alt="Młodzież pomagająca seniorom">
-                            <span class="project-category">Społeczne</span>
-                        </div>
-                        <div class="project-content">
-                            <h3>Pomoc seniorom</h3>
-                            <p>Inicjatywa wspierająca seniorów w lokalnej społeczności poprzez wolontariat i regularne wizyty.</p>
-                            <div class="project-meta">
-                                <span class="project-location">📍 Warszawa</span>
-                                <span class="project-date">📅 Co tydzień</span>
-                            </div>
-                            <a href="#" class="project-link">
-                                <span>Zobacz szczegóły</span>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                    <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2"/>
-                                </svg>
-                            </a>
-                        </div>
-                    </article>
-
-                    <article class="project-card" data-category="ekologia">
-                        <div class="project-image">
-                            <img src="../photos/baner-photo.jpg" alt="Sadzenie drzew w parku">
-                            <span class="project-category">Ekologia</span>
-                        </div>
-                        <div class="project-content">
-                            <h3>Sadzenie drzew w mieście</h3>
-                            <p>Projekt ekologiczny, sadzenie drzew w miejskich parkach i skwerach. Razem tworzymy zielone płuca miasta!</p>
-                            <div class="project-meta">
-                                <span class="project-location">📍 Kraków</span>
-                                <span class="project-date">📅 20.05.2024</span>
-                            </div>
-                            <a href="#" class="project-link">
-                                <span>Zobacz szczegóły</span>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                    <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2"/>
-                                </svg>
-                            </a>
-                        </div>
-                    </article>
-
-                    <article class="project-card" data-category="społeczne">
-                        <div class="project-image">
-                            <img src="../photos/baner-photo.jpg" alt="Akcja charytatywna">
-                            <span class="project-category">Społeczne</span>
-                        </div>
-                        <div class="project-content">
-                            <h3>Akcja charytatywna</h3>
-                            <p>Zbiórka funduszy i darów dla lokalnych organizacji społecznych. Każda pomoc się liczy!</p>
-                            <div class="project-meta">
-                                <span class="project-location">📍 Wrocław</span>
-                                <span class="project-date">📅 10.04.2024</span>
-                            </div>
-                            <a href="#" class="project-link">
-                                <span>Zobacz szczegóły</span>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                    <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2"/>
-                                </svg>
-                            </a>
-                        </div>
-                    </article>
-                </div>
+                <?php if (empty($projects)): ?>
+                    <div class="no-projects">
+                        <h3>Brak projektów do wyświetlenia</h3>
+                        <p>Nie ma jeszcze żadnych publicznych projektów. Bądź pierwszy i stwórz swój projekt!</p>
+                        <?php if (isset($_SESSION["logged_in"]) && $_SESSION["logged_in"] === true): ?>
+                            <a href="create_project.php" class="btn-primary">Stwórz projekt</a>
+                        <?php else: ?>
+                            <a href="login.php" class="btn-primary">Zaloguj się, aby tworzyć projekty</a>
+                        <?php endif; ?>
+                    </div>
+                <?php else: ?>
+                    <div class="projects-grid" id="projects-grid">
+                        <?php foreach ($projects as $project): ?>
+                            <?php
+                            $categoryClass = getCategoryClass($project['categories'], $categoryMap);
+                            $primaryCategory = !empty($project['categories']) ? $project['categories'][0] : 'Inne';
+                            ?>
+                            <article class="project-card" data-category="<?php echo $categoryClass; ?>">
+                                <div class="project-image">
+                                    <?php if ($project['thumbnail']): ?>
+                                        <img src="<?php echo htmlspecialchars($project['thumbnail']); ?>"
+                                            alt="<?php echo htmlspecialchars($project['name']); ?>">
+                                    <?php else: ?>
+                                        <img src="../photos/project-sample.jpg"
+                                            alt="<?php echo htmlspecialchars($project['name']); ?>">
+                                    <?php endif; ?>
+                                    <span class="project-category"><?php echo $primaryCategory; ?></span>
+                                    <div class="project-overlay">
+                                        <div class="project-stats">
+                                            <span class="stat">👥 <?php echo $project['member_count'] ?? 0; ?></span>
+                                            <span class="stat">❤️ <?php echo $project['like_count'] ?? 0; ?></span>
+                                            <span class="stat">👁️ <?php echo $project['follows_count'] ?? 0; ?></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="project-content">
+                                    <h3><?php echo htmlspecialchars($project['name']); ?></h3>
+                                    <p><?php echo truncateText(htmlspecialchars($project['short_description'])); ?></p>
+                                    <div class="project-meta">
+                                        <span class="project-location">📍
+                                            <?php echo htmlspecialchars($project['location'] ?? 'Online'); ?></span>
+                                        <span class="project-date">📅 <?php echo formatDate($project['created_at']); ?></span>
+                                    </div>
+                                    <div class="project-founder">
+                                        <?php if ($project['founder_avatar']): ?>
+                                            <img src="<?php echo htmlspecialchars($project['founder_avatar']); ?>"
+                                                alt="<?php echo htmlspecialchars($project['founder_name']); ?>"
+                                                class="founder-avatar">
+                                        <?php else: ?>
+                                            <img src="../photos/default-avatar.jpg"
+                                                alt="<?php echo htmlspecialchars($project['founder_name']); ?>"
+                                                class="founder-avatar">
+                                        <?php endif; ?>
+                                        <span
+                                            class="founder-name"><?php echo htmlspecialchars($project['founder_name']); ?></span>
+                                    </div>
+                                    <a href="project.php?id=<?php echo $project['id']; ?>" class="project-link">
+                                        <span>Zobacz szczegóły</span>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                            <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" />
+                                        </svg>
+                                    </a>
+                                </div>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
             </div>
         </section>
     </main>
-
 
     <footer>
         <article id="logo">
             <img src="../photos/website-logo.jpg" alt="Logo TeenCollab">
             <h1>TeenCollab</h1>
         </article>
-
         <p>©2025 TeenCollab | Made with ❤️ by M.Cz.</p>
     </footer>
 
@@ -219,7 +331,7 @@
                 button.classList.add('active');
 
                 const category = button.dataset.category;
-                
+
                 projects.forEach(project => {
                     if (category === 'all' || project.dataset.category === category) {
                         project.style.display = 'block';
@@ -245,6 +357,29 @@
         burgerMenu.addEventListener('click', () => {
             burgerMenu.classList.toggle('active');
             navMenu.classList.toggle('active');
+        });
+
+        // Animacje przy scrollowaniu
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Obserwuj wszystkie karty projektów
+        document.querySelectorAll('.project-card').forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            observer.observe(card);
         });
     </script>
 </body>

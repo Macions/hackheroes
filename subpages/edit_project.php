@@ -23,24 +23,24 @@ if (!$projectId) {
 try {
     $sql = "SELECT * FROM projects WHERE id = ? AND founder_id = ?";
     $stmt = $conn->prepare($sql);
-    
+
     if ($stmt === false) {
         throw new Exception("Błąd przygotowania zapytania: " . $conn->error);
     }
-    
+
     $stmt->bind_param("ii", $projectId, $userId);
-    
+
     if (!$stmt->execute()) {
         throw new Exception("Błąd wykonania zapytania: " . $stmt->error);
     }
-    
+
     $result = $stmt->get_result();
     $project = $result->fetch_assoc();
-    
+
     if (!$project) {
         throw new Exception("Projekt nie istnieje lub nie masz uprawnień do jego edycji");
     }
-    
+
     $stmt->close();
 
     // Pobierz kategorie projektu
@@ -59,19 +59,6 @@ try {
             $selectedCategories[] = $row['name'];
         }
         $catStmt->close();
-    }
-
-    // Pobierz cele projektu
-    $goals = [];
-    $goalStmt = $conn->prepare("SELECT id, description FROM goals WHERE project_id = ?");
-    if ($goalStmt) {
-        $goalStmt->bind_param("i", $projectId);
-        $goalStmt->execute();
-        $goalResult = $goalStmt->get_result();
-        while ($row = $goalResult->fetch_assoc()) {
-            $goals[] = $row;
-        }
-        $goalStmt->close();
     }
 
     // Pobierz umiejętności projektu
@@ -104,6 +91,45 @@ try {
         }
         $taskStmt->close();
     }
+
+    // Pobierz cele projektu
+    $goals = [];
+    $goalStmt = $conn->prepare("SELECT id, description, status FROM goals WHERE project_id = ?");
+    if ($goalStmt) {
+        $goalStmt->bind_param("i", $projectId); // "i" bo project_id to liczba całkowita
+        $goalStmt->execute();
+        $goalResult = $goalStmt->get_result();
+        while ($row = $goalResult->fetch_assoc()) {
+            $goals[] = $row; // teraz każda tablica $row ma id, description i status
+        }
+        $goalStmt->close();
+    }
+
+    // Obsługa dodania nowego celu
+    if (isset($_POST['add_goal'])) {
+        $new_goal = $_POST['new_goal'];
+        $stmt = $conn->prepare("INSERT INTO goals (project_id, description, status) VALUES (?, ?, 0)");
+        $stmt->bind_param("is", $projectId, $new_goal);
+        $stmt->execute();
+        $stmt->close();
+        header("Location: edit_project.php?id=$projectId");
+        exit;
+    }
+
+    // Obsługa edycji istniejącego celu
+    if (isset($_POST['edit_goal'])) {
+        $goal_id = $_POST['goal_id'];
+        $goal_text = $_POST['goal_text'];
+        $completed = isset($_POST['completed']) ? 1 : 0; // checkbox
+        $stmt = $conn->prepare("UPDATE goals SET description = ?, status = ? WHERE id = ?");
+        $stmt->bind_param("sii", $goal_text, $completed, $goal_id);
+        $stmt->execute();
+        $stmt->close();
+        header("Location: edit_project.php?id=$projectId");
+        exit;
+    }
+
+
 
 } catch (Exception $e) {
     die("Błąd: " . $e->getMessage());
@@ -163,27 +189,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     WHERE id = ? AND founder_id = ?
 ");
 
-if (!$updateStmt) {
-    die("SQL ERROR: " . $conn->error);
-}
+        if (!$updateStmt) {
+            die("SQL ERROR: " . $conn->error);
+        }
 
-$updateStmt->bind_param(
-    "ssssiiisiii",
-    $projectName,
-    $shortDescription,
-    $fullDescription,
-    $deadline,
-    $visibility,
-    $status,
-    $allowApplications,
-    $autoAccept,
-    $seoTags,
-    $projectId,
-    $userId
-);
+        $updateStmt->bind_param(
+            "ssssiiisiii",
+            $projectName,
+            $shortDescription,
+            $fullDescription,
+            $deadline,
+            $visibility,
+            $status,
+            $allowApplications,
+            $autoAccept,
+            $seoTags,
+            $projectId,
+            $userId
+        );
 
-$updateStmt->execute();
-$updateStmt->close();
+        $updateStmt->execute();
+        $updateStmt->close();
 
         // Thumbnail
         if (isset($_FILES['thumbnail']) && $_FILES['thumbnail']['error'] === UPLOAD_ERR_OK) {
@@ -196,7 +222,7 @@ $updateStmt->close();
                 $ext = pathinfo($_FILES['thumbnail']['name'], PATHINFO_EXTENSION);
                 $fileName = "project_{$projectId}_" . time() . ".$ext";
                 $filePath = $uploadDir . $fileName;
-                
+
                 if (move_uploaded_file($_FILES['thumbnail']['tmp_name'], $filePath)) {
                     $thumbnailUrl = "../photos/projects/$fileName";
                     $thumbStmt = $conn->prepare("UPDATE projects SET thumbnail = ? WHERE id = ?");
@@ -208,10 +234,10 @@ $updateStmt->close();
         }
 
         $conn->commit();
-        
+
         header("Location: project.php?id=" . $projectId . "&success=1");
         exit();
-        
+
     } catch (Exception $e) {
         $conn->rollback();
         $error = "Błąd podczas aktualizacji projektu: " . $e->getMessage();
@@ -220,6 +246,7 @@ $updateStmt->close();
 ?>
 <!DOCTYPE html>
 <html lang="pl">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -230,6 +257,7 @@ $updateStmt->close();
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
+
 <body>
     <header>
         <nav>
@@ -252,11 +280,11 @@ $updateStmt->close();
             <div class="edit-header">
                 <h1>Edytuj projekt</h1>
                 <p>Aktualizuj informacje o swoim projekcie "<?php echo htmlspecialchars($project['name']); ?>"</p>
-                
+
                 <?php if (isset($error)): ?>
                     <div class="alert alert-error"><?php echo $error; ?></div>
                 <?php endif; ?>
-                
+
                 <?php if (isset($_GET['success'])): ?>
                     <div class="alert alert-success">Projekt został pomyślnie zaktualizowany!</div>
                 <?php endif; ?>
@@ -269,9 +297,8 @@ $updateStmt->close();
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="projectName">Nazwa projektu *</label>
-                            <input type="text" id="projectName" name="projectName" 
-                                   value="<?php echo htmlspecialchars($project['name']); ?>" 
-                                   maxlength="80" required>
+                            <input type="text" id="projectName" name="projectName"
+                                value="<?php echo htmlspecialchars($project['name']); ?>" maxlength="80" required>
                             <div class="char-counter">
                                 <span id="nameCounter"><?php echo strlen($project['name']); ?></span>/80 znaków
                             </div>
@@ -280,25 +307,31 @@ $updateStmt->close();
                         <div class="form-group">
                             <label for="projectStatus">Status projektu</label>
                             <select id="projectStatus" name="status">
-                                <option value="active" <?php echo ($project['status'] == 'active') ? 'selected' : ''; ?>>Aktywny</option>
-                                <option value="paused" <?php echo ($project['status'] == 'paused') ? 'selected' : ''; ?>>Wstrzymany</option>
+                                <option value="active" <?php echo ($project['status'] == 'active') ? 'selected' : ''; ?>>
+                                    Aktywny</option>
+                                <option value="paused" <?php echo ($project['status'] == 'paused') ? 'selected' : ''; ?>>
+                                    Wstrzymany</option>
                                 <option value="completed" <?php echo ($project['status'] == 'completed') ? 'selected' : ''; ?>>Zakończony</option>
-                                <option value="draft" <?php echo ($project['status'] == 'draft') ? 'selected' : ''; ?>>Szkic</option>
+                                <option value="draft" <?php echo ($project['status'] == 'draft') ? 'selected' : ''; ?>>
+                                    Szkic</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label for="shortDescription">Krótki opis *</label>
-                        <textarea id="shortDescription" name="shortDescription" maxlength="300" required><?php echo htmlspecialchars($project['short_description']); ?></textarea>
+                        <textarea id="shortDescription" name="shortDescription" maxlength="300"
+                            required><?php echo htmlspecialchars($project['short_description']); ?></textarea>
                         <div class="char-counter">
-                            <span id="descCounter"><?php echo strlen($project['short_description']); ?></span>/300 znaków
+                            <span id="descCounter"><?php echo strlen($project['short_description']); ?></span>/300
+                            znaków
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label for="fullDescription">Pełny opis</label>
-                        <textarea id="fullDescription" name="fullDescription" rows="6"><?php echo htmlspecialchars($project['full_description'] ?? ''); ?></textarea>
+                        <textarea id="fullDescription" name="fullDescription"
+                            rows="6"><?php echo htmlspecialchars($project['full_description'] ?? ''); ?></textarea>
                     </div>
                 </section>
 
@@ -321,52 +354,96 @@ $updateStmt->close();
                     </div>
                 </section>
 
+                <!-- 🎯 Cele projektu -->
+                <section class="form-section">
+                    <h2>Cele projektu</h2>
+                    <div class="goals-management">
+                        <!-- Formularz dodawania nowego celu -->
+                        <form method="POST" class="add-goal-form">
+                            <div class="goal-input-group">
+                                <input type="text" name="new_goal" placeholder="Dodaj nowy cel..." maxlength="255"
+                                    required>
+                                <button type="submit" name="add_goal" class="btn-primary btn-sm">Dodaj cel</button>
+                            </div>
+                        </form>
+
+                        <!-- Lista istniejących celów -->
+                        <div class="goals-list">
+                            <?php if (!empty($goals)): ?>
+                                <?php foreach ($goals as $goal): ?>
+                                    <form method="POST" class="goal-item">
+                                        <input type="hidden" name="goal_id" value="<?php echo $goal['id']; ?>">
+
+                                        <div class="goal-content">
+                                            <div class="goal-checkbox">
+                                                <input type="checkbox" name="completed" id="goal_<?php echo $goal['id']; ?>"
+                                                    <?php echo $goal['status'] == 1 ? 'checked' : ''; ?>>
+                                                <label for="goal_<?php echo $goal['id']; ?>" class="checkmark"></label>
+                                            </div>
+
+                                            <input type="text" name="goal_text"
+                                                value="<?php echo htmlspecialchars($goal['description']); ?>" class="goal-input"
+                                                placeholder="Opis celu..." required>
+
+                                            <div class="goal-actions">
+                                                <button type="submit" name="edit_goal"
+                                                    class="btn-success btn-sm">Zapisz</button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="no-goals">
+                                    <p>🎯 Nie masz jeszcze żadnych celów. Dodaj pierwszy cel!</p>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- Kategorie -->
                 <section class="form-section">
                     <h2>Kategorie</h2>
                     <div class="categories-grid">
-                        <?php foreach ($categoryMap as $key => $name): ?>
+                        <?php
+                        $icons = [
+                            'technology' => '💻',
+                            'social' => '👥',
+                            'education' => '🎓',
+                            'ecology' => '🌱',
+                            'business' => '💼',
+                            'art' => '🎨',
+                            'media' => '📱'
+                        ];
+
+                        foreach ($categoryMap as $key => $name) {
+                            $isChecked = in_array($key, $selectedCategories) ? 'checked' : '';
+                            $categoryIcon = $icons[$key] ?? '📁';
+                            ?>
                             <label class="category-checkbox">
-                                <input type="checkbox" name="categories[]" value="<?php echo $key; ?>"
-                                    <?php echo in_array($name, $selectedCategories) ? 'checked' : ''; ?>>
+                                <input type="checkbox" name="categories[]" value="<?= $key ?>" <?= $isChecked ?>>
                                 <span class="checkmark"></span>
                                 <span class="category-label">
-                                    <span class="category-icon">
-                                        <?php 
-                                        $icons = [
-                                            'technology' => '💻',
-                                            'social' => '👥',
-                                            'education' => '🎓',
-                                            'ecology' => '🌱',
-                                            'business' => '💼',
-                                            'art' => '🎨',
-                                            'media' => '📱'
-                                        ];
-                                        echo $icons[$key] ?? '📁';
-                                        ?>
-                                    </span>
-                                    <?php echo $name; ?>
+                                    <span class="category-icon"><?= $categoryIcon ?></span>
+                                    <?= $name ?>
                                 </span>
                             </label>
-                        <?php endforeach; ?>
+                        <?php } ?>
                     </div>
                 </section>
-
                 <!-- Umiejętności -->
                 <section class="form-section">
                     <h2>Wymagane umiejętności</h2>
                     <div class="skills-grid">
                         <?php foreach ($skillMap as $key => $name): ?>
                             <label class="skill-checkbox">
-                                <input type="checkbox" name="skills[]" value="<?php echo $key; ?>"
-                                    <?php echo in_array($name, $selectedSkills) ? 'checked' : ''; ?>>
+                                <input type="checkbox" name="skills[]" value="<?php echo $key; ?>" <?php echo in_array($key, $selectedSkills) ? 'checked' : ''; ?>>
                                 <span class="checkmark"></span>
                                 <?php echo $name; ?>
                             </label>
                         <?php endforeach; ?>
                     </div>
                 </section>
-
                 <!-- Ustawienia zaawansowane -->
                 <section class="form-section">
                     <h2>Ustawienia zaawansowane</h2>
@@ -374,8 +451,8 @@ $updateStmt->close();
                         <div class="form-grid">
                             <div class="form-group">
                                 <label for="projectDeadline">Termin zakończenia</label>
-                                <input type="date" id="projectDeadline" name="deadline" 
-                                       value="<?php echo $project['deadline'] ?? ''; ?>">
+                                <input type="date" id="projectDeadline" name="deadline"
+                                    value="<?php echo $project['deadline'] ?? ''; ?>">
                             </div>
 
                             <div class="form-group">
@@ -389,15 +466,13 @@ $updateStmt->close();
 
                         <div class="settings-group">
                             <label class="checkbox-label">
-                                <input type="checkbox" name="allowApplications" 
-                                    <?php echo $project['allow_applications'] ? 'checked' : ''; ?>>
-                                <span class="checkmark"></span>
+                                <input type="checkbox" name="allowApplications" <?php echo (int) $project['allow_applications'] === 1 ? 'checked' : ''; ?>> <span
+                                    class="checkmark"></span>
                                 Pozwalaj użytkownikom składać zgłoszenia do projektu
                             </label>
 
                             <label class="checkbox-label">
-                                <input type="checkbox" name="autoAccept"
-                                    <?php echo $project['auto_accept'] ? 'checked' : ''; ?>>
+                                <input type="checkbox" name="autoAccept" <?php echo $project['auto_accept'] ? 'checked' : ''; ?>>
                                 <span class="checkmark"></span>
                                 Automatycznie przyjmuj nowych członków
                             </label>
@@ -405,9 +480,9 @@ $updateStmt->close();
 
                         <div class="form-group">
                             <label for="seoTags">Tagi SEO</label>
-                            <input type="text" id="seoTags" name="seoTags" 
-                                   value="<?php echo htmlspecialchars($project['seo_tags'] ?? ''); ?>" 
-                                   placeholder="Dodaj tagi oddzielone przecinkami">
+                            <input type="text" id="seoTags" name="seoTags"
+                                value="<?php echo htmlspecialchars($project['seo_tags'] ?? ''); ?>"
+                                placeholder="Dodaj tagi oddzielone przecinkami">
                         </div>
                     </div>
                 </section>
@@ -440,4 +515,5 @@ $updateStmt->close();
 
     <script src="../scripts/edit_project.js"></script>
 </body>
+
 </html>

@@ -284,6 +284,154 @@ document
 			.catch(() => alert("Coś poszło nie tak..."));
 	});
 
+// Obsługa formularzy akceptacji/odrzucania zgłoszeń
+document.addEventListener("DOMContentLoaded", function () {
+	const requestForms = document.querySelectorAll(".action-form");
+
+	requestForms.forEach((form) => {
+		form.addEventListener("submit", function (e) {
+			e.preventDefault();
+
+			const button = this.querySelector("button");
+			const originalText = button.innerHTML;
+			const isAccept = button.classList.contains("btn-primary");
+			const action = isAccept ? "akceptowania" : "odrzucania";
+
+			// Pokazanie stanu ładowania
+			button.classList.add("loading");
+			button.disabled = true;
+			button.innerHTML = '<span class="btn-icon">⏳</span> Przetwarzanie...';
+
+			// Wyłącz wszystkie przyciski na czas przetwarzania
+			const allButtons =
+				this.closest(".request-actions").querySelectorAll("button");
+			allButtons.forEach((btn) => (btn.disabled = true));
+
+			// Wyślij formularz
+			fetch(this.action, {
+				method: "POST",
+				body: new FormData(this),
+			})
+				.then((response) => {
+					if (response.redirected) {
+						window.location.href = response.url;
+					} else {
+						return response.text();
+					}
+				})
+				.then((data) => {
+					// Sukces - przekierowanie nastąpi automatycznie
+					showNotification(`Pomyślnie ${action} zgłoszenie!`, "success");
+				})
+				.catch((error) => {
+					console.error("Error:", error);
+					showNotification(`Błąd podczas ${action} zgłoszenia`, "error");
+
+					// Przywróć przyciski
+					button.classList.remove("loading");
+					button.disabled = false;
+					button.innerHTML = originalText;
+					allButtons.forEach((btn) => (btn.disabled = false));
+				});
+		});
+	});
+});
+
+const notificationStyles = `
+.custom-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 1rem 1.5rem;
+    border-radius: 0.75rem;
+    color: white;
+    z-index: 10000;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    animation: slideInRight 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    max-width: 400px;
+    backdrop-filter: blur(10px);
+}
+
+.notification-success {
+    background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.notification-error {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.notification-info {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.notification-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.3s ease;
+    flex-shrink: 0;
+}
+
+.notification-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+`;
+
+// Dodaj style do dokumentu
+const styleSheet = document.createElement("style");
+styleSheet.textContent = notificationStyles;
+document.head.appendChild(styleSheet);
+// Funkcja pokazująca powiadomienia
+function showNotification(message, type = "info") {
+	// Usuń istniejące powiadomienia
+	const existingNotifications = document.querySelectorAll(
+		".custom-notification"
+	);
+	existingNotifications.forEach((notification) => notification.remove());
+
+	const notification = document.createElement("div");
+	notification.className = `custom-notification notification-${type}`;
+	notification.innerHTML = `
+        <span>${message}</span>
+        <button class="notification-close" onclick="this.parentElement.remove()">×</button>
+    `;
+
+	document.body.appendChild(notification);
+
+	// Automatyczne ukrywanie po 5 sekundach
+	setTimeout(() => {
+		if (notification.parentElement) {
+			notification.remove();
+		}
+	}, 5000);
+}
+
+
+
 // Menu burger
 const burgerMenu = document.getElementById("burger-menu");
 const navMenu = document.querySelector(".nav-menu");

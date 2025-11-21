@@ -13,7 +13,6 @@ $userEmail = $_SESSION["user_email"] ?? '';
 
 // Pobierz ID projektu z URL
 $projectId = $_GET['id'] ?? null;
-
 if (!$projectId) {
     header("Location: projekty.php");
     exit();
@@ -24,280 +23,240 @@ if (!$conn) {
     die("Błąd połączenia z bazą danych: " . $conn->connect_error);
 }
 
-// Formatowanie daty
+// Funkcje do formatowania dat
 function formatDate($dateString)
 {
     if (!$dateString || $dateString == '0000-00-00')
         return 'Nie ustawiono';
-    $date = new DateTime($dateString);
-    return $date->format('d.m.Y');
+    return (new DateTime($dateString))->format('d.m.Y');
 }
 
 function formatDateTime($dateString)
 {
     if (!$dateString || $dateString == '0000-00-00 00:00:00')
         return 'Nie ustawiono';
-    $date = new DateTime($dateString);
-    return $date->format('d.m.Y H:i');
+    return (new DateTime($dateString))->format('d.m.Y H:i');
 }
 
 // Funkcja do zwiększania licznika wyświetleń
-function incrementProjectViews($conn, $projectId, $userId)
+function incrementProjectViews($conn, $projectId)
 {
     $viewKey = 'project_view_' . $projectId;
-
     if (!isset($_SESSION[$viewKey])) {
-        // Zwiększ licznik
-        $updateSql = "UPDATE projects SET views_counter = views_counter + 1, updated_at = NOW() WHERE id = ?";
-        $updateStmt = $conn->prepare($updateSql);
-
+        $updateStmt = $conn->prepare("UPDATE projects SET views_counter = views_counter + 1, updated_at = NOW() WHERE id = ?");
         if ($updateStmt) {
             $updateStmt->bind_param("i", $projectId);
             $updateStmt->execute();
             $updateStmt->close();
-
-            // Oznacz jako obejrzane w tej sesji
             $_SESSION[$viewKey] = true;
-
-            // Pobierz zaktualizowaną liczbę wyświetleń
-            $selectSql = "SELECT views_counter FROM projects WHERE id = ?";
-            $selectStmt = $conn->prepare($selectSql);
-            if ($selectStmt) {
-                $selectStmt->bind_param("i", $projectId);
-                $selectStmt->execute();
-                $result = $selectStmt->get_result();
-                $row = $result->fetch_assoc();
-                $selectStmt->close();
-                return $row['views_counter'];
-            }
         }
     }
 
-    // Jeśli już było liczone, zwróć aktualną wartość
-    $currentSql = "SELECT views_counter FROM projects WHERE id = ?";
-    $currentStmt = $conn->prepare($currentSql);
-    if ($currentStmt) {
-        $currentStmt->bind_param("i", $projectId);
-        $currentStmt->execute();
-        $result = $currentStmt->get_result();
-        $row = $result->fetch_assoc();
-        $currentStmt->close();
-        return $row['views_counter'];
-    }
-
-    return 0;
+    $stmt = $conn->prepare("SELECT views_counter FROM projects WHERE id = ?");
+    $stmt->bind_param("i", $projectId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result->fetch_assoc();
+    $stmt->close();
+    return $row['views_counter'] ?? 0;
 }
 
-// Użycie:
-$currentViews = incrementProjectViews($conn, $projectId, $userId);
+$currentViews = incrementProjectViews($conn, $projectId);
 
-// Mapowanie priorytetów
-$priorityMap = [
-    'low' => 'Niski',
-    'medium' => 'Średni',
-    'high' => 'Wysoki'
-];
+// Mapowania
+$priorityMap = ['low' => 'Niski', 'medium' => 'Średni', 'high' => 'Wysoki'];
+$statusMap = ['active' => 'Aktywny', 'completed' => 'Zakończony', 'paused' => 'Wstrzymany', 'draft' => 'Szkic'];
+$visibilityMap = ['public' => 'Publiczny', 'private' => 'Prywatny'];
 
-// Mapowanie statusów z wartościami domyślnymi
-$statusMap = [
-    'active' => 'Aktywny',
-    'completed' => 'Zakończony',
-    'paused' => 'Wstrzymany',
-    'draft' => 'Szkic'
-];
-
-// Mapowanie widoczności z wartościami domyślnymi
-$visibilityMap = [
-    'public' => 'Publiczny',
-    'private' => 'Prywatny'
-];
-
-// Bezpieczne pobieranie wartości z mapowań
 function getStatus($status, $statusMap)
 {
-    if (!$status)
-        return 'Aktywny';
     return $statusMap[$status] ?? 'Aktywny';
 }
-
 function getVisibility($visibility, $visibilityMap)
 {
-    if (!$visibility)
-        return 'Publiczny';
     return $visibilityMap[$visibility] ?? 'Publiczny';
 }
 
-// Pobierz dane projektu
+// DODAJ TĘ FUNKCJĘ PRZED TRY-CATCH
+function isDeadlineApproaching($deadline)
+{
+    if (!$deadline || $deadline == '0000-00-00')
+        return false;
+
+    $now = new DateTime();
+    $deadlineDate = new DateTime($deadline);
+    $interval = $now->diff($deadlineDate);
+
+    // Zwróć true jeśli termin jest w ciągu 3 dni
+    return $interval->days <= 3 && $interval->invert == 0;
+}
+
 try {
-    // Podstawowe informacje o projekcie
-    $sql = "
-        SELECT p.*, u.nick as founder_name, u.email as founder_email
-        FROM projects p 
-        LEFT JOIN users u ON p.founder_id = u.id 
+    // Pobierz projekt wraz z founderem
+    $stmt = $conn->prepare("
+        SELECT p.*, u.nick AS founder_name, u.email AS founder_email, u.avatar AS founder_avatar
+        FROM projects p
+        LEFT JOIN users u ON p.founder_id = u.id
         WHERE p.id = ?
-    ";
-
-    $stmt = $conn->prepare($sql);
-
-    if ($stmt === false) {
-        throw new Exception("Błąd przygotowania zapytania: " . $conn->error);
-    }
-
+    ");
     $stmt->bind_param("i", $projectId);
-
-    if (!$stmt->execute()) {
-        throw new Exception("Błąd wykonania zapytania: " . $stmt->error);
-    }
-
-    $result = $stmt->get_result();
-    $project = $result->fetch_assoc();
-
-    if (!$project) {
-        throw new Exception("Projekt nie istnieje");
-    }
-
+    $stmt->execute();
+    $project = $stmt->get_result()->fetch_assoc();
     $stmt->close();
 
-    // ZWIĘKSZ LICZNIK WYŚWIETLEŃ
-    incrementProjectViews($conn, $projectId, $userId);
+    if (!$project)
+        throw new Exception("Projekt nie istnieje");
 
-    // Pobierz kategorie projektu
+    // Kategorie
     $categories = [];
-    $catSql = "
+    $catStmt = $conn->prepare("
         SELECT c.name 
-        FROM categories c 
-        JOIN project_categories pc ON c.id = pc.category_id 
+        FROM categories c
+        JOIN project_categories pc ON c.id = pc.category_id
         WHERE pc.project_id = ?
-    ";
-    $catStmt = $conn->prepare($catSql);
+    ");
+    $catStmt->bind_param("i", $projectId);
+    $catStmt->execute();
+    $catResult = $catStmt->get_result();
+    while ($row = $catResult->fetch_assoc())
+        $categories[] = $row['name'];
+    $catStmt->close();
 
-    if ($catStmt) {
-        $catStmt->bind_param("i", $projectId);
-        $catStmt->execute();
-        $catResult = $catStmt->get_result();
-        while ($row = $catResult->fetch_assoc()) {
-            $categories[] = $row['name'];
-        }
-        $catStmt->close();
-    }
-
-    // Pobierz cele projektu
+    // Cele - POPRAWIONE - pobierz status
     $goals = [];
-    $goalStmt = $conn->prepare("SELECT description FROM goals WHERE project_id = ?");
-    if ($goalStmt) {
-        $goalStmt->bind_param("i", $projectId);
-        $goalStmt->execute();
-        $goalResult = $goalStmt->get_result();
-        while ($row = $goalResult->fetch_assoc()) {
-            $goals[] = $row['description'];
-        }
-        $goalStmt->close();
+    $goalStmt = $conn->prepare("SELECT description, status FROM goals WHERE project_id = ?");
+    $goalStmt->bind_param("i", $projectId);
+    $goalStmt->execute();
+    $goalResult = $goalStmt->get_result();
+    while ($row = $goalResult->fetch_assoc()) {
+        $goals[] = $row; // teraz każdy cel ma description i status
     }
+    $goalStmt->close();
 
-    // Pobierz liczbę polubień projektu
-    $likeCount = 0;
-
-    // Pobierz liczbę polubień
-    $likeCountStmt = $conn->prepare("SELECT COUNT(*) as like_count FROM likes WHERE project_id = ?");
+    // Liczba polubień
+    $likeCountStmt = $conn->prepare("SELECT COUNT(*) AS like_count FROM likes WHERE project_id = ?");
     $likeCountStmt->bind_param("i", $projectId);
     $likeCountStmt->execute();
-    $likeCountResult = $likeCountStmt->get_result();
-    $likeCountData = $likeCountResult->fetch_assoc();
-    $likeCount = $likeCountData['like_count'] ?? 0;
+    $likeCount = $likeCountStmt->get_result()->fetch_assoc()['like_count'] ?? 0;
     $likeCountStmt->close();
 
-    // POPRAWIONE: Sprawdź czy użytkownik obserwuje projekt - używaj $conn zamiast $pdo
+    // Obserwacja
     $isFollowing = false;
     if (isset($_SESSION['user_id'])) {
         $followStmt = $conn->prepare("SELECT id FROM follows WHERE user_id = ? AND project_id = ?");
-        $followStmt->bind_param("ii", $_SESSION['user_id'], $projectId);
+        $followStmt->bind_param("ii", $userId, $projectId);
         $followStmt->execute();
-        $followResult = $followStmt->get_result();
-        $isFollowing = $followResult->fetch_assoc() !== null;
+        $isFollowing = $followStmt->get_result()->fetch_assoc() !== null;
         $followStmt->close();
     }
 
-    $userAvatarUrlStmt = $conn->prepare('SELECT avatar FROM users WHERE id = ?');
-    $userAvatarUrlStmt->bind_param('s', $_SESSION['user_id']);
+    // Avatar aktualnego użytkownika
+    $userAvatarUrlStmt = $conn->prepare("SELECT avatar FROM users WHERE id = ?");
+    $userAvatarUrlStmt->bind_param("i", $userId);
     $userAvatarUrlStmt->execute();
-
-    $userAvatarUrlResult = $userAvatarUrlStmt->get_result();
-    $userAvatarUrlRow = $userAvatarUrlResult->fetch_assoc(); // tutaj fetch_assoc na wyniku, nie na stmt
-    $userAvatarUrl = $userAvatarUrlRow['avatar'] ?? 'd'; // domyślny avatar, jeśli brak
-
+    $userAvatarUrl = $userAvatarUrlStmt->get_result()->fetch_assoc()['avatar'] ?? 'default.png';
     $userAvatarUrlStmt->close();
 
-
-    // Pobierz umiejętności projektu
+    // Umiejętności
     $skills = [];
-    $skillSql = "
-        SELECT s.name 
-        FROM skills s 
-        JOIN project_skills ps ON s.id = ps.skill_id 
+    $skillStmt = $conn->prepare("
+        SELECT s.name
+        FROM skills s
+        JOIN project_skills ps ON s.id = ps.skill_id
         WHERE ps.project_id = ?
-    ";
-    $skillStmt = $conn->prepare($skillSql);
-    if ($skillStmt) {
-        $skillStmt->bind_param("i", $projectId);
-        $skillStmt->execute();
-        $skillResult = $skillStmt->get_result();
-        while ($row = $skillResult->fetch_assoc()) {
-            $skills[] = $row['name'];
-        }
-        $skillStmt->close();
-    }
+    ");
+    $skillStmt->bind_param("i", $projectId);
+    $skillStmt->execute();
+    $skillResult = $skillStmt->get_result();
+    while ($row = $skillResult->fetch_assoc())
+        $skills[] = $row['name'];
+    $skillStmt->close();
 
-    // Pobierz zadania projektu
+    // Zadania z przypisaniami
     $tasks = [];
-    $taskStmt = $conn->prepare("SELECT name, description, priority FROM tasks WHERE project_id = ?");
-    if ($taskStmt) {
-        $taskStmt->bind_param("i", $projectId);
-        $taskStmt->execute();
-        $taskResult = $taskStmt->get_result();
-        while ($row = $taskResult->fetch_assoc()) {
-            $tasks[] = $row;
-        }
-        $taskStmt->close();
+    $taskStmt = $conn->prepare("
+    SELECT t.*, 
+           u_assigned.nick as assigned_nick,
+           u_assigned.avatar as assigned_avatar,
+           u_created.nick as created_nick
+    FROM tasks t
+    LEFT JOIN users u_assigned ON t.assigned_to = u_assigned.id
+    LEFT JOIN users u_created ON t.created_by = u_created.id
+    WHERE t.project_id = ?
+    ORDER BY 
+        CASE t.status 
+            WHEN 'open' THEN 1
+            WHEN 'in_progress' THEN 2
+            WHEN 'done' THEN 3
+            ELSE 4
+        END,
+        CASE t.priority
+            WHEN 'critical' THEN 1
+            WHEN 'high' THEN 2
+            WHEN 'medium' THEN 3
+            WHEN 'low' THEN 4
+        END
+");
+    $taskStmt->bind_param("i", $projectId);
+    $taskStmt->execute();
+    $taskResult = $taskStmt->get_result();
+    while ($row = $taskResult->fetch_assoc()) {
+        $tasks[] = $row;
     }
+    $taskStmt->close();
 
-    // Pobierz członków zespołu (właściciel + członkowie z project_team)
+    // Mapowania statusów
+    $taskStatusMap = [
+        'open' => 'Otwarte',
+        'in_progress' => 'W trakcie',
+        'done' => 'Zrobione',
+        'cancelled' => 'Anulowane'
+    ];
+
+    // DODAJ INICJALIZACJĘ TEJ ZMIENNEJ!
     $teamMembers = [];
 
-    // Najpierw pobierz właściciela
-    $ownerSql = "SELECT id, nick, email FROM users WHERE id = ?";
-    $ownerStmt = $conn->prepare($ownerSql);
-    if ($ownerStmt) {
-        $ownerStmt->bind_param("i", $project['founder_id']);
-        $ownerStmt->execute();
-        $ownerResult = $ownerStmt->get_result();
-        $owner = $ownerResult->fetch_assoc();
-        if ($owner) {
-            $owner['role'] = 'Założyciel';
-            $owner['joined_at'] = $project['created_at'];
-            $teamMembers[] = $owner;
-        }
-        $ownerStmt->close();
+    // Pobranie właściciela z project_team (żeby mieć datę joined_at)
+    $ownerStmt = $conn->prepare("
+    SELECT u.id, u.nick, u.email, u.avatar, pt.joined_at
+    FROM project_team pt
+    JOIN users u ON pt.user_id = u.id
+    WHERE pt.project_id = ? AND pt.user_id = ?
+");
+    $ownerStmt->bind_param("ii", $projectId, $project['founder_id']);
+    $ownerStmt->execute();
+    $ownerResult = $ownerStmt->get_result();
+    $owner = $ownerResult->fetch_assoc();
+    $ownerStmt->close();
+
+    if ($owner) {
+        $owner['role'] = 'Założyciel';
+        if (empty($owner['avatar']))
+            $owner['avatar'] = 'default.png';
+        $teamMembers[] = $owner; // właściciel jako pierwszy
     }
 
-    // Potem pobierz pozostałych członków z project_team
-    $teamSql = " SELECT u.id, u.nick, u.email, u.avatar, pt.role, pt.joined_at FROM project_team pt JOIN users u ON pt.user_id = u.id WHERE pt.project_id = ? AND pt.user_id != ?
+    // Pobranie pozostałych członków
+    $teamStmt = $conn->prepare("
+    SELECT u.id, u.nick, u.email, u.avatar, pt.role, pt.joined_at
+    FROM project_team pt
+    JOIN users u ON pt.user_id = u.id
+    WHERE pt.project_id = ? AND pt.user_id != ?
+");
+    $teamStmt->bind_param("ii", $projectId, $project['founder_id']);
+    $teamStmt->execute();
+    $teamResult = $teamStmt->get_result();
 
-    ";
-    $teamStmt = $conn->prepare($teamSql);
-    if ($teamStmt) {
-        $teamStmt->bind_param("ii", $projectId, $project['founder_id']);
-        $teamStmt->execute();
-        $teamResult = $teamStmt->get_result();
-        while ($row = $teamResult->fetch_assoc()) {
-            $teamMembers[] = $row;
-        }
-        $teamStmt->close();
+    while ($row = $teamResult->fetch_assoc()) {
+        if (empty($row['avatar']))
+            $row['avatar'] = 'default.png';
+        $teamMembers[] = $row;
     }
 
-    // Sprawdź czy użytkownik jest właścicielem projektu
-    $isOwner = ($project['founder_id'] == $userId);
+    $teamStmt->close();
 
-    // Sprawdź czy użytkownik jest członkiem zespołu
+    // Sprawdzenie roli użytkownika
+    $isOwner = ($userId == $project['founder_id']);
     $isMember = false;
     foreach ($teamMembers as $member) {
         if ($member['id'] == $userId) {
@@ -306,28 +265,51 @@ try {
         }
     }
 
+    // Komentarze
     $comments = [];
-    $commentStmt = $conn->prepare("SELECT c.comment, c.created_at, u.nick, u.avatar 
-                               FROM comments c 
-                               JOIN users u ON c.user_id = u.id 
-                               WHERE c.project_id = ? 
-                               ORDER BY c.created_at ASC");
-    if ($commentStmt) {
-        $commentStmt->bind_param("i", $projectId);
-        $commentStmt->execute();
-        $commentResult = $commentStmt->get_result();
-        while ($row = $commentResult->fetch_assoc()) {
-            $comments[] = $row;
-        }
-        $commentStmt->close();
+    $commentStmt = $conn->prepare("
+        SELECT c.comment, c.created_at, u.nick, u.avatar
+        FROM comments c
+        JOIN users u ON c.user_id = u.id
+        WHERE c.project_id = ?
+        ORDER BY c.created_at ASC
+    ");
+    $commentStmt->bind_param("i", $projectId);
+    $commentStmt->execute();
+    $commentResult = $commentStmt->get_result();
+    while ($row = $commentResult->fetch_assoc())
+        $comments[] = $row;
+    $commentStmt->close();
+
+
+    // Zgłoszenia do projektu
+    $joinRequests = [];
+    $requestSql = "
+    SELECT pr.id, pr.user_id, pr.applied_at, pr.motivation, pr.desired_role, pr.availability, pr.status, u.nick, u.avatar
+    FROM project_applications pr
+    JOIN users u ON pr.user_id = u.id
+    WHERE pr.project_id = ? AND pr.status = 'pending'
+    ORDER BY pr.applied_at ASC
+";
+
+    $requestStmt = $conn->prepare($requestSql);
+    if ($requestStmt === false) {
+        die("Błąd przygotowania zapytania: " . $conn->error . "\nSQL: " . $requestSql);
     }
 
-
+    $requestStmt->bind_param("i", $projectId);
+    $requestStmt->execute();
+    $requestResult = $requestStmt->get_result();
+    while ($row = $requestResult->fetch_assoc()) {
+        $joinRequests[] = $row;
+    }
+    $requestStmt->close();
 
 } catch (Exception $e) {
     die("Błąd: " . $e->getMessage());
 }
 ?>
+
 
 <!DOCTYPE html>
 <html lang="pl">
@@ -456,6 +438,27 @@ try {
                         </section>
                     <?php endif; ?>
 
+
+                    <!-- 💼 Quick Actions dla członków -->
+                    <?php if ($isMember): ?>
+                        <section class="content-section">
+                            <h2>Szybkie akcje</h2>
+                            <div class="quick-actions-grid">
+                                <a href="member_dashboard.php?project_id=<?php echo $projectId; ?>" class="action-card">
+                                    <span class="action-icon">📊</span>
+                                    <span class="action-text">Moje zadania</span>
+                                    <span class="action-description">Zobacz wszystkie przypisane zadania</span>
+                                </a>
+
+                                <a href="project_reports.php?project_id=<?php echo $projectId; ?>" class="action-card">
+                                    <span class="action-icon">📈</span>
+                                    <span class="action-text">Raporty</span>
+                                    <span class="action-description">Statystyki projektu</span>
+                                </a>
+                            </div>
+                        </section>
+                    <?php endif; ?>
+
                     <!-- 🎯 Cele projektu -->
                     <?php if (!empty($goals)): ?>
                         <section class="content-section goals-section">
@@ -467,12 +470,15 @@ try {
                                     <div class="goal-item">
                                         <div class="goal-header">
                                             <span class="goal-icon">🎯</span>
-                                            <span class="goal-text"><?php echo htmlspecialchars($goal); ?></span>
+                                            <span class="goal-text"><?php echo htmlspecialchars($goal['description']); ?></span>
                                         </div>
                                         <div class="progress-bar">
-                                            <div class="progress-fill" style="width: 0%"></div>
+                                            <div class="progress-fill"
+                                                style="width: <?php echo $goal['status'] == 1 ? '100%' : '0%'; ?>"></div>
                                         </div>
-                                        <span class="progress-text">0% ukończono</span>
+                                        <span class="progress-text">
+                                            <?php echo $goal['status'] == 1 ? '100% ukończono' : '0% ukończono'; ?>
+                                        </span>
                                     </div>
                                 <?php endforeach; ?>
                             </div>
@@ -489,27 +495,116 @@ try {
                                     <button class="filter-btn" data-filter="open">Otwarte</button>
                                     <button class="filter-btn" data-filter="in-progress">W trakcie</button>
                                     <button class="filter-btn" data-filter="done">Zrobione</button>
+                                    <button class="filter-btn" data-filter="my-tasks">Moje zadania</button>
                                 </div>
                             </div>
                             <div class="tasks-list">
                                 <?php foreach ($tasks as $task): ?>
-                                    <div class="task-card" data-status="open" data-priority="<?php echo $task['priority']; ?>">
+                                    <div class="task-card" data-status="<?php echo $task['status']; ?>"
+                                        data-priority="<?php echo $task['priority']; ?>"
+                                        data-assigned="<?php echo $task['assigned_to'] == $userId ? 'true' : 'false'; ?>">
+
                                         <div class="task-main">
                                             <h3 class="task-title"><?php echo htmlspecialchars($task['name']); ?></h3>
                                             <?php if ($task['description']): ?>
                                                 <p class="task-description"><?php echo htmlspecialchars($task['description']); ?>
                                                 </p>
                                             <?php endif; ?>
+
+                                            <div class="task-meta-extended">
+                                                <div class="meta-item">
+                                                    <span class="meta-label">Utworzył:</span>
+                                                    <span
+                                                        class="meta-value"><?php echo htmlspecialchars($task['created_nick']); ?></span>
+                                                </div>
+                                                <?php if ($task['assigned_nick']): ?>
+                                                    <div class="meta-item">
+                                                        <span class="meta-label">Przypisane do:</span>
+                                                        <span class="meta-value">
+                                                            <img src="<?php echo htmlspecialchars($task['assigned_avatar'] ?? 'default.png'); ?>"
+                                                                alt="<?php echo htmlspecialchars($task['assigned_nick']); ?>"
+                                                                class="assignee-avatar">
+                                                            <?php echo htmlspecialchars($task['assigned_nick']); ?>
+                                                        </span>
+                                                    </div>
+                                                <?php endif; ?>
+                                                <?php if ($task['deadline'] && $task['deadline'] != '0000-00-00'): ?>
+                                                    <div class="meta-item">
+                                                        <span class="meta-label">Termin:</span>
+                                                        <span
+                                                            class="meta-value deadline <?php echo isDeadlineApproaching($task['deadline']) ? 'approaching' : ''; ?>">
+                                                            <?php echo formatDate($task['deadline']); ?>
+                                                        </span>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
                                         </div>
-                                        <div class="task-meta">
+
+                                        <div class="task-actions-member">
                                             <span class="task-priority priority-<?php echo $task['priority']; ?>">
                                                 <?php echo $priorityMap[$task['priority']] ?? 'Średni'; ?>
                                             </span>
-                                            <span class="task-status status-open">Otwarte</span>
+                                            <span class="task-status status-<?php echo $task['status']; ?>">
+                                                <?php echo $taskStatusMap[$task['status']] ?? $task['status']; ?>
+                                            </span>
+
+                                            <?php if ($isMember && $task['status'] !== 'done' && $task['status'] !== 'cancelled'): ?>
+                                                <div class="member-actions">
+                                                    <?php if (!$task['assigned_to'] || $task['assigned_to'] == $userId): ?>
+                                                        <?php if ($task['assigned_to'] == $userId): ?>
+                                                            <form method="POST" action="task_actions.php" class="task-action-form">
+                                                                <input type="hidden" name="task_id" value="<?php echo $task['id']; ?>">
+                                                                <input type="hidden" name="project_id" value="<?php echo $projectId; ?>">
+                                                                <input type="hidden" name="action" value="complete_task">
+                                                                <button type="submit" class="btn-success btn-small">
+                                                                    <span class="btn-icon">✓</span> Wykonane
+                                                                </button>
+                                                            </form>
+                                                            <form method="POST" action="task_actions.php" class="task-action-form">
+                                                                <input type="hidden" name="task_id" value="<?php echo $task['id']; ?>">
+                                                                <input type="hidden" name="project_id" value="<?php echo $projectId; ?>">
+                                                                <input type="hidden" name="action" value="release_task">
+                                                                <button type="submit" class="btn-warning btn-small">
+                                                                    <span class="btn-icon">✏️</span> Szczegóły
+                                                                </button>
+                                                            </form>
+                                                        <?php else: ?>
+                                                            <form method="POST" action="task_actions.php" class="task-action-form">
+                                                                <input type="hidden" name="task_id" value="<?php echo $task['id']; ?>">
+                                                                <input type="hidden" name="project_id" value="<?php echo $projectId; ?>">
+                                                                <input type="hidden" name="action" value="take_task">
+                                                                <button type="submit" class="btn-primary btn-small">
+                                                                    <span class="btn-icon">👤</span> Weź zadanie
+                                                                </button>
+                                                            </form>
+                                                        <?php endif; ?>
+                                                    <?php endif; ?>
+                                                </div>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
                                 <?php endforeach; ?>
                             </div>
+
+                            <?php if ($isMember): ?>
+                                <div class="tasks-summary">
+                                    <div class="summary-item">
+                                        <span
+                                            class="summary-count"><?php echo count(array_filter($tasks, fn($t) => $t['assigned_to'] == $userId && $t['status'] == 'in_progress')); ?></span>
+                                        <span class="summary-label">Twoje zadania w trakcie</span>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span
+                                            class="summary-count"><?php echo count(array_filter($tasks, fn($t) => $t['status'] == 'open')); ?></span>
+                                        <span class="summary-label">Zadań otwartych</span>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span
+                                            class="summary-count"><?php echo count(array_filter($tasks, fn($t) => $t['status'] == 'done')); ?></span>
+                                        <span class="summary-label">Zadań wykonanych</span>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
                         </section>
                     <?php endif; ?>
 
@@ -523,15 +618,24 @@ try {
                             <?php foreach ($teamMembers as $member): ?>
                                 <div class="team-member-card">
                                     <div class="member-avatar">
-                                        <img src="<?php echo $userAvatarUrl; ?>"
+                                        <img src="<?php echo htmlspecialchars($member['avatar'] ?? 'default.png'); ?>"
                                             alt="<?php echo htmlspecialchars($member['nick']); ?>">
+
                                     </div>
                                     <div class="member-info">
                                         <h3 class="member-name"><?php echo htmlspecialchars($member['nick']); ?></h3>
                                         <p class="member-role"><?php echo htmlspecialchars($member['role']); ?></p>
                                         <span class="member-tenure">
-                                            W zespole od <?php echo formatDate($member['joined_at']); ?>
+                                            W zespole od
+                                            <?php
+                                            if (!empty($member['joined_at'])) {
+                                                echo formatDate($member['joined_at']);
+                                            } else {
+                                                echo "Nieznana data dołączenia";
+                                            }
+                                            ?>
                                         </span>
+
                                     </div>
                                 </div>
                             <?php endforeach; ?>
@@ -546,6 +650,103 @@ try {
                             <?php endif; ?>
                         </div>
                     </section>
+
+                    <?php if ($isOwner || ($isMember && isset($member['role']) && $member['role'] === 'developer')): ?>
+                        <section class="content-section">
+                            <div class="section-header">
+                                <h2>Zgłoszenia do projektu <span
+                                        class="request-count">(<?php echo count($joinRequests); ?>)</span></h2>
+                            </div>
+
+                            <?php if (count($joinRequests) === 0): ?>
+                                <div class="empty-state">
+                                    <p>Brak oczekujących zgłoszeń do projektu.</p>
+                                </div>
+                            <?php else: ?>
+                                <?php foreach ($joinRequests as $req): ?>
+                                    <div class="request-card">
+                                        <div class="request-avatar">
+                                            <img src="<?php echo htmlspecialchars($req['avatar'] ?? '../photos/default-avatar.jpg'); ?>"
+                                                alt="Avatar <?php echo htmlspecialchars($req['nick']); ?>">
+                                        </div>
+
+                                        <div class="request-info">
+                                            <div class="request-header">
+                                                <strong
+                                                    class="request-username"><?php echo htmlspecialchars($req['nick']); ?></strong>
+                                                <span class="request-date"><?php echo formatDateTime($req['applied_at']); ?></span>
+                                            </div>
+
+                                            <div class="request-details">
+                                                <div class="detail-item">
+                                                    <span class="detail-label">Motywacja:</span>
+                                                    <p class="detail-value"><?php echo htmlspecialchars($req['motivation']); ?></p>
+                                                </div>
+
+                                                <div class="detail-row">
+                                                    <div class="detail-item">
+                                                        <span class="detail-label">Pożądana rola:</span>
+                                                        <span
+                                                            class="role-badge"><?php echo htmlspecialchars($req['desired_role']); ?></span>
+                                                    </div>
+
+                                                    <div class="detail-item">
+                                                        <span class="detail-label">Dostępność:</span>
+                                                        <span
+                                                            class="availability"><?php echo htmlspecialchars($req['availability']); ?></span>
+                                                    </div>
+                                                </div>
+
+                                                <div class="detail-item">
+                                                    <span class="detail-label">Status:</span>
+                                                    <span class="status-badge status-<?php echo $req['status']; ?>">
+                                                        <?php
+                                                        $statusLabels = [
+                                                            'pending' => 'Oczekujące',
+                                                            'accepted' => 'Zaakceptowane',
+                                                            'rejected' => 'Odrzucone'
+                                                        ];
+                                                        echo $statusLabels[$req['status']] ?? $req['status'];
+                                                        ?>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="request-actions">
+                                            <?php if ($req['status'] === 'pending'): ?>
+                                                <form action="project_accept.php" method="POST" class="action-form">
+                                                    <input type="hidden" name="request_id" value="<?php echo $req['id']; ?>">
+                                                    <input type="hidden" name="project_id" value="<?php echo $projectId; ?>">
+                                                    <button type="submit" class="btn-primary" name="accept_request">
+                                                        <span class="btn-icon">✓</span>
+                                                        Akceptuj
+                                                    </button>
+                                                </form>
+
+                                                <form action="project_decline.php" method="POST" class="action-form">
+                                                    <input type="hidden" name="request_id" value="<?php echo $req['id']; ?>">
+                                                    <input type="hidden" name="project_id" value="<?php echo $projectId; ?>">
+                                                    <button type="submit" class="btn-danger" name="decline_request">
+                                                        <span class="btn-icon">✕</span>
+                                                        Odrzuć
+                                                    </button>
+                                                </form>
+                                            <?php else: ?>
+                                                <div class="request-status-info">
+                                                    <span class="status-message">
+                                                        Zgłoszenie zostało
+                                                        <?php echo $req['status'] === 'accepted' ? 'zaakceptowane' : 'odrzucone'; ?>
+                                                    </span>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </section>
+                    <?php endif; ?>
+
 
                     <!-- 💬 Sekcja komentarzy -->
                     <section class="content-section comments-section">
@@ -736,6 +937,10 @@ try {
                                 <a href="manage_tasks.php?project_id=<?php echo $projectId; ?>" class="tool-btn">✅ Zarządzaj
                                     zadaniami</a>
 
+                                <!-- DODAJ TEN LINK -->
+                                <a href="project_reports.php?project_id=<?php echo $projectId; ?>" class="tool-btn">📊
+                                    Raporty projektu</a>
+
                                 <!-- Usuwanie projektu przez formularz POST -->
                                 <form method="POST" action="" style="display:inline;">
                                     <input type="hidden" name="delete_project_id" value="<?php echo $projectId; ?>">
@@ -745,21 +950,6 @@ try {
                                 </form>
                             </div>
                         </div>
-
-                        <?php
-                        // Obsługa usuwania projektu
-                        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_project_id'])) {
-                            $deleteId = (int) $_POST['delete_project_id'];
-
-                            // Tu wstaw kod do usuwania projektu z bazy danych
-                            $stmt = $db->prepare("DELETE FROM projects WHERE id = ?");
-                            $stmt->execute([$deleteId]);
-
-                            // Przekierowanie po usunięciu
-                            header("Location: projects_list.php");
-                            exit;
-                        }
-                        ?>
                     <?php endif; ?>
 
 

@@ -441,6 +441,59 @@ if (burgerMenu && navMenu) {
 	});
 }
 
+// Przełączanie typu lokalizacji
+const locationTypeRadios = document.querySelectorAll(
+	'input[name="locationType"]'
+);
+const specificLocationDiv = document.getElementById("specificLocation");
+
+locationTypeRadios.forEach((radio) => {
+	radio.addEventListener("change", function () {
+		if (this.value === "specific") {
+			specificLocationDiv.style.display = "block";
+		} else {
+			specificLocationDiv.style.display = "none";
+			document.getElementById("projectLocation").value = "";
+		}
+		updatePreview();
+	});
+});
+
+// Aktualizuj podgląd lokalizacji
+function updatePreviewLocation() {
+	const locationType = document.querySelector(
+		'input[name="locationType"]:checked'
+	).value;
+	const specificLocation = document.getElementById("projectLocation").value;
+
+	let locationText = "Online";
+	if (locationType === "specific" && specificLocation) {
+		locationText = specificLocation;
+	}
+
+	// Tutaj możesz dodać aktualizację podglądu jeśli chcesz pokazywać lokalizację
+}
+
+// Pokazywanie/ukrywanie pola lokalizacji
+document.addEventListener("DOMContentLoaded", function () {
+	const locationRadios = document.querySelectorAll(
+		'input[name="locationType"]'
+	);
+	const specificLocationDiv = document.getElementById("specificLocation");
+
+	locationRadios.forEach((radio) => {
+		radio.addEventListener("change", function () {
+			if (this.value === "specific") {
+				specificLocationDiv.style.display = "block";
+			} else {
+				specificLocationDiv.style.display = "none";
+				// Opcjonalnie: wyczyść pole gdy przełączasz na Online
+				specificLocationDiv.querySelector("input").value = "";
+			}
+		});
+	});
+});
+
 window.closeTaskModal = closeTaskModal;
 window.saveTask = saveTask;
 window.removeTask = removeTask;

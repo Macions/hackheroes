@@ -22,6 +22,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $allowApplications = isset($_POST['allowApplications']) ? 1 : 0;
     $autoAccept = isset($_POST['autoAccept']) ? 1 : 0;
     $seoTags = trim($_POST['seoTags'] ?? '');
+    $location = 'Online'; // wartość domyślna
+
+    if (isset($_POST['locationType']) && $_POST['locationType'] === 'specific' && !empty(trim($_POST['location'] ?? ''))) {
+        $location = trim($_POST['location']);
+    }
 
     if (empty($projectName) || empty($shortDescription)) {
         echo json_encode(['success' => false, 'message' => 'Puste dane']);
@@ -42,16 +47,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $conn->begin_transaction();
 
         $stmt = $conn->prepare("
-            INSERT INTO projects 
-            (name, short_description, full_description, deadline, visibility, founder_id, allow_applications, auto_accept, seo_tags, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-        ");
+        INSERT INTO projects 
+        (name, short_description, location, full_description, deadline, visibility, founder_id, allow_applications, auto_accept, seo_tags, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+    ");
 
         if ($stmt === false) {
             throw new Exception("Błąd przygotowania zapytania: " . $conn->error);
         }
 
-        if (!$stmt->bind_param("sssssiiis", $projectName, $shortDescription, $fullDescription, $deadline, $visibility, $userId, $allowApplications, $autoAccept, $seoTags)) {
+        // ✅ JEDNO bind_param z location
+        if (!$stmt->bind_param("ssssssiiis", $projectName, $shortDescription, $location, $fullDescription, $deadline, $visibility, $userId, $allowApplications, $autoAccept, $seoTags)) {
             throw new Exception("Błąd powiązania parametrów: " . $stmt->error);
         }
 
@@ -241,6 +247,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]);
         exit();
 
+
+
     } catch (Exception $e) {
         $conn->rollback();
 
@@ -340,6 +348,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                             <textarea id="fullDescription" name="fullDescription"
                                 placeholder="Opisz szczegóły projektu: cele, kontekst, problemy, inspiracje..."></textarea>
+                        </section>
+
+                        <!-- Lokalizacja -->
+                        <section class="form-section">
+                            <div class="section-header">
+                                <h2>Lokalizacja projektu</h2>
+                                <span class="optional">opcjonalne</span>
+                            </div>
+                            <div class="location-options">
+                                <label class="radio-option">
+                                    <input type="radio" name="locationType" value="online" checked>
+                                    <span class="radio-checkmark"></span>
+                                    <div class="option-content">
+                                        <span class="option-title">🌐 Online</span>
+                                        <span class="option-description">Projekt realizowany zdalnie</span>
+                                    </div>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="locationType" value="specific">
+                                    <span class="radio-checkmark"></span>
+                                    <div class="option-content">
+                                        <span class="option-title">📍 Konkretne miejsce</span>
+                                        <span class="option-description">Projekt w określonej lokalizacji</span>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div class="specific-location" id="specificLocation" style="display: none;">
+                                <input type="text" name="location"
+                                    placeholder="Podaj miasto lub adres, np. 'Warszawa', 'Kraków, Rynek Główny'"
+                                    style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 0.5rem; margin-top: 1rem;">
+                            </div>
                         </section>
 
                         <!-- Kategorie -->

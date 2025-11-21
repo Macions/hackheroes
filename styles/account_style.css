@@ -462,6 +462,11 @@ header {
 	border: 1px solid var(--border);
 }
 
+.project-item a {
+	color: black;
+	font-weight: 900;
+	text-decoration: none;
+}
 .project-info h3 {
 	font-size: 1.25rem;
 	font-weight: 600;

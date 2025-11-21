@@ -502,11 +502,25 @@ $conn->close();
                             <label for="interests">Twoje zainteresowania</label>
                             <select id="interests" name="interests">
                                 <option value="">Wybierz obszar zainteresowań</option>
-                                <option value="programming">Programowanie</option>
-                                <option value="design">Design/UX</option>
-                                <option value="ecology">Ekologia</option>
-                                <option value="social">Projekty społeczne</option>
-                                <option value="other">Inne</option>
+                                <option value="programowanie">Programowanie</option>
+                                <option value="grafika_komputerowa">Grafika komputerowa</option>
+                                <option value="projektowanie_stron">Projektowanie stron WWW</option>
+                                <option value="robotyka">Robotyka</option>
+                                <option value="sztuczna_inteligencja">AI i uczenie maszynowe</option>
+                                <option value="tworzenie_gier">Tworzenie gier</option>
+                                <option value="aplikacje_mobilne">Aplikacje mobilne</option>
+                                <option value="nauka_badania">Nauka i badania</option>
+                                <option value="ekologia">Ekologia i ochrona środowiska</option>
+                                <option value="projekty_spoleczne">Projekty społeczne</option>
+                                <option value="edukacja">Edukacja i nauczanie</option>
+                                <option value="sztuka">Sztuka i kreatywność</option>
+                                <option value="muzyka">Muzyka i dźwięk</option>
+                                <option value="fotografia">Fotografia i wideo</option>
+                                <option value="biznes">Biznes i przedsiębiorczość</option>
+                                <option value="dziennikarstwo">Dziennikarstwo i pisanie</option>
+                                <option value="sport">Sport i aktywność fizyczna</option>
+                                <option value="wolontariat">Wolontariat i pomoc</option>
+                                <option value="inne">Inne</option>
                             </select>
                         </div>
 
