@@ -1,7 +1,7 @@
 <?php
 session_start();
-include("../global/connection.php");
-include("../global/nav_global.php");
+include("global/connection.php");
+include("global/nav_global.php");
 
 // Sprawdź czy użytkownik jest zalogowany
 if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
@@ -19,9 +19,8 @@ try {
     $projects_stmt = $conn->prepare("
         SELECT p.id, p.name 
         FROM projects p 
-        WHERE p.founder_id = ? OR EXISTS (
-            SELECT 1 FROM project_members pm 
-            WHERE pm.project_id = p.id AND pm.user_id = ?
+        WHERE p.founder_id = ? OR p.id IN (
+            SELECT project_id FROM project_members WHERE user_id = ?
         )
         ORDER BY p.created_at DESC
     ");
@@ -31,8 +30,9 @@ try {
     $projects_stmt->close();
 } catch (Exception $e) {
     $user_projects = [];
+    // Możesz dodać logowanie błędu dla debugowania
+    error_log("Błąd przy pobieraniu projektów użytkownika: " . $e->getMessage());
 }
-
 // Obsługa formularza
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $project_id = $_POST['project_id'] ?? '';
