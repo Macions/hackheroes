@@ -1,6 +1,7 @@
 <?php
-include("global/connection.php");
 session_start();
+include("global/connection.php");
+include("global/nav_global.php");
 
 if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
     header("Location: join.php");
@@ -8,10 +9,6 @@ if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
 }
 
 $userId = $_SESSION["user_id"]; // musi być liczba
-
-if (!$conn) {
-    die("Brak połączenia z bazą: " . mysqli_connect_error());
-}
 
 // Dane użytkownika
 $stmt = $conn->prepare("SELECT first_name, last_name, email, created_at, avatar, nick, phone, verification_status FROM users WHERE id = ?");
@@ -148,11 +145,12 @@ $badgesStmt->close();
                 </div>
 
                 <ul class="nav-menu">
-                    <li><a href="index.html">Strona główna</a></li>
-                    <li><a href="projekty.html">Projekty</a></li>
-                    <li><a href="społeczność.html">Społeczność</a></li>
-                    <li><a href="o-projekcie.html">O projekcie</a></li>
-                    <li class="nav-cta"><a href="konto.html" class="cta-button active">Moje konto</a></li>
+                    <li><a href="../index.php">Strona główna</a></li>
+                    <li><a href="projects.php">Projekty</a></li>
+                    <li><a href="community.php">Społeczność</a></li>
+                    <li><a href="about.php">O projekcie</a></li>
+                    <li><a href="notifications.php">Powiadomienia</a></li>
+                    <?php echo $nav_cta_action; ?>
                 </ul>
 
                 <button class="burger-menu" id="burger-menu" aria-label="Menu">
@@ -358,7 +356,7 @@ $badgesStmt->close();
                             if ($myProjects->num_rows > 0) {
                                 while ($project = $myProjects->fetch_assoc()) {
                                     echo '<div class="project-item">
-                                                <a href = "https://teencollab.pl/project.php?id='. htmlspecialchars($project['id']) .'">
+                                                <a href = "https://teencollab.pl/project.php?id=' . htmlspecialchars($project['id']) . '">
                                                 <h3>' . htmlspecialchars($project['name']) . '</h3></a>
                                                 <p>' . htmlspecialchars($project['short_description']) . '</p>
                                                 <span class="project-role">Rola: ' . htmlspecialchars($project['role']) . '</span>

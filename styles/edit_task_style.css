@@ -1,3 +1,5 @@
+@import url("global/dropdown_menu.css");
+
 /* Style dla strony edycji zadania */
 :root {
 	--primary: #667eea;

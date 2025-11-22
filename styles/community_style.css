@@ -1,3 +1,5 @@
+@import url('global/dropdown_menu.css');
+
 /* Reset i zmienne */
 :root {
 	--primary: #10b981;
@@ -31,7 +33,6 @@ body {
 	margin: 0 auto;
 	padding: 0 1.5rem;
 }
-
 /* Header */
 header {
 	background: var(--background);
@@ -88,7 +89,7 @@ header {
 	color: var(--primary);
 }
 
-.nav-menu a.active::after {
+.nav-menu a.active:not(.cta-button)::after {
 	content: "";
 	position: absolute;
 	bottom: -0.5rem;

@@ -1,17 +1,11 @@
 <?php
+
+include("global/connection.php");
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-$hostname = "localhost";
-$username = "root";
-$password = "";
-$database = "teencollab";
-
-$conn = new mysqli($hostname, $username, $password, $database);
-if ($conn->connect_error) {
-    die(json_encode(['status' => 'error', 'message' => 'Błąd połączenia z bazą']));
-}
 
 // Obsługa zarówno GET jak i POST
 $nick = trim($_REQUEST['nick'] ?? '');

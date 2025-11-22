@@ -1,10 +1,12 @@
 <?php
 session_start();
 include("global/connection.php");
+include("global/nav_global.php");
+
 
 // Sprawdź czy użytkownik jest zalogowany
 if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
-    header("Location: login.php");
+    header("Location: join.php");
     exit();
 }
 
@@ -22,7 +24,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $allowApplications = isset($_POST['allowApplications']) ? 1 : 0;
     $autoAccept = isset($_POST['autoAccept']) ? 1 : 0;
     $seoTags = trim($_POST['seoTags'] ?? '');
-    $location = 'Online'; // wartość domyślna
+    $location = 'Online';
+    $country = trim($_POST['country'] ?? '');
 
     if (isset($_POST['locationType']) && $_POST['locationType'] === 'specific' && !empty(trim($_POST['location'] ?? ''))) {
         $location = trim($_POST['location']);
@@ -47,9 +50,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $conn->begin_transaction();
 
         $stmt = $conn->prepare("
-        INSERT INTO projects 
-        (name, short_description, location, full_description, deadline, visibility, founder_id, allow_applications, auto_accept, seo_tags, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+INSERT INTO projects 
+(name, short_description, location, country, full_description, deadline, visibility, founder_id, allow_applications, auto_accept, seo_tags, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
     ");
 
         if ($stmt === false) {
@@ -57,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // ✅ JEDNO bind_param z location
-        if (!$stmt->bind_param("ssssssiiis", $projectName, $shortDescription, $location, $fullDescription, $deadline, $visibility, $userId, $allowApplications, $autoAccept, $seoTags)) {
+        if (!$stmt->bind_param("sssssssiiis", $projectName, $shortDescription, $location, $country, $fullDescription, $deadline, $visibility, $userId, $allowApplications, $autoAccept, $seoTags)) {
             throw new Exception("Błąd powiązania parametrów: " . $stmt->error);
         }
 
@@ -287,11 +290,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
 
                 <ul class="nav-menu">
-                    <li><a href="index.html">Strona główna</a></li>
-                    <li><a href="projekty.html">Projekty</a></li>
-                    <li><a href="społeczność.html">Społeczność</a></li>
-                    <li><a href="o-projekcie.html">O projekcie</a></li>
-                    <li class="nav-cta"><a href="konto.html">Moje konto</a></li>
+                    <li><a href="../index.php">Strona główna</a></li>
+                    <li><a href="projects.php">Projekty</a></li>
+                    <li><a href="community.php">Społeczność</a></li>
+                    <li><a href="about.php">O projekcie</a></li>
+                    <li><a href="notifications.php">Powiadomienia</a></li>
+                    <?php echo $nav_cta_action; ?>
                 </ul>
 
                 <button class="burger-menu" id="burger-menu" aria-label="Menu">
@@ -376,10 +380,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
 
                             <div class="specific-location" id="specificLocation" style="display: none;">
-                                <input type="text" name="location"
+                                <select id="countrySelect" name="country"
+                                    style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 0.5rem; margin-top: 1rem;">
+                                    <option value="">Wybierz kraj</option>
+                                </select>
+                                <input type="text" name="location" id="projectLocation"
                                     placeholder="Podaj miasto lub adres, np. 'Warszawa', 'Kraków, Rynek Główny'"
                                     style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 0.5rem; margin-top: 1rem;">
                             </div>
+
                         </section>
 
                         <!-- Kategorie -->

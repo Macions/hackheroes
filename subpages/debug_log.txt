@@ -1,0 +1,25 @@
+2025-11-22 18:29:23 === START ===
+POST: Array
+(
+    [user_id] => 10
+    [email] => maciejkaczarneckadasd@gmail.com
+    [action] => notification_change
+    [details] => E-mail o nowych zadaniach: wyłączone
+)
+
+SESSION: Array
+(
+    [user_email] => maciejkaczarneckadasd@gmail.com
+    [logged_in] => 1
+    [user_id] => 10
+    [project_view_7] => 1
+    [project_view_8] => 1
+    [project_view_9] => 1
+    [project_view_10] => 1
+)
+
+Dane: user_id=10, email=maciejkaczarneckadasd@gmail.com, action=notification_change, details=E-mail o nowych zadaniach: wyłączone
+IP: ::1, UserAgent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0
+SUKCES: Zapisano log ID: 173
+=== KONEC ===
+

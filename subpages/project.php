@@ -1,20 +1,16 @@
 <?php
 session_start();
 include("global/connection.php");
+include("global/nav_global.php");
 
-// Sprawdź czy użytkownik jest zalogowany
-if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
-    header("Location: login.php");
-    exit();
-}
-
-$userId = $_SESSION["user_id"];
+$userId = $_SESSION["user_id"] ?? null;
 $userEmail = $_SESSION["user_email"] ?? '';
+$isLoggedIn = isset($_SESSION["logged_in"]) && $_SESSION["logged_in"] === true;
 
 // Pobierz ID projektu z URL
 $projectId = $_GET['id'] ?? null;
 if (!$projectId) {
-    header("Location: projekty.php");
+    header("Location: projects.php");
     exit();
 }
 
@@ -77,7 +73,6 @@ function getVisibility($visibility, $visibilityMap)
     return $visibilityMap[$visibility] ?? 'Publiczny';
 }
 
-// DODAJ TĘ FUNKCJĘ PRZED TRY-CATCH
 function isDeadlineApproaching($deadline)
 {
     if (!$deadline || $deadline == '0000-00-00')
@@ -89,6 +84,17 @@ function isDeadlineApproaching($deadline)
 
     // Zwróć true jeśli termin jest w ciągu 3 dni
     return $interval->days <= 3 && $interval->invert == 0;
+}
+
+// Funkcja do sprawdzania czy wymagane jest logowanie
+function requireLogin($action)
+{
+    if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
+        $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
+        $_SESSION['login_message'] = "Musisz się zalogować, aby $action";
+        header("Location: login.php");
+        exit();
+    }
 }
 
 try {
@@ -122,14 +128,14 @@ try {
         $categories[] = $row['name'];
     $catStmt->close();
 
-    // Cele - POPRAWIONE - pobierz status
+    // Cele
     $goals = [];
     $goalStmt = $conn->prepare("SELECT description, status FROM goals WHERE project_id = ?");
     $goalStmt->bind_param("i", $projectId);
     $goalStmt->execute();
     $goalResult = $goalStmt->get_result();
     while ($row = $goalResult->fetch_assoc()) {
-        $goals[] = $row; // teraz każdy cel ma description i status
+        $goals[] = $row;
     }
     $goalStmt->close();
 
@@ -140,9 +146,19 @@ try {
     $likeCount = $likeCountStmt->get_result()->fetch_assoc()['like_count'] ?? 0;
     $likeCountStmt->close();
 
-    // Obserwacja
+    // Sprawdź czy użytkownik polubił projekt (tylko jeśli jest zalogowany)
+    $userLiked = false;
+    if ($isLoggedIn) {
+        $userLikeStmt = $conn->prepare("SELECT id FROM likes WHERE project_id = ? AND user_id = ?");
+        $userLikeStmt->bind_param("ii", $projectId, $userId);
+        $userLikeStmt->execute();
+        $userLiked = $userLikeStmt->get_result()->fetch_assoc() !== null;
+        $userLikeStmt->close();
+    }
+
+    // Obserwacja (tylko jeśli jest zalogowany)
     $isFollowing = false;
-    if (isset($_SESSION['user_id'])) {
+    if ($isLoggedIn) {
         $followStmt = $conn->prepare("SELECT id FROM follows WHERE user_id = ? AND project_id = ?");
         $followStmt->bind_param("ii", $userId, $projectId);
         $followStmt->execute();
@@ -150,12 +166,21 @@ try {
         $followStmt->close();
     }
 
-    // Avatar aktualnego użytkownika
-    $userAvatarUrlStmt = $conn->prepare("SELECT avatar FROM users WHERE id = ?");
-    $userAvatarUrlStmt->bind_param("i", $userId);
-    $userAvatarUrlStmt->execute();
-    $userAvatarUrl = $userAvatarUrlStmt->get_result()->fetch_assoc()['avatar'] ?? 'default.png';
-    $userAvatarUrlStmt->close();
+    // Avatar aktualnego użytkownika (tylko jeśli jest zalogowany)
+    if ($isLoggedIn) {
+        $userAvatarUrlStmt = $conn->prepare("SELECT avatar FROM users WHERE id = ?");
+        $userAvatarUrlStmt->bind_param("i", $userId);
+        $userAvatarUrlStmt->execute();
+        $userAvatarUrl = $userAvatarUrlStmt->get_result()->fetch_assoc()['avatar'] ?? 'default.png';
+        $userAvatarUrlStmt->close();
+    }
+
+    $FounderUserAvatarUrlStmt = $conn->prepare("SELECT avatar FROM users WHERE id = ?");
+    $FounderUserAvatarUrlStmt->bind_param("i", $project['founder_id']); // tu ID założyciela
+    $FounderUserAvatarUrlStmt->execute();
+    $FounderUserAvatarUrl = $FounderUserAvatarUrlStmt->get_result()->fetch_assoc()['avatar'] ?? 'default.png';
+    $FounderUserAvatarUrlStmt->close();
+
 
     // Umiejętności
     $skills = [];
@@ -213,10 +238,10 @@ try {
         'cancelled' => 'Anulowane'
     ];
 
-    // DODAJ INICJALIZACJĘ TEJ ZMIENNEJ!
+    // Członkowie zespołu
     $teamMembers = [];
 
-    // Pobranie właściciela z project_team (żeby mieć datę joined_at)
+    // Pobranie właściciela
     $ownerStmt = $conn->prepare("
     SELECT u.id, u.nick, u.email, u.avatar, pt.joined_at
     FROM project_team pt
@@ -233,7 +258,7 @@ try {
         $owner['role'] = 'Założyciel';
         if (empty($owner['avatar']))
             $owner['avatar'] = 'default.png';
-        $teamMembers[] = $owner; // właściciel jako pierwszy
+        $teamMembers[] = $owner;
     }
 
     // Pobranie pozostałych członków
@@ -252,16 +277,18 @@ try {
             $row['avatar'] = 'default.png';
         $teamMembers[] = $row;
     }
-
     $teamStmt->close();
 
-    // Sprawdzenie roli użytkownika
-    $isOwner = ($userId == $project['founder_id']);
+    // Sprawdzenie roli użytkownika (tylko jeśli jest zalogowany)
+    $isOwner = false;
     $isMember = false;
-    foreach ($teamMembers as $member) {
-        if ($member['id'] == $userId) {
-            $isMember = true;
-            break;
+    if ($isLoggedIn) {
+        $isOwner = ($userId == $project['founder_id']);
+        foreach ($teamMembers as $member) {
+            if ($member['id'] == $userId) {
+                $isMember = true;
+                break;
+            }
         }
     }
 
@@ -281,29 +308,30 @@ try {
         $comments[] = $row;
     $commentStmt->close();
 
-
-    // Zgłoszenia do projektu
+    // Zgłoszenia do projektu (tylko dla właściciela)
     $joinRequests = [];
-    $requestSql = "
-    SELECT pr.id, pr.user_id, pr.applied_at, pr.motivation, pr.desired_role, pr.availability, pr.status, u.nick, u.avatar
-    FROM project_applications pr
-    JOIN users u ON pr.user_id = u.id
-    WHERE pr.project_id = ? AND pr.status = 'pending'
-    ORDER BY pr.applied_at ASC
-";
+    if ($isLoggedIn && $isOwner) {
+        $requestSql = "
+        SELECT pr.id, pr.user_id, pr.applied_at, pr.motivation, pr.desired_role, pr.availability, pr.status, u.nick, u.avatar
+        FROM project_applications pr
+        JOIN users u ON pr.user_id = u.id
+        WHERE pr.project_id = ? AND pr.status = 'pending'
+        ORDER BY pr.applied_at ASC
+    ";
 
-    $requestStmt = $conn->prepare($requestSql);
-    if ($requestStmt === false) {
-        die("Błąd przygotowania zapytania: " . $conn->error . "\nSQL: " . $requestSql);
-    }
+        $requestStmt = $conn->prepare($requestSql);
+        if ($requestStmt === false) {
+            die("Błąd przygotowania zapytania: " . $conn->error . "\nSQL: " . $requestSql);
+        }
 
-    $requestStmt->bind_param("i", $projectId);
-    $requestStmt->execute();
-    $requestResult = $requestStmt->get_result();
-    while ($row = $requestResult->fetch_assoc()) {
-        $joinRequests[] = $row;
+        $requestStmt->bind_param("i", $projectId);
+        $requestStmt->execute();
+        $requestResult = $requestStmt->get_result();
+        while ($row = $requestResult->fetch_assoc()) {
+            $joinRequests[] = $row;
+        }
+        $requestStmt->close();
     }
-    $requestStmt->close();
 
 } catch (Exception $e) {
     die("Błąd: " . $e->getMessage());
@@ -335,11 +363,12 @@ try {
                 </div>
 
                 <ul class="nav-menu">
-                    <li><a href="index.php">Strona główna</a></li>
-                    <li><a href="projekty.php">Projekty</a></li>
-                    <li><a href="społeczność.php">Społeczność</a></li>
-                    <li><a href="o-projekcie.php">O projekcie</a></li>
-                    <li class="nav-cta"><a href="konto.php">Moje konto</a></li>
+                    <li><a href="../index.php">Strona główna</a></li>
+                    <li><a href="projects.php">Projekty</a></li>
+                    <li><a href="community.php">Społeczność</a></li>
+                    <li><a href="about.php">O projekcie</a></li>
+                    <li><a href="notifications.php">Powiadomienia</a></li>
+                    <?php echo $nav_cta_action; ?>
                 </ul>
 
                 <button class="burger-menu" id="burger-menu" aria-label="Menu">

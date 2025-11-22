@@ -1,3 +1,8 @@
+<?php
+include("global/nav_global.php");
+
+?>
+
 <!DOCTYPE html>
 <html lang="pl">
 
@@ -20,15 +25,16 @@
                     <img src="../photos/website-logo.jpg" alt="Logo TeenCollab">
                     <span>TeenCollab</span>
                 </div>
-                
+
                 <ul class="nav-menu">
-                    <li><a href="index.html">Strona główna</a></li>
-                    <li><a href="projekty.html">Projekty</a></li>
-                    <li><a href="społeczność.html">Społeczność</a></li>
-                    <li><a href="o-projekcie.html">O projekcie</a></li>
-                    <li class="nav-cta"><a href="konto.html">Moje konto</a></li>
+                    <li><a href="../index.php">Strona główna</a></li>
+                    <li><a href="projects.php">Projekty</a></li>
+                    <li><a href="community.php">Społeczność</a></li>
+                    <li><a href="about.php">O projekcie</a></li>
+                    <li><a href="notifications.php">Powiadomienia</a></li>
+                    <?php echo $nav_cta_action; ?>
                 </ul>
-                
+
                 <button class="burger-menu" id="burger-menu" aria-label="Menu">
                     <span></span>
                     <span></span>
@@ -51,7 +57,8 @@
                         <h1 class="profile-name">Anna Nowak</h1>
                         <p class="profile-role">Front-end Developer & Organizator społeczny</p>
                         <p class="profile-bio">
-                            Uczeń technikum, pasjonatka IT i projektów społecznych. Tworzę rzeczy, które pomagają innym i zmieniają świat na lepsze.
+                            Uczeń technikum, pasjonatka IT i projektów społecznych. Tworzę rzeczy, które pomagają innym
+                            i zmieniają świat na lepsze.
                         </p>
                         <div class="profile-actions">
                             <button class="btn-primary">
@@ -118,7 +125,7 @@
                     <section class="content-section projects-section">
                         <div class="section-header">
                             <h2>Aktywne projekty</h2>
-                            <a href="projekty.html?user=anna" class="see-all-link">Zobacz wszystkie →</a>
+                            <a href="projects.php?user=anna" class="see-all-link">Zobacz wszystkie →</a>
                         </div>
                         <div class="projects-grid">
                             <div class="project-card">
@@ -128,7 +135,8 @@
                                 </div>
                                 <div class="project-info">
                                     <h3 class="project-title">EcoFuture</h3>
-                                    <p class="project-description">Platforma edukacyjna promująca zrównoważony rozwój wśród młodzieży</p>
+                                    <p class="project-description">Platforma edukacyjna promująca zrównoważony rozwój
+                                        wśród młodzieży</p>
                                     <div class="project-meta">
                                         <span class="meta-item">👥 3 członków</span>
                                         <span class="meta-item">❤️ 132</span>
@@ -144,7 +152,8 @@
                                 </div>
                                 <div class="project-info">
                                     <h3 class="project-title">CodeMentor</h3>
-                                    <p class="project-description">Platforma łącząca młodych programistów z mentorami</p>
+                                    <p class="project-description">Platforma łącząca młodych programistów z mentorami
+                                    </p>
                                     <div class="project-meta">
                                         <span class="meta-item">👥 5 członków</span>
                                         <span class="meta-item">❤️ 89</span>
@@ -178,11 +187,13 @@
                         </div>
                         <div class="about-content">
                             <p class="about-text">
-                                Od 3 lat pasjonuję się programowaniem i technologią. Uwielbiam tworzyć projekty, które mają realny wpływ na społeczność. 
-                                Specjalizuję się w front-end development, ale ciągle rozwijam swoje umiejętności w zakresie UI/UX design i zarządzania projektami.
+                                Od 3 lat pasjonuję się programowaniem i technologią. Uwielbiam tworzyć projekty, które
+                                mają realny wpływ na społeczność.
+                                Specjalizuję się w front-end development, ale ciągle rozwijam swoje umiejętności w
+                                zakresie UI/UX design i zarządzania projektami.
                                 Wierzę, że technologia może zmieniać świat na lepsze i chcę być częścią tej zmiany.
                             </p>
-                            
+
                             <div class="skills-section">
                                 <h3 class="skills-title">Umiejętności</h3>
                                 <div class="skills-grid">

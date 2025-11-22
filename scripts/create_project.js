@@ -406,7 +406,7 @@ function handleCancel() {
 			"Czy na pewno chcesz anulować tworzenie projektu? Wszystkie niezapisane zmiany zostaną utracone."
 		)
 	) {
-		window.location.href = "projekty.html";
+		window.location.href = "projects.php";
 	}
 }
 
@@ -440,21 +440,37 @@ if (burgerMenu && navMenu) {
 		navMenu.classList.toggle("active");
 	});
 }
-
 // Przełączanie typu lokalizacji
 const locationTypeRadios = document.querySelectorAll(
 	'input[name="locationType"]'
 );
+
 const specificLocationDiv = document.getElementById("specificLocation");
+const specificLocationInputSelect = document.getElementById("countrySelect");
+const specificLocationInputLocation =
+	document.getElementById("projectLocation");
 
 locationTypeRadios.forEach((radio) => {
 	radio.addEventListener("change", function () {
 		if (this.value === "specific") {
+			// Pokaż pola
 			specificLocationDiv.style.display = "block";
+
+			// Dodaj required
+			specificLocationInputSelect.required = true;
+			specificLocationInputLocation.required = true;
 		} else {
+			// Usuń required PRZED ukrywaniem
+			specificLocationInputSelect.required = false;
+			specificLocationInputLocation.required = false;
+
+			// Ukryj
 			specificLocationDiv.style.display = "none";
-			document.getElementById("projectLocation").value = "";
+
+			// Wyczyść pole
+			specificLocationInputLocation.value = "";
 		}
+
 		updatePreview();
 	});
 });
@@ -493,6 +509,30 @@ document.addEventListener("DOMContentLoaded", function () {
 		});
 	});
 });
+
+fetch("https://restcountries.com/v3.1/all?fields=name,cca2,translations")
+	.then((res) => res.json())
+	.then((data) => {
+		if (!Array.isArray(data)) {
+			console.error("Otrzymany response nie jest tablicą:", data);
+			return;
+		}
+		const select = document.getElementById("countrySelect");
+		// sortujemy po polskich nazwach, jeśli nie ma to po angielsku
+		data.sort((a, b) => {
+			const nameA = a.translations?.pol?.common || a.name.common;
+			const nameB = b.translations?.pol?.common || b.name.common;
+			return nameA.localeCompare(nameB);
+		});
+		data.forEach((country) => {
+			const option = document.createElement("option");
+			option.value = country.cca2;
+			option.textContent =
+				country.translations?.pol?.common || country.name.common;
+			select.appendChild(option);
+		});
+	})
+	.catch((err) => console.error("Błąd przy pobieraniu krajów:", err));
 
 window.closeTaskModal = closeTaskModal;
 window.saveTask = saveTask;

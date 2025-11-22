@@ -1,6 +1,7 @@
 <?php
 session_start();
 include("global/connection.php");
+include("global/nav_global.php");
 
 // Sprawdź czy użytkownik jest zalogowany (opcjonalne - strona może być publiczna)
 $isLoggedIn = isset($_SESSION["logged_in"]) && $_SESSION["logged_in"] === true;
@@ -26,11 +27,25 @@ try {
     $stats['active_users'] = $activeUsersStmt->get_result()->fetch_assoc()['active'] ?? 0;
     $activeUsersStmt->close();
 
-    // Liczba projektów
-    $totalProjectsStmt = $conn->prepare("SELECT COUNT(*) as total FROM projects WHERE status = 'active'");
+    // Liczba projektów aktywnych
+    $totalProjectsStmt = $conn->prepare("
+    SELECT COUNT(*) as total_active 
+    FROM projects 
+    WHERE status = 'Aktywny'
+");
     $totalProjectsStmt->execute();
-    $stats['total_projects'] = $totalProjectsStmt->get_result()->fetch_assoc()['total'] ?? 0;
+    $stats['total_projects'] = $totalProjectsStmt->get_result()->fetch_assoc()['total_active'] ?? 0;
     $totalProjectsStmt->close();
+
+    // Liczba projektów zakończonych
+    $completedProjectsStmt = $conn->prepare("
+    SELECT COUNT(*) as total_completed 
+    FROM projects 
+    WHERE status = 'Zakończony'
+");
+    $completedProjectsStmt->execute();
+    $stats['completed_projects'] = $completedProjectsStmt->get_result()->fetch_assoc()['total_completed'] ?? 0;
+    $completedProjectsStmt->close();
 
     // Unikalne szkoły
     $schoolsStmt = $conn->prepare("SELECT COUNT(DISTINCT school) as schools FROM users WHERE school IS NOT NULL AND school != ''");
@@ -80,7 +95,7 @@ try {
         DATEDIFF(NOW(), u.created_at) as days_since_join
     FROM users u
     ORDER BY u.created_at DESC
-    LIMIT 4
+    LIMIT 3
 ");
     $newTalentsStmt->execute();
     $newTalents = $newTalentsStmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -115,8 +130,16 @@ try {
     $newProjectsYear = $newProjectsYearStmt->get_result()->fetch_assoc()['new_projects'] ?? 0;
     $newProjectsYearStmt->close();
 
-    // Międzynarodowe partnerstwa (przykładowe - możesz zmienić)
-    $partnerships = 5; // Przykładowa wartość
+    // Międzynarodowe partnerstwa (projekty spoza Polski)
+    $partnershipsStmt = $conn->prepare("
+    SELECT COUNT(*) as international_projects 
+    FROM projects 
+    WHERE country IS NOT NULL AND country != 'PL'
+");
+    $partnershipsStmt->execute();
+    $partnerships = $partnershipsStmt->get_result()->fetch_assoc()['international_projects'] ?? 0;
+    $partnershipsStmt->close();
+
 
 } catch (Exception $e) {
     // W przypadku błędu, ustaw puste dane
@@ -182,15 +205,12 @@ function getInterestsPreview($interests)
                 </div>
 
                 <ul class="nav-menu">
-                    <li><a href="index.php">Strona główna</a></li>
-                    <li><a href="projekty.php">Projekty</a></li>
-                    <li><a href="społeczność.php" class="active">Społeczność</a></li>
-                    <li><a href="o-projekcie.php">O projekcie</a></li>
-                    <?php if ($isLoggedIn): ?>
-                        <li class="nav-cta"><a href="konto.php" class="cta-button">Moje konto</a></li>
-                    <?php else: ?>
-                        <li class="nav-cta"><a href="login.php" class="cta-button">Dołącz</a></li>
-                    <?php endif; ?>
+                    <li><a href="../index.php">Strona główna</a></li>
+                    <li><a href="projects.php">Projekty</a></li>
+                    <li><a href="community.php" class="active">Społeczność</a></li>
+                    <li><a href="about.php">O projekcie</a></li>
+                    <li><a href="notifications.php">Powiadomienia</a></li>
+                    <?php echo $nav_cta_action; ?>
                 </ul>
 
                 <button class="burger-menu" id="burger-menu" aria-label="Menu">
@@ -214,7 +234,7 @@ function getInterestsPreview($interests)
                         <span class="stat-label">Aktywnych członków</span>
                     </div>
                     <div class="stat">
-                        <span class="stat-number"><?php echo $stats['total_projects']; ?>+</span>
+                        <span class="stat-number"><?php echo $stats['completed_projects']; ?>+</span>
                         <span class="stat-label">Zrealizowanych projektów</span>
                     </div>
                     <div class="stat">
@@ -369,7 +389,7 @@ function getInterestsPreview($interests)
                         <div class="highlight-icon">🌍</div>
                         <h3>Globalny zasięg</h3>
                         <p class="highlight-number"><?php echo $partnerships; ?></p>
-                        <p class="highlight-text">międzynarodowych partnerstw nawiązanych</p>
+                        <p class="highlight-text">projektów zagranicznych</p>
                     </div>
                 </div>
 
@@ -408,7 +428,7 @@ function getInterestsPreview($interests)
                         <?php else: ?>
                             <a href="register.php" class="cta-button primary">Dołącz do nas!</a>
                         <?php endif; ?>
-                        <a href="projekty.php" class="cta-button secondary">Zobacz projekty</a>
+                        <a href="projects.php" class="cta-button secondary">Zobacz projekty</a>
                     </div>
                     <div class="cta-features">
                         <div class="feature">

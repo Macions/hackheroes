@@ -1,6 +1,8 @@
 <?php
 session_start();
 include("global/connection.php");
+include("global/nav_global.php");
+
 
 // Sprawdzenie uprawnień właściciela
 $projectId = $_GET['project_id'] ?? 0;
@@ -127,11 +129,12 @@ $stmt->close();
                     <span>TeenCollab</span>
                 </div>
                 <ul class="nav-menu">
-                    <li><a href="index.php">Strona główna</a></li>
-                    <li><a href="projekty.php">Projekty</a></li>
-                    <li><a href="społeczność.php">Społeczność</a></li>
-                    <li><a href="o-projekcie.php">O projekcie</a></li>
-                    <li class="nav-cta"><a href="konto.php">Moje konto</a></li>
+                    <li><a href="../index.php">Strona główna</a></li>
+                    <li><a href="projects.php">Projekty</a></li>
+                    <li><a href="community.php">Społeczność</a></li>
+                    <li><a href="about.php">O projekcie</a></li>
+                    <li><a href="notifications.php">Powiadomienia</a></li>
+                    <?php echo $nav_cta_action; ?>
                 </ul>
             </div>
         </nav>

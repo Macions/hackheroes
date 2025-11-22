@@ -1,6 +1,8 @@
 <?php
 session_start();
 include("global/connection.php");
+include("global/nav_global.php");
+
 
 $taskId = $_GET['task_id'] ?? 0;
 $currentUserId = $_SESSION['user_id'] ?? 0;
@@ -98,10 +100,12 @@ function isDeadlineApproaching($deadline)
                     <span>TeenCollab</span>
                 </div>
                 <ul class="nav-menu">
-                    <li><a href="index.php">Strona główna</a></li>
-                    <li><a href="project.php?id=<?php echo $task['project_id']; ?>">Powrót do projektu</a></li>
-                    <li><a href="projekty.php">Wszystkie projekty</a></li>
-                    <li class="nav-cta"><a href="konto.php">Moje konto</a></li>
+                    <li><a href="../index.php">Strona główna</a></li>
+                    <li><a href="projects.php">Projekty</a></li>
+                    <li><a href="community.php">Społeczność</a></li>
+                    <li><a href="about.php">O projekcie</a></li>
+                    <li><a href="notifications.php">Powiadomienia</a></li>
+                    <?php echo $nav_cta_action; ?>
                 </ul>
             </div>
         </nav>

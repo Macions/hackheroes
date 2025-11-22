@@ -254,10 +254,10 @@ $conn->close();
                 </div>
 
                 <ul class="nav-menu">
-                    <li><a href="index.html">Strona główna</a></li>
-                    <li><a href="projekty.html">Projekty</a></li>
-                    <li><a href="społeczność.html">Społeczność</a></li>
-                    <li><a href="o-projekcie.html">O projekcie</a></li>
+                    <li><a href="../index.php">Strona główna</a></li>
+                    <li><a href="projects.php">Projekty</a></li>
+                    <li><a href="community.php">Społeczność</a></li>
+                    <li><a href="about.php">O projekcie</a></li>
                     <li><a href="notifications.php">Powiadomienia</a></li>
                     <?php echo $nav_cta_action; ?>
                 </ul>
@@ -312,7 +312,7 @@ $conn->close();
                             <li>Śledź postępy prac</li>
                             <li>Dodawaj nowe zadania</li>
                         </ul>
-                        <button class="logged-button primary" onclick="window.location.href='projekty.html'">Przejdź do
+                        <button class="logged-button primary" onclick="window.location.href='projects.php'">Przejdź do
                             projektów</button>
                     </div>
 
@@ -326,7 +326,7 @@ $conn->close();
                             <li>Uczestnicz w wydarzeniach</li>
                             <li>Dziel się doświadczeniami</li>
                         </ul>
-                        <button class="logged-button primary" onclick="window.location.href='społeczność.html'">Odkryj
+                        <button class="logged-button primary" onclick="window.location.href='community.php'">Odkryj
                             społeczność</button>
                     </div>
 
@@ -341,7 +341,7 @@ $conn->close();
                             <li>Ustal harmonogram</li>
                         </ul>
                         <button class="logged-button secondary"
-                            onclick="window.location.href='create-project.html'">Utwórz projekt</button>
+                            onclick="window.location.href='create-project.php'">Utwórz projekt</button>
                     </div>
 
                     <div class="logged-card">
@@ -354,7 +354,7 @@ $conn->close();
                             <li>Ustawienia powiadomień</li>
                             <li>Twoje osiągnięcia</li>
                         </ul>
-                        <button class="logged-button secondary" onclick="window.location.href='account.html'">Przejdź do
+                        <button class="logged-button secondary" onclick="window.location.href='account.php'">Przejdź do
                             konta</button>
                     </div>
                 </div>

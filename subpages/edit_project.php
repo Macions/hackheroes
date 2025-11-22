@@ -4,7 +4,7 @@ include("global/connection.php");
 
 // Sprawdź czy użytkownik jest zalogowany
 if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
-    header("Location: login.php");
+    header("Location: join.php");
     exit();
 }
 
@@ -15,7 +15,7 @@ $userEmail = $_SESSION["user_email"] ?? '';
 $projectId = $_GET['id'] ?? null;
 
 if (!$projectId) {
-    header("Location: projekty.php");
+    header("Location: projects.php");
     exit();
 }
 
@@ -267,8 +267,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <span>TeenCollab</span>
                 </div>
                 <ul class="nav-menu">
-                    <li><a href="index.php">Strona główna</a></li>
-                    <li><a href="projekty.php">Projekty</a></li>
+                    <li><a href="../index.php">Strona główna</a></li>
+                    <li><a href="projects.php">Projekty</a></li>
                     <li><a href="project.php?id=<?php echo $projectId; ?>">Powrót do projektu</a></li>
                 </ul>
             </div>

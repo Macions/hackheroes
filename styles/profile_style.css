@@ -1,3 +1,5 @@
+@import url("global/dropdown_menu.css");
+
 /* profile_style.css */
 :root {
 	--primary: #10b981;
@@ -90,7 +92,7 @@ header {
 	color: var(--primary);
 }
 
-.nav-menu a.active::after {
+.nav-menu a.active:not(.cta-button)::after {
 	content: "";
 	position: absolute;
 	bottom: -0.5rem;

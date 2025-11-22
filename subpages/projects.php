@@ -1,6 +1,7 @@
 <?php
 session_start();
 include("global/connection.php");
+include("global/nav_global.php");
 
 // Sprawdź czy użytkownik jest zalogowany
 if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
@@ -161,15 +162,12 @@ function truncateText($text, $length = 150)
                 </div>
 
                 <ul class="nav-menu">
-                    <li><a href="index.php">Strona główna</a></li>
-                    <li><a href="projekty.php" class="active">Projekty</a></li>
-                    <li><a href="społeczność.php">Społeczność</a></li>
-                    <li><a href="o-projekcie.php">O projekcie</a></li>
-                    <?php if (isset($_SESSION["logged_in"]) && $_SESSION["logged_in"] === true): ?>
-                        <li class="nav-cta"><a href="konto.php" class="cta-button">Moje konto</a></li>
-                    <?php else: ?>
-                        <li class="nav-cta"><a href="login.php" class="cta-button">Dołącz</a></li>
-                    <?php endif; ?>
+                    <li><a href="../index.php">Strona główna</a></li>
+                    <li><a href="projects.php" class="active">Projekty</a></li>
+                    <li><a href="community.php">Społeczność</a></li>
+                    <li><a href="about.php">O projekcie</a></li>
+                    <li><a href="notifications.php">Powiadomienia</a></li>
+                    <?php echo $nav_cta_action; ?>
                 </ul>
 
                 <button class="burger-menu" id="burger-menu" aria-label="Menu">
@@ -248,7 +246,7 @@ function truncateText($text, $length = 150)
                         <?php if (isset($_SESSION["logged_in"]) && $_SESSION["logged_in"] === true): ?>
                             <a href="create_project.php" class="btn-primary">Stwórz projekt</a>
                         <?php else: ?>
-                            <a href="login.php" class="btn-primary">Zaloguj się, aby tworzyć projekty</a>
+                            <a href="join.php" class="btn-primary">Zaloguj się, aby tworzyć projekty</a>
                         <?php endif; ?>
                     </div>
                 <?php else: ?>

@@ -4,7 +4,7 @@ include("global/connection.php");
 
 // Sprawdź czy użytkownik jest zalogowany
 if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
-    header("Location: login.php");
+    header("Location: join.php");
     exit();
 }
 
@@ -107,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_id']) && isse
     }
 } else {
     $_SESSION['error_message'] = "Nieprawidłowe żądanie.";
-    header("Location: projekty.php");
+    header("Location: projects.php");
     exit();
 }
 ?>

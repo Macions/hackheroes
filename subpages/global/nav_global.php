@@ -1,12 +1,49 @@
 <?php
-session_start();
+$currentPage = basename($_SERVER['PHP_SELF']);
+
+if ($currentPage == 'index.php') {
+    include("subpages/global/connection.php");
+    $urlToAvatarPhoto = 'photos/avatars/default_avatar.png';
+} else {
+    include("global/connection.php");
+}
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 $nav_cta_action = '';
+$urlToAvatarPhoto = '../photos/avatars/default_avatar.png';
+
 // Sprawdzenie, czy użytkownik jest zalogowany
 if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
     $firstName = $_SESSION['first_name'] ?? 'Użytkownik';
     $userId = $_SESSION['user_id'] ?? 0;
-    $userAvatar = $_SESSION['user_avatar'] ?? 'default-avatar.png';
+
+    // Pobranie avatara z bazy
+    $userAvatar = $urlToAvatarPhoto; // domyślny
+
+    if ($userId) {
+        $stmt = $conn->prepare("SELECT avatar, first_name FROM users WHERE id = ?");
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+
+        if (!empty($row['avatar'])) {
+            $userAvatar = $row['avatar'];
+            if ($currentPage == 'index.php') {
+                $userAvatar = str_replace('../', '', $userAvatar);
+            }
+
+        }
+
+        // Jeśli chcesz pobierać imię z bazy:
+        if (!empty($row['first_name'])) {
+            $firstName = $row['first_name'];
+        }
+
+        $stmt->close();
+    }
 
     $nav_cta_action = <<<HTML
 <li class="nav-user-dropdown">
@@ -16,11 +53,8 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
         <span class="dropdown-arrow">▼</span>
     </div>
     <div class="user-dropdown-menu">
-        <a href="profil.php?id=$userId" class="dropdown-item">
+        <a href="account.php" class="dropdown-item">
             <span class="dropdown-icon">👤</span> Mój profil
-        </a>
-        <a href="konto.php" class="dropdown-item">
-            <span class="dropdown-icon">⚙️</span> Ustawienia konta
         </a>
         <div class="dropdown-divider"></div>
         <a href="logout.php" class="dropdown-item logout-item">
@@ -30,7 +64,6 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
 </li>
 HTML;
 } else {
-    $nav_cta_action = '<li class="nav-cta"><a href="dolacz.html" class="cta-button active">Dołącz</a></li>';
+    $nav_cta_action = '<li class="nav-cta"><a href="join.php" class="cta-button active">Dołącz</a></li>';
 }
-
 ?>

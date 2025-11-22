@@ -3,7 +3,7 @@ session_start();
 include("global/connection.php");
 
 if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
-    header("Location: login.php");
+    header("Location: join.php");
     exit();
 }
 
