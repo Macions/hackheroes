@@ -332,7 +332,6 @@ try {
         }
         $requestStmt->close();
     }
-
 } catch (Exception $e) {
     die("Błąd: " . $e->getMessage());
 }
@@ -354,6 +353,11 @@ try {
 </head>
 
 <body>
+    <script>
+        const PROJECT_ID = <?= (int)$projectId ?>;
+        const USER_AVATAR_URL = '<?= addslashes($userAvatarUrl ?? "default.png") ?>';
+    </script>
+
     <header>
         <nav>
             <div class="nav-container">
@@ -831,16 +835,18 @@ try {
                     </section>
 
                     <script>
-                        document.getElementById('btnAddComment')?.addEventListener('click', function (e) {
+                        document.getElementById('btnAddComment')?.addEventListener('click', function(e) {
                             e.preventDefault();
                             const comment = document.getElementById('commentInput').value.trim();
                             if (!comment) return alert('Komentarz nie może być pusty!');
 
                             fetch('add_comment.php', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                                body: 'project_id=<?php echo $projectId; ?>&comment=' + encodeURIComponent(comment)
-                            })
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/x-www-form-urlencoded'
+                                    },
+                                    body: 'project_id=<?php echo $projectId; ?>&comment=' + encodeURIComponent(comment)
+                                })
                                 .then(res => res.json())
                                 .then(data => {
                                     if (data.success) {
@@ -862,6 +868,8 @@ try {
                                         document.querySelector('.stat-item').innerText = `💬 ${list.querySelectorAll('.comment-item').length} komentarzy`;
                                     } else {
                                         alert('Błąd przy dodawaniu komentarza!');
+
+                                        console.log("dsadsadad")
                                     }
                                 })
                                 .catch(() => alert('Coś poszło nie tak...'));
@@ -883,9 +891,9 @@ try {
                                 foreach ($tags as $tag):
                                     $tag = trim($tag);
                                     if ($tag):
-                                        ?>
+                                ?>
                                         <span class="project-tag"><?php echo htmlspecialchars($tag); ?></span>
-                                        <?php
+                                <?php
                                     endif;
                                 endforeach;
                                 ?>

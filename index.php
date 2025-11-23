@@ -19,38 +19,94 @@ try {
 
     // Pobierz 3 najnowsze projekty do slidera
     $latestProjectsStmt = $conn->prepare("
-    SELECT 
-        p.id, 
-        p.name AS title, 
-        p.short_description AS description, 
-        REPLACE(p.thumbnail, '../', '') AS image_url, 
-        p.location, 
-        u.nick as founder_name
-    FROM projects p 
-    LEFT JOIN users u ON p.founder_id = u.id 
-    WHERE p.status = 'active' 
-    ORDER BY p.created_at DESC 
-    LIMIT 5
-");
-
+        SELECT 
+            p.id, 
+            p.name AS title, 
+            p.short_description AS description, 
+            REPLACE(p.thumbnail, '../', '') AS image_url, 
+            p.location, 
+            u.nick as founder_name
+        FROM projects p 
+        LEFT JOIN users u ON p.founder_id = u.id 
+        WHERE p.status = 'active' 
+        ORDER BY p.created_at DESC 
+        LIMIT 5
+    ");
 
     $latestProjectsStmt->execute();
     $latestProjects = $latestProjectsStmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    $latestProjectsStmt->close();
 
-    // Pobierz opinie użytkowników (możesz dodać tabelę opinions/reviews)
+    if (isset($_SESSION['user_id'])) {
+        $stmt = $conn->prepare("SELECT created_at FROM users WHERE id = ?");
+        $stmt->bind_param("i", $_SESSION['user_id']);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        $joinedAt = $result['created_at'] ?? null;
+        $stmt->close();
+    } else {
+        $joinedAt = null;
+    }
+
+    function pluralForm($number, $forms)
+    {
+        // $forms = ['miesiąc', 'miesiące', 'miesięcy'] dla miesięcy
+        $n = abs($number);
+
+        if ($n == 1) return $forms[0]; // 1 miesiąc
+        if ($n >= 2 && $n <= 4) return $forms[1]; // 2,3,4 miesiące
+        return $forms[2]; // 5+ miesięcy
+    }
+
+    function timeAgo($date)
+    {
+        if (!$date) return 'jakiegoś czasu';
+
+        $now = new DateTime();
+        $joined = new DateTime($date);
+        $diff = $joined->diff($now);
+
+        $years = $diff->y;
+        $months = $diff->m;
+        $days = $diff->d;
+
+        // Jeśli ma więcej niż rok, pokaż tylko lata
+        if ($years > 0) {
+            if ($years == 1) return '1 roku';
+            return "$years lat";
+        }
+
+        // Jeśli ma więcej niż miesiąc, pokaż tylko miesiące
+        if ($months > 0) {
+            return $months . ' ' . pluralForm($months, ['miesiąca', 'miesięcy', 'miesięcy']);
+        }
+
+        // Jeśli ma mniej niż miesiąc, pokaż dni
+        if ($days > 0) {
+            if ($days == 1) return '1 dnia';
+            return "$days dni";
+        }
+
+        return 'kilku dni';
+    }
+
+    // Pobierz opinie użytkowników (opinie/reviews)
     $opinionsStmt = $conn->prepare("
-    SELECT u.nick, u.avatar, r.comment, r.created_at
-    FROM reviews r
-    JOIN users u ON r.user_id = u.id
-    ORDER BY r.created_at DESC
-    LIMIT 4
-");
+        SELECT u.nick, u.avatar, r.comment, r.created_at
+        FROM reviews r
+        JOIN users u ON r.user_id = u.id
+        ORDER BY r.created_at DESC
+        LIMIT 4
+    ");
 
     $opinionsStmt->execute();
     $opinions = $opinionsStmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    $opinionsStmt->close();
 
+    // Usuń '../' z początku linków do avatarów
+    foreach ($opinions as &$opinion) {
+        $opinion['avatar'] = preg_replace('#^\.\./#', '', $opinion['avatar']);
+    }
+
+    $opinionsStmt->close();
 } catch (Exception $e) {
     // W przypadku błędu, ustaw domyślne wartości
     $totalProjects = 100;
@@ -59,6 +115,7 @@ try {
     $opinions = [];
 }
 ?>
+
 
 
 <!DOCTYPE html>
@@ -174,7 +231,7 @@ try {
             </article>
         </section>
 
-        <<section id="our_projects">
+        <section id="our_projects">
             <h1>Nasze projekty</h1>
 
             <article id="projects">
@@ -237,74 +294,76 @@ try {
             <div class="projects-view-all">
                 <a href="https://teencollab.pl/projekty">Zobacz wszystkie projekty</a>
             </div>
-            </section>
+        </section>
 
-            <section id="future_makers_opinions">
-                <img class="arrow left" src="photos/mve_arrow.svg"
-                    alt="Strzałka do przeglądania wstecz opinii twórców przyszłości">
-                <img class="arrow right" src="photos/mve_arrow.svg"
-                    alt="Strzałka do przeglądania kolejnych opinii twórców przyszłości">
+        <section id="future_makers_opinions">
+            <img class="arrow left" src="photos/mve_arrow.svg"
+                alt="Strzałka do przeglądania wstecz opinii twórców przyszłości">
+            <img class="arrow right" src="photos/mve_arrow.svg"
+                alt="Strzałka do przeglądania kolejnych opinii twórców przyszłości">
 
-                <h1>Opinie kreatorów przyszłości</h1>
+            <h1>Opinie kreatorów przyszłości</h1>
 
-                <article id="opinions">
-                    <?php if (!empty($opinions)): ?>
-                        <?php foreach ($opinions as $index => $opinion): ?>
-                            <div class="opinion" data-opinion="<?php echo $index + 1; ?>">
-                                <div class="content">
-                                    <div class="left_side-opinions">
-                                        <img src="<?php echo htmlspecialchars($opinion['avatar'] ?? 'photos/sample_person.png'); ?>"
-                                            alt="<?php echo htmlspecialchars($opinion['nick']); ?>">
-                                        <p><?php echo htmlspecialchars($opinion['nick']); ?> -
-                                            <?php echo htmlspecialchars($opinion['school'] ?? 'uczeń'); ?>,<br>tworzę z Wami
-                                            przyszłość
-                                        </p>
-                                    </div>
-                                    <div class="right_side-opinions">
-                                        <p>"<?php echo htmlspecialchars($opinion['comment']); ?>"</p>
-                                    </div>
+            <article id="opinions">
+                <?php if (!empty($opinions)): ?>
+                    <?php foreach ($opinions as $index => $opinion): ?>
+                        <div class="opinion" data-opinion="<?php echo $index + 1; ?>">
+                            <div class="content">
+                                <div class="left_side-opinions">
+                                    <img src="<?php echo htmlspecialchars($opinion['avatar'] ?? 'photos/sample_person.png'); ?>"
+                                        alt="<?php echo htmlspecialchars($opinion['nick']); ?>">
+                                    <p>
+                                        <?php echo htmlspecialchars($opinion['nick']); ?>,<br>
+                                        tworzę z Wami przyszłość od <?php echo timeAgo($joinedAt); ?>
+                                    </p>
+
+
                                 </div>
-                            </div>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <!-- Sekcja zachęcająca do dodania pierwszej opinii - FULL WIDTH -->
-                        <div class="opinion-prompt-full">
-                            <div class="prompt-content">
-                                <div class="prompt-icon">
-                                    <svg viewBox="0 0 24 24" width="48" height="48" fill="currentColor">
-                                        <path
-                                            d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z" />
-                                        <path d="M11 11h2v2h-2zm-4 0h2v2H7zm8 0h2v2h-2z" />
-                                    </svg>
-                                </div>
-                                <h3>Bądź pierwszą osobą, która podzieli się opinią!</h3>
-                                <p>Twoje doświadczenia mogą zainspirować innych młodych twórców. Podziel się swoją historią
-                                    i pokaż, jak TeenCollab pomógł Ci rozwijać pasje i realizować marzenia.</p>
-                                <div class="prompt-actions">
-                                    <?php if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']): ?>
-                                        <!-- Dla zalogowanych użytkowników -->
-                                        <a href="subpages/create_opinion.php" class="btn-primary">Dodaj swoją opinię</a>
-                                        <a href="subpages/projects.php" class="btn-secondary">Przeglądaj projekty</a>
-                                    <?php else: ?>
-                                        <!-- Dla niezalogowanych użytkowników -->
-                                        <a href="subpages/login.php" class="btn-primary">Zaloguj się i dodaj opinię</a>
-                                        <a href="subpages/register.php" class="btn-secondary">Dołącz do społeczności</a>
-                                    <?php endif; ?>
+                                <div class="right_side-opinions">
+                                    <p>"<?php echo htmlspecialchars($opinion['comment']); ?>"</p>
                                 </div>
                             </div>
                         </div>
-                    <?php endif; ?>
-                </article>
-            </section>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <!-- Sekcja zachęcająca do dodania pierwszej opinii - FULL WIDTH -->
+                    <div class="opinion-prompt-full">
+                        <div class="prompt-content">
+                            <div class="prompt-icon">
+                                <svg viewBox="0 0 24 24" width="48" height="48" fill="currentColor">
+                                    <path
+                                        d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z" />
+                                    <path d="M11 11h2v2h-2zm-4 0h2v2H7zm8 0h2v2h-2z" />
+                                </svg>
+                            </div>
+                            <h3>Bądź pierwszą osobą, która podzieli się opinią!</h3>
+                            <p>Twoje doświadczenia mogą zainspirować innych młodych twórców. Podziel się swoją historią
+                                i pokaż, jak TeenCollab pomógł Ci rozwijać pasje i realizować marzenia.</p>
+                            <div class="prompt-actions">
+                                <?php if (isset($_SESSION['logged_in']) && $_SESSION['logged_in']): ?>
+                                    <!-- Dla zalogowanych użytkowników -->
+                                    <a href="subpages/create_opinion.php" class="btn-primary">Dodaj swoją opinię</a>
+                                    <a href="subpages/projects.php" class="btn-secondary">Przeglądaj projekty</a>
+                                <?php else: ?>
+                                    <!-- Dla niezalogowanych użytkowników -->
+                                    <a href="subpages/login.php" class="btn-primary">Zaloguj się i dodaj opinię</a>
+                                    <a href="subpages/register.php" class="btn-secondary">Dołącz do społeczności</a>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
+            </article>
+        </section>
 
-            <section id="make_future_with_us">
-                <h1>Twórz przyszłość razem z nami!</h1>
+        <section id="make_future_with_us">
+            <h1>Twórz przyszłość razem z nami!</h1>
 
-                <article id="buttons-make_future">
-                    <a href="https://teencollab.pl/login" class="join_us-button">Dołącz do nas</a>
-                    <a href="https://teencollab.pl/projekty" class="projects-button">Projekty</a>
-                </article>
-            </section>
+            <article id="buttons-make_future">
+                <a href="subpages/join.php" class="join_us-button">Dołącz do nas</a>
+                <a href="subpages/projects.php" class="projects-button">Projekty</a>
+            </article>
+        </section>
     </main>
 
     <footer>
@@ -326,7 +385,7 @@ try {
 
     <script>
         // Modern JavaScript with Enhanced Animations - FIXED VERSION
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function() {
             // Projects Grid Manager - dla grid layoutu zamiast slidera
             class ProjectsGridManager {
                 constructor() {

@@ -662,9 +662,8 @@ function validatePasswordFields() {
 
 	if (newPassword) {
 		strengthIndicator.textContent = strength.message;
-		strengthIndicator.className = `password-strength ${
-			strength.isValid ? "valid" : "invalid"
-		}`;
+		strengthIndicator.className = `password-strength ${strength.isValid ? "valid" : "invalid"
+			}`;
 	} else {
 		strengthIndicator.textContent = "";
 		strengthIndicator.className = "password-strength";
@@ -956,8 +955,7 @@ function updateNotificationSetting(settingIndex, isChecked) {
 					// LOGOWANIE ZMIANY POWIADOMIEŃ
 					logUserAction(
 						"notification_change",
-						`${settingNames[settingName]}: ${
-							isChecked ? "włączone" : "wyłączone"
+						`${settingNames[settingName]}: ${isChecked ? "włączone" : "wyłączone"
 						}`
 					);
 					showNotificationFeedback("Ustawienie zapisane", "success");
@@ -1126,7 +1124,7 @@ function showPreferenceFeedback(message, type) {
 
 function logUserAction(action, details = "") {
 	const xhr = new XMLHttpRequest();
-	xhr.open("POST", "log_action.php", true);
+	xhr.open("POST", "../subpages/global/log_action.php", true);
 	xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
 
 	xhr.onload = function () {
@@ -1136,7 +1134,7 @@ function logUserAction(action, details = "") {
 	};
 
 	xhr.onerror = function () {
-		console.error("Błąd połączenia z log_action.php"); // DEBUG
+		console.error("Błąd połączenia z ../subpages/global/log_action.php"); // DEBUG
 	};
 
 	const userId = document.body.getAttribute("data-user-id");
@@ -1147,9 +1145,9 @@ function logUserAction(action, details = "") {
 
 	xhr.send(
 		`user_id=${userId}` +
-			`&email=${encodeURIComponent(userEmail)}` +
-			`&action=${encodeURIComponent(action)}` +
-			`&details=${encodeURIComponent(details)}`
+		`&email=${encodeURIComponent(userEmail)}` +
+		`&action=${encodeURIComponent(action)}` +
+		`&details=${encodeURIComponent(details)}`
 	);
 }
 
@@ -1356,19 +1354,54 @@ function showAvatarFeedback(message, type) {
 }
 
 // Odblokowanie przycisku po wybraniu pliku
-avatarUpload.addEventListener('change', function() {
-    const saveBtn = document.getElementById('saveAvatarBtn');
-    saveBtn.disabled = !this.files.length;
-    
-    if (this.files.length) {
-        // Tutaj też można dodać walidację pliku
-        const file = this.files[0];
-        if (file.size > 5 * 1024 * 1024) { // 5MB
-            saveBtn.disabled = true;
-            showError('Plik jest za duży');
-        }
-    }
+avatarUpload.addEventListener('change', function () {
+	const saveBtn = document.getElementById('saveAvatarBtn');
+	saveBtn.disabled = !this.files.length;
+
+	if (this.files.length) {
+		// Tutaj też można dodać walidację pliku
+		const file = this.files[0];
+		if (file.size > 5 * 1024 * 1024) { // 5MB
+			saveBtn.disabled = true;
+			showError('Plik jest za duży');
+		}
+	}
 });
+
+function logUserAction(action, details = "") {
+	const userId = document.body.getAttribute("data-user-id");
+	const xhr = new XMLHttpRequest();
+	xhr.open("POST", "../subpages/global/log_action.php", true);
+	xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+
+	xhr.onload = function () {
+		if (xhr.status === 200) {
+			try {
+				const response = JSON.parse(xhr.responseText);
+				if (!response.success) {
+					console.error(`Nie udało się zalogować akcji: ${action}`, response.message);
+				} else {
+					console.log(`✅ Zalogowano akcję: ${action}`, details);
+				}
+			} catch (e) {
+				console.error("Błąd parsowania odpowiedzi logu:", e);
+			}
+		} else {
+			console.error("Błąd logowania akcji:", xhr.status, action);
+		}
+	};
+
+	xhr.onerror = function () {
+		console.error("Błąd połączenia przy logowaniu akcji:", action);
+	};
+
+	xhr.send(
+		`user_id=${encodeURIComponent(userId)}&action=${encodeURIComponent(
+			action
+		)}&details=${encodeURIComponent(details)}`
+	);
+}
+
 
 const burgerMenu = document.getElementById("burger-menu");
 const navMenu = document.querySelector(".nav-menu");

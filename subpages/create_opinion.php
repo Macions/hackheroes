@@ -2,6 +2,8 @@
 session_start();
 include("global/connection.php");
 include("global/nav_global.php");
+include("global/log_action.php");
+
 
 // Sprawdź czy użytkownik jest zalogowany
 if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
@@ -10,80 +12,80 @@ if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
 }
 
 $user_id = $_SESSION['user_id'];
+$user_email = $_SESSION['email'] ?? '';
 $error = '';
 $success = '';
 
-// Pobierz projekty użytkownika do wyboru
-$user_projects = [];
+// Sprawdź, czy konto istnieje dłużej niż miesiąc
 try {
-    $projects_stmt = $conn->prepare("
-        SELECT p.id, p.name 
-        FROM projects p 
-        WHERE p.founder_id = ? OR p.id IN (
-            SELECT project_id FROM project_members WHERE user_id = ?
-        )
-        ORDER BY p.created_at DESC
+    $user_stmt = $conn->prepare("
+        SELECT created_at 
+        FROM users 
+        WHERE id = ? AND created_at <= DATE_SUB(NOW(), INTERVAL 1 MONTH)
     ");
-    $projects_stmt->bind_param("ii", $user_id, $user_id);
-    $projects_stmt->execute();
-    $user_projects = $projects_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    $projects_stmt->close();
+    $user_stmt->bind_param("i", $user_id);
+    $user_stmt->execute();
+    $has_account_long_enough = $user_stmt->get_result()->num_rows > 0;
+    $user_stmt->close();
 } catch (Exception $e) {
-    $user_projects = [];
-    // Możesz dodać logowanie błędu dla debugowania
-    error_log("Błąd przy pobieraniu projektów użytkownika: " . $e->getMessage());
+    $has_account_long_enough = false;
+    error_log("Błąd przy sprawdzaniu wieku konta: " . $e->getMessage());
 }
+
+// Sprawdź, czy użytkownik już dodał opinię o stronie (project_id IS NULL)
+$has_existing_review = false;
+if ($has_account_long_enough) {
+    try {
+        $review_stmt = $conn->prepare("
+            SELECT id FROM reviews 
+            WHERE user_id = ?
+        ");
+        $review_stmt->bind_param("i", $user_id);
+        $review_stmt->execute();
+        $has_existing_review = $review_stmt->get_result()->num_rows > 0;
+        $review_stmt->close();
+    } catch (Exception $e) {
+        error_log("Błąd przy sprawdzaniu istniejącej opinii: " . $e->getMessage());
+    }
+}
+
 // Obsługa formularza
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $project_id = $_POST['project_id'] ?? '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $has_account_long_enough && !$has_existing_review) {
     $rating = $_POST['rating'] ?? '';
     $comment = trim($_POST['comment'] ?? '');
 
-    // Walidacja
-    if (empty($project_id) || empty($rating) || empty($comment)) {
+    if (empty($rating) || empty($comment)) {
         $error = "Wszystkie pola są wymagane!";
+        logAction($conn, $user_id, $user_email, "review_attempt_failed", "Brak oceny lub komentarza");
     } elseif (strlen($comment) < 10) {
         $error = "Komentarz musi mieć co najmniej 10 znaków!";
+        logAction($conn, $user_id, $user_email, "review_attempt_failed", "Komentarz za krótki");
     } else {
         try {
-            // Sprawdź czy użytkownik ma dostęp do projektu
-            $access_stmt = $conn->prepare("
-                SELECT 1 FROM projects 
-                WHERE id = ? AND (founder_id = ? OR EXISTS (
-                    SELECT 1 FROM project_members 
-                    WHERE project_id = ? AND user_id = ?
-                ))
+            $insert_stmt = $conn->prepare("
+                INSERT INTO reviews (user_id, rating, comment, created_at) 
+                VALUES (?, ?, ?, NOW())
             ");
-            $access_stmt->bind_param("iiii", $project_id, $user_id, $project_id, $user_id);
-            $access_stmt->execute();
-            $has_access = $access_stmt->get_result()->num_rows > 0;
-            $access_stmt->close();
+            $insert_stmt->bind_param("iis", $user_id, $rating, $comment);
 
-            if (!$has_access) {
-                $error = "Nie masz dostępu do tego projektu!";
+            if ($insert_stmt->execute()) {
+                $success = "Twoja opinia o stronie została dodana pomyślnie! Dziękujemy za feedback!";
+                logAction($conn, $user_id, $user_email, "review_added", "Rating: $rating, Comment: $comment");
+                $_POST = [];
+                $has_existing_review = true;
             } else {
-                // Dodaj opinię do bazy
-                $insert_stmt = $conn->prepare("
-                    INSERT INTO reviews (user_id, project_id, rating, comment, created_at) 
-                    VALUES (?, ?, ?, ?, NOW())
-                ");
-                $insert_stmt->bind_param("iiis", $user_id, $project_id, $rating, $comment);
-
-                if ($insert_stmt->execute()) {
-                    $success = "Twoja opinia została dodana pomyślnie!";
-                    // Reset form
-                    $_POST = [];
-                } else {
-                    $error = "Wystąpił błąd podczas dodawania opinii.";
-                }
-                $insert_stmt->close();
+                $error = "Wystąpił błąd podczas dodawania opinii.";
+                logAction($conn, $user_id, $user_email, "review_attempt_failed", "Błąd wykonania INSERT");
             }
+            $insert_stmt->close();
         } catch (Exception $e) {
             $error = "Wystąpił błąd: " . $e->getMessage();
+            logAction($conn, $user_id, $user_email, "review_attempt_failed", "Exception: " . $e->getMessage());
         }
     }
 }
 ?>
+
 
 <!DOCTYPE html>
 <html lang="pl">
@@ -91,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dodaj opinię - TeenCollab</title>
+    <title>Dodaj opinię o stronie - TeenCollab</title>
     <link rel="stylesheet" href="../styles/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -162,7 +164,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-size: 1rem;
         }
 
-        .form-select,
         .form-textarea {
             width: 100%;
             padding: 1rem;
@@ -174,7 +175,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             background: white;
         }
 
-        .form-select:focus,
         .form-textarea:focus {
             outline: none;
             border-color: #10b981;
@@ -286,18 +286,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: #16a34a;
         }
 
-        .no-projects {
-            text-align: center;
-            padding: 2rem;
-            background: #f8fafc;
-            border-radius: 12px;
-            border: 2px dashed #cbd5e1;
+        .alert-info {
+            background: #eff6ff;
+            border: 1px solid #dbeafe;
+            color: #1d4ed8;
         }
 
-        .no-projects h3 {
+        .requirements-info {
+            background: #fffbeb;
+            border: 1px solid #fed7aa;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .requirements-info h3 {
             font-family: "Inter", sans-serif;
-            color: #6b7280;
-            margin-bottom: 1rem;
+            color: #92400e;
+            margin-bottom: 0.5rem;
+        }
+
+        .requirements-info ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .requirements-info li {
+            font-family: "Inter", sans-serif;
+            color: #92400e;
+            margin-bottom: 0.5rem;
+            padding-left: 1.5rem;
+            position: relative;
         }
 
         @keyframes shimmer {
@@ -375,8 +394,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="opinion-form-container">
             <div class="opinion-form-card">
                 <div class="form-header">
-                    <h1>Dodaj opinię</h1>
-                    <p>Podziel się swoimi doświadczeniami i zainspiruj innych</p>
+                    <h1>Twoja opinia o TeenCollab</h1>
+                    <p>Podziel się swoimi doświadczeniami z korzystania z naszej platformy</p>
                 </div>
 
                 <?php if ($error): ?>
@@ -387,31 +406,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div>
                 <?php endif; ?>
 
-                <?php if (empty($user_projects)): ?>
-                    <div class="no-projects">
-                        <h3>Nie masz jeszcze projektów do oceny</h3>
-                        <p>Dołącz do projektu lub stwórz własny, aby móc dodać opinię.</p>
-                        <div class="form-actions">
-                            <a href="projects.php" class="btn-submit">Przeglądaj projekty</a>
-                            <a href="create_project.php" class="btn-cancel">Stwórz projekt</a>
-                        </div>
+                <?php if (!$has_account_long_enough): ?>
+                    <div class="requirements-info">
+                        <h3>Wymagania do dodania opinii</h3>
+                        <ul>
+                            <li>Musisz posiadać konto na TeenCollab przez co najmniej 1 miesiąc</li>
+                        </ul>
+                        <p style="margin-top: 1rem; color: #92400e; font-family: 'Inter', sans-serif;">
+                            ❌ Twoje konto nie spełnia jeszcze tego wymagania. Wróć za jakiś czas!
+                        </p>
+                    </div>
+                    <div class="form-actions">
+                        <a href="../index.php" class="btn-cancel">Powrót do strony głównej</a>
+                    </div>
+                <?php elseif ($has_existing_review && !$success): ?>
+                    <div class="alert alert-info">
+                        ❌ Już dodałeś opinię o naszej stronie. Dziękujemy za feedback!
+                    </div>
+                    <div class="form-actions">
+                        <a href="../index.php" class="btn-cancel">Powrót do strony głównej</a>
                     </div>
                 <?php else: ?>
+                    <div class="requirements-info">
+                        <h3>Twoje konto spełnia wymagania!</h3>
+                        <p style="color: #92400e; font-family: 'Inter', sans-serif;">
+                            ✅ Możesz dodać opinię o naszej platformie. Dziękujemy!
+                        </p>
+                    </div>
+
                     <form method="POST" id="opinionForm">
                         <div class="form-group">
-                            <label class="form-label" for="project_id">Wybierz projekt *</label>
-                            <select class="form-select" id="project_id" name="project_id" required>
-                                <option value="">-- Wybierz projekt --</option>
-                                <?php foreach ($user_projects as $project): ?>
-                                    <option value="<?php echo $project['id']; ?>" <?php echo ($_POST['project_id'] ?? '') == $project['id'] ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($project['name']); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label">Ocena projektu *</label>
+                            <label class="form-label">Ogólna ocena strony *</label>
                             <div class="rating-stars" id="ratingStars">
                                 <?php for ($i = 1; $i <= 5; $i++): ?>
                                     <button type="button" class="star" data-rating="<?php echo $i; ?>">★</button>
@@ -424,7 +449,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="form-group">
                             <label class="form-label" for="comment">Twoja opinia *</label>
                             <textarea class="form-textarea" id="comment" name="comment"
-                                placeholder="Napisz co sądzisz o projekcie, jakie były Twoje doświadczenia, co Ci się podobało..."
+                                placeholder="Napisz co sądzisz o naszej platformie, jakie są Twoje doświadczenia, co Ci się podoba, co możemy poprawić..."
                                 required><?php echo htmlspecialchars($_POST['comment'] ?? ''); ?></textarea>
                             <div class="char-count" id="charCount">0/500 znaków</div>
                         </div>
@@ -463,6 +488,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         const commentTextarea = document.getElementById('comment');
         const charCount = document.getElementById('charCount');
 
+        // Rating stars functionality
         stars.forEach(star => {
             star.addEventListener('click', () => {
                 const rating = star.getAttribute('data-rating');
@@ -497,7 +523,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         });
 
         // Form validation
-        document.getElementById('opinionForm').addEventListener('submit', (e) => {
+        document.getElementById('opinionForm')?.addEventListener('submit', (e) => {
             if (!ratingInput.value) {
                 e.preventDefault();
                 alert('Proszę wybrać ocenę klikając na gwiazdki!');
@@ -511,7 +537,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         });
 
-        // Initialize existing rating if any
+        // Initialize existing values if any
         const existingRating = ratingInput.value;
         if (existingRating) {
             stars.forEach((star, index) => {
@@ -522,7 +548,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Initialize character count
-        charCount.textContent = `${commentTextarea.value.length}/500 znaków`;
+        if (commentTextarea) {
+            charCount.textContent = `${commentTextarea.value.length}/500 znaków`;
+        }
     </script>
 </body>
 

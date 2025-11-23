@@ -6,21 +6,23 @@ if ($currentPage == 'index.php') {
     $urlToAvatarPhoto = 'photos/avatars/default_avatar.png';
 } else {
     include("global/connection.php");
+    $urlToAvatarPhoto = '../photos/avatars/default_avatar.png';
 }
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
 $nav_cta_action = '';
-$urlToAvatarPhoto = '../photos/avatars/default_avatar.png';
+$prefix = ($currentPage == 'index.php') ? 'subpages/' : '';
 
 // Sprawdzenie, czy użytkownik jest zalogowany
 if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
     $firstName = $_SESSION['first_name'] ?? 'Użytkownik';
     $userId = $_SESSION['user_id'] ?? 0;
 
-    // Pobranie avatara z bazy
-    $userAvatar = $urlToAvatarPhoto; // domyślny
+    // Domyślny avatar
+    $userAvatar = $urlToAvatarPhoto;
 
     if ($userId) {
         $stmt = $conn->prepare("SELECT avatar, first_name FROM users WHERE id = ?");
@@ -34,10 +36,8 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
             if ($currentPage == 'index.php') {
                 $userAvatar = str_replace('../', '', $userAvatar);
             }
-
         }
 
-        // Jeśli chcesz pobierać imię z bazy:
         if (!empty($row['first_name'])) {
             $firstName = $row['first_name'];
         }
@@ -53,17 +53,16 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
         <span class="dropdown-arrow">▼</span>
     </div>
     <div class="user-dropdown-menu">
-        <a href="account.php" class="dropdown-item">
+        <a href="{$prefix}account.php" class="dropdown-item">
             <span class="dropdown-icon">👤</span> Mój profil
         </a>
         <div class="dropdown-divider"></div>
-        <a href="logout.php" class="dropdown-item logout-item">
+        <a href="{$prefix}logout.php" class="dropdown-item logout-item">
             <span class="dropdown-icon">🚪</span> Wyloguj się
         </a>
     </div>
 </li>
 HTML;
 } else {
-    $nav_cta_action = '<li class="nav-cta"><a href="join.php" class="cta-button active">Dołącz</a></li>';
+    $nav_cta_action = '<li class="nav-cta"><a href="' . $prefix . 'join.php" class="cta-button active">Dołącz</a></li>';
 }
-?>

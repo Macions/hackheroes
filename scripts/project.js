@@ -244,45 +244,45 @@ function showNotification(message, type) {
 	}, 3000);
 }
 
-document
-	.getElementById("btnAddComment")
-	.addEventListener("click", function (e) {
-		e.preventDefault();
-		const comment = document.getElementById("commentInput").value.trim();
-		if (!comment) return alert("Komentarz nie może być pusty!");
+document.getElementById("btnAddComment").addEventListener("click", function (e) {
+	e.preventDefault();
+	const comment = document.getElementById("commentInput").value.trim();
+	if (!comment) return alert("Komentarz nie może być pusty!");
 
-		fetch("add_comment.php", {
-			method: "POST",
-			headers: { "Content-Type": "application/x-www-form-urlencoded" },
-			body:
-				"project_id=<?php echo $projectId; ?>&comment=" +
-				encodeURIComponent(comment),
+	const formData = new URLSearchParams();
+	formData.append("project_id", PROJECT_ID);
+	formData.append("comment", comment);
+
+	fetch("add_comment.php", {
+		method: "POST",
+		headers: { "Content-Type": "application/x-www-form-urlencoded" },
+		body: formData.toString(),
+	})
+		.then((response) => response.json())
+		.then((data) => {
+			if (data.success) {
+				const list = document.querySelector(".comments-list");
+				const newComment = document.createElement("div");
+				newComment.classList.add("comment-item");
+				newComment.innerHTML = `
+					<div class="comment-avatar">
+						<img src="${USER_AVATAR_URL}" alt="Twój avatar">
+					</div>
+					<div class="comment-content">
+						<h4>Ty</h4>
+						<p>${comment.replace(/\n/g, "<br>")}</p>
+						<span class="comment-date">Właśnie teraz</span>
+					</div>
+				`;
+				list.prepend(newComment);
+				document.getElementById("commentInput").value = "";
+			} else {
+				alert("Błąd: " + data.message);
+			}
 		})
-			.then((response) => response.json())
-			.then((data) => {
-				if (data.success) {
-					// Dodaj komentarz do listy bez przeładowania
-					const list = document.querySelector(".comments-list");
-					const newComment = document.createElement("div");
-					newComment.classList.add("comment-item");
-					newComment.innerHTML = `
-                <div class="comment-avatar">
-                    <img src="<?php echo $userAvatarUrl; ?>" alt="Twój avatar">
-                </div>
-                <div class="comment-content">
-                    <h4>Ty</h4>
-                    <p>${comment.replace(/\n/g, "<br>")}</p>
-                    <span class="comment-date">Właśnie teraz</span>
-                </div>
-            `;
-					list.prepend(newComment);
-					document.getElementById("commentInput").value = "";
-				} else {
-					alert("Błąd przy dodawaniu komentarza!");
-				}
-			})
-			.catch(() => alert("Coś poszło nie tak..."));
-	});
+		.catch(() => alert("Coś poszło nie tak..."));
+});
+
 
 // Obsługa formularzy akceptacji/odrzucania zgłoszeń
 document.addEventListener("DOMContentLoaded", function () {
