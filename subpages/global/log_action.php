@@ -1,5 +1,8 @@
 <?php
-function logAction($conn, $userId, $email, $action, $details = '') {
+include(__DIR__ . "/connection.php"); // działa zawsze w stosunku do pliku
+
+function logAction($conn, $userId, $email, $action, $details = '')
+{
     $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
     $agent = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
 
@@ -7,9 +10,12 @@ function logAction($conn, $userId, $email, $action, $details = '') {
         INSERT INTO logs (user_id, email, action, details, ip_address, user_agent, created_at)
         VALUES (?, ?, ?, ?, ?, ?, NOW())
     ");
-    if (!$stmt) return;
+    if (!$stmt)
+        return false;
 
     $stmt->bind_param("isssss", $userId, $email, $action, $details, $ip, $agent);
     $stmt->execute();
     $stmt->close();
+
+    return true;
 }

@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", function () {
 function initializeAvatarModal() {
 	console.log("Initializing avatar modal...");
 
-	// 1. Przycisk zapisywania avatara w modal
+
 	const saveAvatarBtn = document.querySelector(
 		"#avatarModal .modal-btn.primary"
 	);
@@ -25,11 +25,11 @@ function initializeAvatarModal() {
 	} else {
 		console.error("❌ Avatar save button not found!");
 
-		// Debug: sprawdź wszystkie przyciski w modal
+
 		const allButtons = document.querySelectorAll("#avatarModal button");
 		console.log("All buttons in modal:", allButtons);
 
-		// Spróbuj znaleźć przycisk po tekście
+
 		const buttons = document.querySelectorAll("#avatarModal button");
 		buttons.forEach((btn) => {
 			if (
@@ -42,7 +42,7 @@ function initializeAvatarModal() {
 		});
 	}
 
-	// 2. Input do wybierania pliku
+
 	const avatarUpload = document.getElementById("avatarUpload");
 	if (avatarUpload) {
 		avatarUpload.addEventListener("change", function () {
@@ -53,7 +53,7 @@ function initializeAvatarModal() {
 		console.error("❌ Avatar upload input not found!");
 	}
 
-	// 3. Przyciski zamykania modala
+
 	const closeAvatarBtns = document.querySelectorAll(
 		"#avatarModal .modal-btn.secondary, #avatarModal .modal-close"
 	);
@@ -65,7 +65,7 @@ function initializeAvatarModal() {
 	} else {
 		console.error("❌ Close buttons not found!");
 
-		// Dodaj ręcznie do przycisku Anuluj
+
 		const cancelBtn = document.querySelector(
 			"#avatarModal .modal-btn.secondary"
 		);
@@ -75,7 +75,7 @@ function initializeAvatarModal() {
 		}
 	}
 
-	// 4. Przycisk zmiany avatara na stronie profilu (poza modem)
+
 	const changeAvatarBtn = document.querySelector(".change-avatar-btn");
 	if (changeAvatarBtn) {
 		changeAvatarBtn.addEventListener("click", openAvatarModal);
@@ -83,7 +83,7 @@ function initializeAvatarModal() {
 	} else {
 		console.error("❌ Change avatar button not found!");
 
-		// Sprawdź czy może jest inny przycisk
+
 		const profileAvatar = document.getElementById("profileAvatar");
 		if (profileAvatar) {
 			profileAvatar.addEventListener("click", openAvatarModal);
@@ -91,7 +91,7 @@ function initializeAvatarModal() {
 		}
 	}
 
-	// 5. Zamknięcie modala przy kliknięciu w tło
+
 	const avatarModal = document.getElementById("avatarModal");
 	if (avatarModal) {
 		avatarModal.addEventListener("click", function (e) {
@@ -102,7 +102,7 @@ function initializeAvatarModal() {
 		console.log("✅ Background click handler added");
 	}
 
-	// 6. Zamknięcie modala klawiszem Escape
+
 	document.addEventListener("keydown", function (e) {
 		if (
 			e.key === "Escape" &&
@@ -308,7 +308,7 @@ function saveInlineEdit() {
 		return;
 	}
 
-	// BLOKUJ DALSZE EDYTOWANIE
+
 	isSaving = true;
 	input.disabled = true;
 	input.style.opacity = "0.7";
@@ -319,17 +319,17 @@ function saveInlineEdit() {
 	xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
 
 	xhr.onload = function () {
-		// ODŁĄCZ BLOKADĘ NA KONIEC
+
 		isSaving = false;
 
 		if (xhr.status === 200) {
 			const response = JSON.parse(xhr.responseText);
 
 			if (response.success) {
-				// PROSTSZE ROZWIĄZANIE - ZAWSZE ODTWÓRZ INTERFEJS
+
 				restoreInterfaceAfterSave(newValue);
 
-				// LOGOWANIE ZMIANY PROFILU
+
 				const fieldNames = {
 					fullName: "Imię i nazwisko",
 					nick: "Nick",
@@ -348,14 +348,14 @@ function saveInlineEdit() {
 					currentEditElement = null;
 				}, 2000);
 			} else {
-				// ODŁĄCZ BLOKADĘ PRZY BŁĘDZIE
+
 				input.disabled = false;
 				input.style.opacity = "1";
 				input.style.cursor = "text";
 				showInlineFeedback(response.message || "Błąd zapisu", "error");
 			}
 		} else {
-			// ODŁĄCZ BLOKADĘ PRZY BŁĘDZIE
+
 			input.disabled = false;
 			input.style.opacity = "1";
 			input.style.cursor = "text";
@@ -364,7 +364,7 @@ function saveInlineEdit() {
 	};
 
 	xhr.onerror = function () {
-		// ODŁĄCZ BLOKADĘ PRZY BŁĘDZIE
+
 		isSaving = false;
 		input.disabled = false;
 		input.style.opacity = "1";
@@ -378,15 +378,15 @@ function saveInlineEdit() {
 	);
 }
 
-// NOWA FUNKCJA - ZAWSZE ODTWARZA INTERFEJS
+
 function restoreInterfaceAfterSave(newValue) {
 	if (!currentEditElement) return;
 
-	// Znajdź data-item i label żeby wiedzieć które pole aktualizować
+
 	const dataItem = currentEditElement.closest(".data-item");
 	const label = dataItem?.querySelector("label")?.textContent;
 
-	// Zawsze przywróć span z nową wartością
+
 	currentEditElement.innerHTML = `
         <span>${newValue}</span>
         <button class="edit-btn">
@@ -397,7 +397,7 @@ function restoreInterfaceAfterSave(newValue) {
         </button>
     `;
 
-	// Ponowna inicjalizacja przycisku
+
 	const newEditButton = currentEditElement.querySelector(".edit-btn");
 	if (newEditButton) {
 		newEditButton.addEventListener("click", function (e) {
@@ -556,7 +556,7 @@ function openDangerModal(action) {
 			if (xhr.status === 200) {
 				const response = JSON.parse(xhr.responseText);
 				if (response.success) {
-					// LOGOWANIE NIEBEZPIECZNYCH AKCJI
+
 					logUserAction("danger_action", `Wykonano akcję: ${action}`);
 
 					if (action === "delete") {
@@ -686,7 +686,7 @@ function validatePasswordFields() {
 function verificationCheck() {
 	const verified = document.querySelector(".verified");
 
-	// SPRAWDŹ CZY ELEMENT ISTNIEJE
+
 	if (!verified) {
 		console.log("Element .verified nie został znaleziony");
 		return;
@@ -789,7 +789,7 @@ function changePassword(currentPassword, newPassword) {
 				const response = JSON.parse(xhr.responseText);
 
 				if (response.success) {
-					// LOGOWANIE ZMIANY HASŁA
+
 					logUserAction("password_change", "Hasło zostało zmienione");
 
 					showPasswordFeedback("Hasło zostało zmienione pomyślnie", "success");
@@ -952,7 +952,7 @@ function updateNotificationSetting(settingIndex, isChecked) {
 					checkboxes[settingIndex].checked = !isChecked;
 					showNotificationFeedback("Błąd zapisu ustawienia", "error");
 				} else {
-					// LOGOWANIE ZMIANY POWIADOMIEŃ
+
 					logUserAction(
 						"notification_change",
 						`${settingNames[settingName]}: ${isChecked ? "włączone" : "wyłączone"
@@ -1075,7 +1075,7 @@ function updatePreference(preferenceIndex, value) {
 			try {
 				const response = JSON.parse(xhr.responseText);
 				if (response.success) {
-					// LOGOWANIE ZMIANY PREFERENCJI
+
 					logUserAction(
 						"preference_change",
 						`${preferenceNames[preferenceName]}: "${value}"`
@@ -1201,7 +1201,7 @@ function saveAvatar() {
 
 	const fileInput = document.getElementById("avatarUpload");
 
-	// SPRAWDŹ CZY PLIK ISTNIEJE
+
 	if (!fileInput) {
 		console.error("❌ Nie znaleziono inputa avatarUpload");
 		showAvatarFeedback("Błąd formularza - brak inputa", "error");
@@ -1217,7 +1217,7 @@ function saveAvatar() {
 	const file = fileInput.files[0];
 	console.log("📁 Wybrany plik:", file.name, file.size, file.type);
 
-	// Walidacja pliku
+
 	const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif"];
 	const maxFileSize = 5 * 1024 * 1024;
 
@@ -1231,7 +1231,7 @@ function saveAvatar() {
 		return;
 	}
 
-	// ✅ BEZPIECZNA AKTUALIZACJA PRZYCISKU
+
 	let originalText = "Zapisz zdjęcie";
 	if (saveBtn && saveBtn.textContent) {
 		originalText = saveBtn.textContent;
@@ -1240,7 +1240,7 @@ function saveAvatar() {
 		console.log("🔘 Przycisk zablokowany");
 	}
 
-	// PRZYGOTUJ DANE
+
 	const formData = new FormData();
 	formData.append("avatar", file);
 
@@ -1258,14 +1258,14 @@ function saveAvatar() {
 		return;
 	}
 
-	// WYŚLIJ ZAPYTANIE
+
 	const xhr = new XMLHttpRequest();
 	xhr.open("POST", "update_avatar.php", true);
 
 	xhr.onload = function () {
 		console.log("📡 Odpowiedź serwera:", xhr.status);
 
-		// ✅ PRZYWRÓĆ PRZYCISK
+
 		if (saveBtn) {
 			saveBtn.textContent = originalText;
 			saveBtn.disabled = false;
@@ -1278,13 +1278,13 @@ function saveAvatar() {
 				console.log("📄 Odpowiedź JSON:", response);
 
 				if (response.success) {
-					// ✅ TYLKO ODSWIERZENIE STRONY - USUŃ CAŁĄ RESZTĘ
+
 					console.log("✅ Sukces! Odświeżam stronę...");
 
-					// Zamknij modal
+
 					closeAvatarModal();
 
-					// Pokaz komunikat
+
 					showAvatarFeedback(
 						"✅ Avatar został zmieniony! Odświeżam stronę...",
 						"success"
@@ -1345,7 +1345,7 @@ function showAvatarFeedback(message, type) {
 	feedback.textContent = message;
 	feedback.className = `avatar-feedback ${type}`;
 
-	// Automatyczne usunięcie po 3 sekundach
+
 	setTimeout(() => {
 		if (feedback && feedback.parentNode) {
 			feedback.remove();
@@ -1353,13 +1353,13 @@ function showAvatarFeedback(message, type) {
 	}, 3000);
 }
 
-// Odblokowanie przycisku po wybraniu pliku
+
 avatarUpload.addEventListener('change', function () {
 	const saveBtn = document.getElementById('saveAvatarBtn');
 	saveBtn.disabled = !this.files.length;
 
 	if (this.files.length) {
-		// Tutaj też można dodać walidację pliku
+
 		const file = this.files[0];
 		if (file.size > 5 * 1024 * 1024) { // 5MB
 			saveBtn.disabled = true;

@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['avatar'])) {
                 }
             }
             
-            // ✅ TYLKO JEDEN LOG: Zmiana avatara zakończona sukcesem
+
             logAction($conn, $userId, $userEmail, 'avatar_change', 'Zdjęcie profilowe zostało zmienione');
             
             echo json_encode([
@@ -104,10 +104,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['avatar'])) {
 
 $conn->close();
 
-// Funkcja do logowania akcji
+
 function logAction($conn, $userId, $email, $action, $details = '') {
     try {
-        // Sprawdź czy tabela logs istnieje
+
         $tableCheck = $conn->query("SELECT 1 FROM logs LIMIT 1");
         if ($tableCheck === false) {
             return;

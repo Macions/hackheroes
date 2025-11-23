@@ -1,5 +1,5 @@
 <?php
-// get_preferences.php
+
 include("global/connection.php");
 session_start();
 

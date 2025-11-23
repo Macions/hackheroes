@@ -3,18 +3,18 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeManageTeam() {
-    // Inicjalizacja tooltipów i potwierdzeń
+
     initializeConfirmations();
     
-    // Obsługa formularzy
+
     initializeForms();
     
-    // Animacje
+
     initializeAnimations();
 }
 
 function initializeConfirmations() {
-    // Potwierdzenie usuwania członka
+
     const removeButtons = document.querySelectorAll('.btn-remove');
     removeButtons.forEach(button => {
         button.addEventListener('click', function(e) {
@@ -26,7 +26,7 @@ function initializeConfirmations() {
 }
 
 function initializeForms() {
-    // Walidacja formularza dodawania członka
+
     const addMemberForm = document.querySelector('.add-member-form');
     if (addMemberForm) {
         addMemberForm.addEventListener('submit', function(e) {
@@ -39,13 +39,13 @@ function initializeForms() {
                 return;
             }
             
-            // Pokazanie ładowania
+
             const submitBtn = this.querySelector('button[type="submit"]');
             const originalText = submitBtn.textContent;
             submitBtn.textContent = 'Dodawanie...';
             submitBtn.disabled = true;
             
-            // Przywróć tekst po załadowaniu
+
             setTimeout(() => {
                 submitBtn.textContent = originalText;
                 submitBtn.disabled = false;
@@ -53,7 +53,7 @@ function initializeForms() {
         });
     }
     
-    // Szybka zmiana roli z feedbackiem
+
     const roleSelects = document.querySelectorAll('.role-select');
     roleSelects.forEach(select => {
         select.addEventListener('change', function() {
@@ -61,7 +61,7 @@ function initializeForms() {
             const memberName = memberCard.querySelector('.member-name').textContent;
             const newRole = this.value;
             
-            // Wizualny feedback
+
             memberCard.style.transform = 'scale(1.02)';
             setTimeout(() => {
                 memberCard.style.transform = '';
@@ -73,7 +73,7 @@ function initializeForms() {
 }
 
 function initializeAnimations() {
-    // Animacja pojawiania się kart członków
+
     const memberCards = document.querySelectorAll('.member-card');
     memberCards.forEach((card, index) => {
         card.style.opacity = '0';
@@ -88,7 +88,7 @@ function initializeAnimations() {
 }
 
 function showNotification(message, type = 'info') {
-    // Tworzenie powiadomienia
+
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
     notification.innerHTML = `
@@ -96,7 +96,7 @@ function showNotification(message, type = 'info') {
         <button class="notification-close" onclick="this.parentElement.remove()">×</button>
     `;
     
-    // Style powiadomienia
+
     notification.style.cssText = `
         position: fixed;
         top: 20px;
@@ -114,7 +114,7 @@ function showNotification(message, type = 'info') {
         max-width: 400px;
     `;
     
-    // Kolory w zależności od typu
+
     const colors = {
         success: '#28a745',
         error: '#dc3545',
@@ -124,7 +124,7 @@ function showNotification(message, type = 'info') {
     
     notification.style.background = colors[type] || colors.info;
     
-    // Przycisk zamknięcia
+
     const closeBtn = notification.querySelector('.notification-close');
     closeBtn.style.cssText = `
         background: none;
@@ -152,7 +152,7 @@ function showNotification(message, type = 'info') {
     
     document.body.appendChild(notification);
     
-    // Automatyczne usuwanie po 5 sekundach
+
     setTimeout(() => {
         if (notification.parentElement) {
             notification.remove();
@@ -160,7 +160,7 @@ function showNotification(message, type = 'info') {
     }, 5000);
 }
 
-// Animacja dla powiadomień
+
 const style = document.createElement('style');
 style.textContent = `
     @keyframes slideInRight {
@@ -180,7 +180,7 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// Obsługa błędów
+
 window.addEventListener('error', function(e) {
     console.error('Błąd:', e.error);
     showNotification('Wystąpił nieoczekiwany błąd', 'error');

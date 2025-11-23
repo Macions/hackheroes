@@ -1,4 +1,4 @@
-// ====== ANIMACJA LICZNIKÓW ======
+
 let stats_section = document.getElementById("stats");
 let amount_of_project = document.querySelector("#stats article#amount_of_projects h2 span");
 let amount_of_future_creators = document.querySelector("#stats article#amount_of_future_creators h2 span");
@@ -45,7 +45,7 @@ if (stats_section) {
 	tryAnimateProjects();
 }
 
-// ====== CAROUSEL PROJEKTÓW ======
+
 const project_section = document.getElementById("projects");
 const move_circles = document.querySelectorAll("#move_circles .circle");
 let autoSlideInterval = null;
@@ -63,7 +63,7 @@ function updateProjectCarousel(nextIndex) {
 	}
 }
 
-// Kółka
+
 if (move_circles.length) {
 	move_circles.forEach((circle, index) => {
 		circle.addEventListener("click", () => {
@@ -91,7 +91,7 @@ function resetAutoSlide() {
 	startAutoSlide();
 }
 
-// ====== CAROUSEL OPINII ======
+
 let opinion_arrow_left = document.querySelector("#future_makers_opinions .arrow.left");
 let opinion_arrow_right = document.querySelector("#future_makers_opinions .arrow.right");
 let opinions = document.getElementById("opinions");
@@ -120,7 +120,7 @@ function navigateOpinions(direction) {
 	resetOpinionsAutoSlide();
 }
 
-// Strzałki
+
 if (opinion_arrow_left) {
 	opinion_arrow_left.addEventListener("click", () => navigateOpinions('prev'));
 }
@@ -146,8 +146,8 @@ function resetOpinionsAutoSlide() {
 	startOpinionsAutoSlide();
 }
 
-// ====== IMPROVED BURGER MENU ======
-// ====== IMPROVED BURGER MENU ======
+
+
 function initMobileMenu() {
     const burgerMenu = document.getElementById('burger-menu');
     const navUl = document.querySelector('header nav ul');
@@ -157,7 +157,7 @@ function initMobileMenu() {
             e.stopPropagation();
             navUl.classList.toggle('mobile-open');
             
-            // Zmień ikonę burger menu (możesz podmienić obrazek)
+
             if (navUl.classList.contains('mobile-open')) {
                 burgerMenu.style.transform = 'rotate(90deg)';
                 burgerMenu.style.opacity = '0.7';
@@ -167,7 +167,7 @@ function initMobileMenu() {
             }
         });
 
-        // Zamknij menu po kliknięciu gdzie indziej
+
         document.addEventListener('click', (e) => {
             if (!navUl.contains(e.target) && e.target !== burgerMenu) {
                 navUl.classList.remove('mobile-open');
@@ -176,7 +176,7 @@ function initMobileMenu() {
             }
         });
 
-        // Zamknij menu po kliknięciu w link (dla mobile)
+
         if (window.innerWidth <= 768) {
             navUl.querySelectorAll('a').forEach(link => {
                 link.addEventListener('click', () => {
@@ -187,7 +187,7 @@ function initMobileMenu() {
             });
         }
 
-        // Zamknij menu po zmianie rozmiaru okna na desktop
+
         window.addEventListener('resize', () => {
             if (window.innerWidth > 768) {
                 navUl.classList.remove('mobile-open');
@@ -198,7 +198,7 @@ function initMobileMenu() {
     }
 }
 
-// ====== FIX FOR MENU SCROLL ISSUE ======
+
 function fixMenuScroll() {
 	const header = document.querySelector('header');
 	const main = document.querySelector('main');
@@ -206,10 +206,10 @@ function fixMenuScroll() {
 	if (header && main) {
 		const headerHeight = header.offsetHeight;
 
-		// Dla desktop - dodaj padding aby treść nie była pod sticky header
+
 		if (!isMobileDevice()) {
 			main.style.paddingTop = '0';
-			// Upewnij się że pierwsza sekcja ma odpowiedni margines
+
 			const firstSection = main.querySelector('section');
 			if (firstSection) {
 				firstSection.style.scrollMarginTop = headerHeight + 'px';
@@ -220,7 +220,7 @@ function fixMenuScroll() {
 	}
 }
 
-// ====== SCROLL TO TOP FIX ======
+
 function scrollToTop() {
 	window.scrollTo({
 		top: 0,
@@ -232,7 +232,7 @@ function scrollToTop() {
 	}
 }
 
-// ====== RESPONSIVE / MOBILE ======
+
 function isMobileDevice() {
 	return window.innerWidth <= 768;
 }
@@ -277,18 +277,18 @@ function adjustFontSizes() {
 	}
 }
 
-// ====== ORIENTATION CHANGE ======
+
 function handleOrientationChange() {
 	if (window.orientation === 90 || window.orientation === -90) {
 		document.body.classList.add('landscape');
 	} else {
 		document.body.classList.remove('landscape');
 	}
-	// Napraw menu po zmianie orientacji
+
 	setTimeout(fixMenuScroll, 100);
 }
 
-// ====== TOUCH SUPPORT ======
+
 function enhanceTouchSupport() {
 	if (isTouchDevice()) {
 		document.body.classList.add('touch-device');
@@ -308,7 +308,7 @@ function enhanceTouchSupport() {
 	}
 }
 
-// ====== SMOOTH SCROLL FOR ANCHOR LINKS ======
+
 function initSmoothScroll() {
 	document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 		anchor.addEventListener('click', function (e) {
@@ -327,7 +327,7 @@ function initSmoothScroll() {
 	});
 }
 
-// ====== LAZY LOADING ======
+
 function initLazyLoading() {
 	const imageObserver = new IntersectionObserver((entries, observer) => {
 		entries.forEach(entry => {
@@ -352,12 +352,12 @@ function initLazyLoading() {
 	});
 }
 
-// ====== PERFORMANCE OPTIMIZATIONS ======
+
 function initPerformanceOptimizations() {
-	// Throttle scroll events
+
 	window.addEventListener('scroll', throttle(tryAnimateProjects, 100));
 
-	// Optimize resize events
+
 	let resizeTimeout;
 	window.addEventListener('resize', () => {
 		clearTimeout(resizeTimeout);
@@ -368,7 +368,7 @@ function initPerformanceOptimizations() {
 	});
 }
 
-// ====== INIT ======
+
 function initResponsiveFeatures() {
 	handleResponsiveImages();
 	adjustFontSizes();
@@ -388,14 +388,14 @@ function initResponsiveFeatures() {
 
 	window.addEventListener('orientationchange', handleOrientationChange);
 
-	// Napraw po załadowaniu obrazków
+
 	window.addEventListener('load', () => {
 		fixMenuScroll();
 		adjustFontSizes();
 	});
 }
 
-// ====== ERROR HANDLING ======
+
 function initErrorHandling() {
 	window.addEventListener('error', (e) => {
 		console.error('JavaScript Error:', e.error);
@@ -406,13 +406,13 @@ function initErrorHandling() {
 	});
 }
 
-// ====== MAIN INITIALIZATION ======
+
 document.addEventListener('DOMContentLoaded', () => {
 	initResponsiveFeatures();
 	enhanceTouchSupport();
 	initErrorHandling();
 
-	// Initial carousel setup
+
 	if (project_section) {
 		startAutoSlide();
 	}
@@ -424,20 +424,20 @@ document.addEventListener('DOMContentLoaded', () => {
 	console.log('TeenCollab - Strona załadowana pomyślnie');
 });
 
-// ====== CLEANUP ON PAGE UNLOAD ======
+
 window.addEventListener('beforeunload', () => {
 	if (autoSlideInterval) clearInterval(autoSlideInterval);
 	if (opinionsAutoSlideInterval) clearInterval(opinionsAutoSlideInterval);
 });
 
-// ====== TOUCH AND SWIPE SUPPORT ======
+
 function initSwipeSupport() {
 	if (!isTouchDevice()) return;
 
 	let startX = 0;
 	let endX = 0;
 
-	// Swipe dla karuzeli projektów
+
 	if (project_section) {
 		project_section.addEventListener('touchstart', (e) => {
 			startX = e.touches[0].clientX;
@@ -449,7 +449,7 @@ function initSwipeSupport() {
 		});
 	}
 
-	// Swipe dla karuzeli opinii
+
 	if (opinions) {
 		opinions.addEventListener('touchstart', (e) => {
 			startX = e.touches[0].clientX;
@@ -473,10 +473,10 @@ function initSwipeSupport() {
 			let nextIndex;
 
 			if (diff > 0) {
-				// Swipe w lewo - następny slajd
+
 				nextIndex = (currentIndex + 1) % move_circles.length;
 			} else {
-				// Swipe w prawo - poprzedni slajd
+
 				nextIndex = currentIndex > 0 ? currentIndex - 1 : move_circles.length - 1;
 			}
 
@@ -491,17 +491,17 @@ function initSwipeSupport() {
 
 		if (Math.abs(diff) > swipeThreshold) {
 			if (diff > 0) {
-				// Swipe w lewo - następna opinia
+
 				navigateOpinions('next');
 			} else {
-				// Swipe w prawo - poprzednia opinia
+
 				navigateOpinions('prev');
 			}
 		}
 	}
 }
 
-// Dodaj obsługę swipe do inicjalizacji
+
 document.addEventListener('DOMContentLoaded', () => {
 	initSwipeSupport();
 });

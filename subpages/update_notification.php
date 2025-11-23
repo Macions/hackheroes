@@ -1,5 +1,5 @@
 <?php
-// update_notification.php
+
 include("global/connection.php");
 session_start();
 

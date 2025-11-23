@@ -7,19 +7,40 @@ $userId = $_SESSION["user_id"] ?? null;
 $userEmail = $_SESSION["user_email"] ?? '';
 $isLoggedIn = isset($_SESSION["logged_in"]) && $_SESSION["logged_in"] === true;
 
-// Pobierz ID projektu z URL
 $projectId = $_GET['id'] ?? null;
+// Pobranie roli użytkownika w projekcie
+$roleStmt = $conn->prepare("SELECT role FROM project_team WHERE user_id = ? AND project_id = ?");
+$roleStmt->bind_param("ii", $userId, $projectId);
+$roleStmt->execute();
+$roleResult = $roleStmt->get_result()->fetch_assoc();
+$roleStmt->close();
+
+$userProjectRole = $roleResult['role'] ?? ''; // np. 'owner', 'developer', 'member'
+
+$membersStmt = $conn->prepare("
+    SELECT u.id, u.nick, u.avatar, pt.role
+    FROM project_team pt
+    JOIN users u ON pt.user_id = u.id
+    WHERE pt.project_id = ?
+");
+
+$membersStmt->bind_param("i", $projectId);
+$membersStmt->execute();
+$members = $membersStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$membersStmt->close();
+
+
 if (!$projectId) {
     header("Location: projects.php");
     exit();
 }
 
-// Sprawdź połączenie z bazą danych
+
 if (!$conn) {
     die("Błąd połączenia z bazą danych: " . $conn->connect_error);
 }
 
-// Funkcje do formatowania dat
+
 function formatDate($dateString)
 {
     if (!$dateString || $dateString == '0000-00-00')
@@ -34,10 +55,11 @@ function formatDateTime($dateString)
     return (new DateTime($dateString))->format('d.m.Y H:i');
 }
 
-// Funkcja do zwiększania licznika wyświetleń
+
 function incrementProjectViews($conn, $projectId)
 {
     $viewKey = 'project_view_' . $projectId;
+
     if (!isset($_SESSION[$viewKey])) {
         $updateStmt = $conn->prepare("UPDATE projects SET views_counter = views_counter + 1, updated_at = NOW() WHERE id = ?");
         if ($updateStmt) {
@@ -51,26 +73,27 @@ function incrementProjectViews($conn, $projectId)
     $stmt = $conn->prepare("SELECT views_counter FROM projects WHERE id = ?");
     $stmt->bind_param("i", $projectId);
     $stmt->execute();
-    $result = $stmt->get_result();
-    $row = $result->fetch_assoc();
+    $result = $stmt->get_result()->fetch_assoc();
     $stmt->close();
-    return $row['views_counter'] ?? 0;
+
+    return $result['views_counter'] ?? 0;
 }
 
 $currentViews = incrementProjectViews($conn, $projectId);
 
-// Mapowania
+
 $priorityMap = ['low' => 'Niski', 'medium' => 'Średni', 'high' => 'Wysoki'];
 $statusMap = ['active' => 'Aktywny', 'completed' => 'Zakończony', 'paused' => 'Wstrzymany', 'draft' => 'Szkic'];
 $visibilityMap = ['public' => 'Publiczny', 'private' => 'Prywatny'];
 
-function getStatus($status, $statusMap)
+function getStatus($status, $map)
 {
-    return $statusMap[$status] ?? 'Aktywny';
+    return $map[$status] ?? 'Aktywny';
 }
-function getVisibility($visibility, $visibilityMap)
+
+function getVisibility($visibility, $map)
 {
-    return $visibilityMap[$visibility] ?? 'Publiczny';
+    return $map[$visibility] ?? 'Publiczny';
 }
 
 function isDeadlineApproaching($deadline)
@@ -82,11 +105,10 @@ function isDeadlineApproaching($deadline)
     $deadlineDate = new DateTime($deadline);
     $interval = $now->diff($deadlineDate);
 
-    // Zwróć true jeśli termin jest w ciągu 3 dni
     return $interval->days <= 3 && $interval->invert == 0;
 }
 
-// Funkcja do sprawdzania czy wymagane jest logowanie
+
 function requireLogin($action)
 {
     if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
@@ -98,9 +120,13 @@ function requireLogin($action)
 }
 
 try {
-    // Pobierz projekt wraz z founderem
+
+
     $stmt = $conn->prepare("
-        SELECT p.*, u.nick AS founder_name, u.email AS founder_email, u.avatar AS founder_avatar
+        SELECT p.*, 
+               u.nick AS founder_name, 
+               u.email AS founder_email, 
+               u.avatar AS founder_avatar
         FROM projects p
         LEFT JOIN users u ON p.founder_id = u.id
         WHERE p.id = ?
@@ -113,7 +139,8 @@ try {
     if (!$project)
         throw new Exception("Projekt nie istnieje");
 
-    // Kategorie
+
+
     $categories = [];
     $catStmt = $conn->prepare("
         SELECT c.name 
@@ -123,66 +150,68 @@ try {
     ");
     $catStmt->bind_param("i", $projectId);
     $catStmt->execute();
-    $catResult = $catStmt->get_result();
-    while ($row = $catResult->fetch_assoc())
+    $res = $catStmt->get_result();
+    while ($row = $res->fetch_assoc())
         $categories[] = $row['name'];
     $catStmt->close();
 
-    // Cele
+
+
     $goals = [];
     $goalStmt = $conn->prepare("SELECT description, status FROM goals WHERE project_id = ?");
     $goalStmt->bind_param("i", $projectId);
     $goalStmt->execute();
-    $goalResult = $goalStmt->get_result();
-    while ($row = $goalResult->fetch_assoc()) {
+    $goalRes = $goalStmt->get_result();
+    while ($row = $goalRes->fetch_assoc())
         $goals[] = $row;
-    }
     $goalStmt->close();
 
-    // Liczba polubień
-    $likeCountStmt = $conn->prepare("SELECT COUNT(*) AS like_count FROM likes WHERE project_id = ?");
-    $likeCountStmt->bind_param("i", $projectId);
-    $likeCountStmt->execute();
-    $likeCount = $likeCountStmt->get_result()->fetch_assoc()['like_count'] ?? 0;
-    $likeCountStmt->close();
 
-    // Sprawdź czy użytkownik polubił projekt (tylko jeśli jest zalogowany)
+
+    $likeStmt = $conn->prepare("SELECT COUNT(*) AS like_count FROM likes WHERE project_id = ?");
+    $likeStmt->bind_param("i", $projectId);
+    $likeStmt->execute();
+    $likeCount = $likeStmt->get_result()->fetch_assoc()['like_count'] ?? 0;
+    $likeStmt->close();
+
+
+
     $userLiked = false;
     if ($isLoggedIn) {
-        $userLikeStmt = $conn->prepare("SELECT id FROM likes WHERE project_id = ? AND user_id = ?");
-        $userLikeStmt->bind_param("ii", $projectId, $userId);
-        $userLikeStmt->execute();
-        $userLiked = $userLikeStmt->get_result()->fetch_assoc() !== null;
-        $userLikeStmt->close();
+        $stmt = $conn->prepare("SELECT id FROM likes WHERE project_id = ? AND user_id = ?");
+        $stmt->bind_param("ii", $projectId, $userId);
+        $stmt->execute();
+        $userLiked = $stmt->get_result()->fetch_assoc() !== null;
+        $stmt->close();
     }
 
-    // Obserwacja (tylko jeśli jest zalogowany)
+
     $isFollowing = false;
     if ($isLoggedIn) {
-        $followStmt = $conn->prepare("SELECT id FROM follows WHERE user_id = ? AND project_id = ?");
-        $followStmt->bind_param("ii", $userId, $projectId);
-        $followStmt->execute();
-        $isFollowing = $followStmt->get_result()->fetch_assoc() !== null;
-        $followStmt->close();
+        $stmt = $conn->prepare("SELECT id FROM follows WHERE user_id = ? AND project_id = ?");
+        $stmt->bind_param("ii", $userId, $projectId);
+        $stmt->execute();
+        $isFollowing = $stmt->get_result()->fetch_assoc() !== null;
+        $stmt->close();
     }
 
-    // Avatar aktualnego użytkownika (tylko jeśli jest zalogowany)
+
+    $userAvatarUrl = '../photos/avatars/default_avatar.png'; // Domyślny avatar
+
+
     if ($isLoggedIn) {
-        $userAvatarUrlStmt = $conn->prepare("SELECT avatar FROM users WHERE id = ?");
-        $userAvatarUrlStmt->bind_param("i", $userId);
-        $userAvatarUrlStmt->execute();
-        $userAvatarUrl = $userAvatarUrlStmt->get_result()->fetch_assoc()['avatar'] ?? 'default.png';
-        $userAvatarUrlStmt->close();
+        $stmt = $conn->prepare("SELECT avatar FROM users WHERE id = ?");
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        $userAvatarUrl = $result['avatar'] ?? '../photos/avatars/default_avatar.png';
+        $stmt->close();
     }
 
-    $FounderUserAvatarUrlStmt = $conn->prepare("SELECT avatar FROM users WHERE id = ?");
-    $FounderUserAvatarUrlStmt->bind_param("i", $project['founder_id']); // tu ID założyciela
-    $FounderUserAvatarUrlStmt->execute();
-    $FounderUserAvatarUrl = $FounderUserAvatarUrlStmt->get_result()->fetch_assoc()['avatar'] ?? 'default.png';
-    $FounderUserAvatarUrlStmt->close();
 
 
-    // Umiejętności
+
+
     $skills = [];
     $skillStmt = $conn->prepare("
         SELECT s.name
@@ -192,45 +221,13 @@ try {
     ");
     $skillStmt->bind_param("i", $projectId);
     $skillStmt->execute();
-    $skillResult = $skillStmt->get_result();
-    while ($row = $skillResult->fetch_assoc())
+    $res = $skillStmt->get_result();
+    while ($row = $res->fetch_assoc())
         $skills[] = $row['name'];
     $skillStmt->close();
 
-    // Zadania z przypisaniami
-    $tasks = [];
-    $taskStmt = $conn->prepare("
-    SELECT t.*, 
-           u_assigned.nick as assigned_nick,
-           u_assigned.avatar as assigned_avatar,
-           u_created.nick as created_nick
-    FROM tasks t
-    LEFT JOIN users u_assigned ON t.assigned_to = u_assigned.id
-    LEFT JOIN users u_created ON t.created_by = u_created.id
-    WHERE t.project_id = ?
-    ORDER BY 
-        CASE t.status 
-            WHEN 'open' THEN 1
-            WHEN 'in_progress' THEN 2
-            WHEN 'done' THEN 3
-            ELSE 4
-        END,
-        CASE t.priority
-            WHEN 'critical' THEN 1
-            WHEN 'high' THEN 2
-            WHEN 'medium' THEN 3
-            WHEN 'low' THEN 4
-        END
-");
-    $taskStmt->bind_param("i", $projectId);
-    $taskStmt->execute();
-    $taskResult = $taskStmt->get_result();
-    while ($row = $taskResult->fetch_assoc()) {
-        $tasks[] = $row;
-    }
-    $taskStmt->close();
 
-    // Mapowania statusów
+
     $taskStatusMap = [
         'open' => 'Otwarte',
         'in_progress' => 'W trakcie',
@@ -238,61 +235,82 @@ try {
         'cancelled' => 'Anulowane'
     ];
 
-    // Członkowie zespołu
+    $tasks = [];
+    $taskStmt = $conn->prepare("
+        SELECT t.*, 
+               u_assigned.nick AS assigned_nick,
+               u_assigned.avatar AS assigned_avatar,
+               u_created.nick AS created_nick
+        FROM tasks t
+        LEFT JOIN users u_assigned ON t.assigned_to = u_assigned.id
+        LEFT JOIN users u_created ON t.created_by = u_created.id
+        WHERE t.project_id = ?
+        ORDER BY 
+            CASE t.status 
+                WHEN 'open' THEN 1
+                WHEN 'in_progress' THEN 2
+                WHEN 'done' THEN 3
+                ELSE 4
+            END,
+            CASE t.priority
+                WHEN 'critical' THEN 1
+                WHEN 'high' THEN 2
+                WHEN 'medium' THEN 3
+                WHEN 'low' THEN 4
+            END
+    ");
+    $taskStmt->bind_param("i", $projectId);
+    $taskStmt->execute();
+    $res = $taskStmt->get_result();
+    while ($row = $res->fetch_assoc())
+        $tasks[] = $row;
+    $taskStmt->close();
+
+
+
     $teamMembers = [];
 
-    // Pobranie właściciela
+
     $ownerStmt = $conn->prepare("
-    SELECT u.id, u.nick, u.email, u.avatar, pt.joined_at
-    FROM project_team pt
-    JOIN users u ON pt.user_id = u.id
-    WHERE pt.project_id = ? AND pt.user_id = ?
-");
+        SELECT u.id, u.nick, u.email, u.avatar, pt.joined_at
+        FROM project_team pt
+        JOIN users u ON pt.user_id = u.id
+        WHERE pt.project_id = ? AND pt.user_id = ?
+    ");
     $ownerStmt->bind_param("ii", $projectId, $project['founder_id']);
     $ownerStmt->execute();
-    $ownerResult = $ownerStmt->get_result();
-    $owner = $ownerResult->fetch_assoc();
+    $founder = $ownerStmt->get_result()->fetch_assoc();
     $ownerStmt->close();
 
-    if ($owner) {
-        $owner['role'] = 'Założyciel';
-        if (empty($owner['avatar']))
-            $owner['avatar'] = 'default.png';
-        $teamMembers[] = $owner;
+    if ($founder) {
+        $founder['role'] = 'Założyciel';
+        if (empty($founder['avatar']))
+            $founder['avatar'] = 'default.png';
+        $teamMembers[] = $founder;
     }
 
-    // Pobranie pozostałych członków
+
     $teamStmt = $conn->prepare("
-    SELECT u.id, u.nick, u.email, u.avatar, pt.role, pt.joined_at
-    FROM project_team pt
-    JOIN users u ON pt.user_id = u.id
-    WHERE pt.project_id = ? AND pt.user_id != ?
-");
+        SELECT u.id, u.nick, u.email, u.avatar, pt.role, pt.joined_at
+        FROM project_team pt
+        JOIN users u ON pt.user_id = u.id
+        WHERE pt.project_id = ? AND pt.user_id != ?
+    ");
     $teamStmt->bind_param("ii", $projectId, $project['founder_id']);
     $teamStmt->execute();
-    $teamResult = $teamStmt->get_result();
-
-    while ($row = $teamResult->fetch_assoc()) {
+    $res = $teamStmt->get_result();
+    while ($row = $res->fetch_assoc()) {
         if (empty($row['avatar']))
             $row['avatar'] = 'default.png';
         $teamMembers[] = $row;
     }
     $teamStmt->close();
 
-    // Sprawdzenie roli użytkownika (tylko jeśli jest zalogowany)
-    $isOwner = false;
-    $isMember = false;
-    if ($isLoggedIn) {
-        $isOwner = ($userId == $project['founder_id']);
-        foreach ($teamMembers as $member) {
-            if ($member['id'] == $userId) {
-                $isMember = true;
-                break;
-            }
-        }
-    }
 
-    // Komentarze
+    $isOwner = $isLoggedIn && $userId == $project['founder_id'];
+    $isMember = $isLoggedIn && array_filter($teamMembers, fn($m) => $m['id'] == $userId);
+
+
     $comments = [];
     $commentStmt = $conn->prepare("
         SELECT c.comment, c.created_at, u.nick, u.avatar
@@ -303,39 +321,111 @@ try {
     ");
     $commentStmt->bind_param("i", $projectId);
     $commentStmt->execute();
-    $commentResult = $commentStmt->get_result();
-    while ($row = $commentResult->fetch_assoc())
+    $res = $commentStmt->get_result();
+    while ($row = $res->fetch_assoc())
         $comments[] = $row;
     $commentStmt->close();
 
-    // Zgłoszenia do projektu (tylko dla właściciela)
+
     $joinRequests = [];
-    if ($isLoggedIn && $isOwner) {
-        $requestSql = "
-        SELECT pr.id, pr.user_id, pr.applied_at, pr.motivation, pr.desired_role, pr.availability, pr.status, u.nick, u.avatar
-        FROM project_applications pr
-        JOIN users u ON pr.user_id = u.id
-        WHERE pr.project_id = ? AND pr.status = 'pending'
-        ORDER BY pr.applied_at ASC
-    ";
+    if ($isOwner) {
+        $stmt = $conn->prepare("
+            SELECT pr.id, pr.user_id, pr.applied_at, pr.motivation, pr.desired_role, pr.availability, 
+                   pr.status, u.nick, u.avatar
+            FROM project_applications pr
+            JOIN users u ON pr.user_id = u.id
+            WHERE pr.project_id = ? AND pr.status = 'pending'
+            ORDER BY pr.applied_at ASC
+        ");
 
-        $requestStmt = $conn->prepare($requestSql);
-        if ($requestStmt === false) {
-            die("Błąd przygotowania zapytania: " . $conn->error . "\nSQL: " . $requestSql);
+        if (!$stmt) {
+            die("Błąd przygotowania zapytania: " . $conn->error);
         }
 
-        $requestStmt->bind_param("i", $projectId);
-        $requestStmt->execute();
-        $requestResult = $requestStmt->get_result();
-        while ($row = $requestResult->fetch_assoc()) {
+        $stmt->bind_param("i", $projectId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($row = $res->fetch_assoc())
             $joinRequests[] = $row;
-        }
-        $requestStmt->close();
+        $stmt->close();
     }
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_team_message'])) {
+        if ($isOwner) {
+            $messageTitle = trim($_POST['message_title'] ?? '');
+            $messageContent = trim($_POST['message_content'] ?? '');
+
+            if (!empty($messageTitle) && !empty($messageContent)) {
+                try {
+                    // Pobierz wszystkich członków zespołu
+                    $teamStmt = $conn->prepare("
+                    SELECT user_id FROM project_team WHERE project_id = ?
+                    UNION 
+                    SELECT ? as user_id
+                ");
+                    $teamStmt->bind_param("ii", $projectId, $project['founder_id']);
+                    $teamStmt->execute();
+                    $teamResult = $teamStmt->get_result();
+
+                    $sentCount = 0;
+                    $notificationStmt = $conn->prepare("
+                    INSERT INTO notifications (user_id, project_id, title, message, type, is_read, related_url, created_at) 
+                    VALUES (?, ?, ?, ?, 'team_message', 0, ?, NOW())
+                ");
+
+                    $relatedUrl = "project.php?id=" . $projectId;
+
+                    while ($member = $teamResult->fetch_assoc()) {
+                        $notificationStmt->bind_param(
+                            "iisss",
+                            $member['user_id'],
+                            $projectId,
+                            $messageTitle,
+                            $messageContent,
+                            $relatedUrl
+                        );
+                        if ($notificationStmt->execute()) {
+                            $sentCount++;
+                        }
+                    }
+
+                    $notificationStmt->close();
+                    $teamStmt->close();
+
+                    // Zapisz log
+                    $logStmt = $conn->prepare("
+                    INSERT INTO logs (user_id, action, details, ip_address, user_agent, created_at) 
+                    VALUES (?, 'send_team_message', ?, ?, ?, NOW())
+                ");
+                    $details = "Wysłano wiadomość do zespołu projektu #{$projectId}: '{$messageTitle}' do {$sentCount} użytkowników";
+                    $logStmt->bind_param("isss", $userId, $details, $_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT']);
+                    $logStmt->execute();
+                    $logStmt->close();
+
+                    $_SESSION['success_message'] = "Wiadomość została wysłana do {$sentCount} członków zespołu!";
+
+                } catch (Exception $e) {
+                    $_SESSION['error_message'] = "Błąd podczas wysyłania wiadomości: " . $e->getMessage();
+                }
+            } else {
+                $_SESSION['error_message'] = "Tytuł i treść wiadomości nie mogą być puste!";
+            }
+
+            // Przekieruj aby uniknąć ponownego wysłania formularza
+            header("Location: project.php?id=" . $projectId);
+            exit();
+
+
+        }
+    }
+
+
+
 } catch (Exception $e) {
     die("Błąd: " . $e->getMessage());
 }
 ?>
+
 
 
 <!DOCTYPE html>
@@ -353,10 +443,7 @@ try {
 </head>
 
 <body>
-    <script>
-        const PROJECT_ID = <?= (int)$projectId ?>;
-        const USER_AVATAR_URL = '<?= addslashes($userAvatarUrl ?? "default.png") ?>';
-    </script>
+
 
     <header>
         <nav>
@@ -394,7 +481,8 @@ try {
                             <img src="<?php echo htmlspecialchars($project['thumbnail']); ?>"
                                 alt="<?php echo htmlspecialchars($project['name']); ?>">
                         <?php else: ?>
-                            <img src="../photos/project-sample.jpg" alt="<?php echo htmlspecialchars($project['name']); ?>">
+                            <img src="../photos/project-default.jpg"
+                                alt="<?php echo htmlspecialchars($project['name']); ?>">
                         <?php endif; ?>
                     </div>
                     <div class="hero-info">
@@ -441,7 +529,7 @@ try {
                         </div>
                         <div class="creator-card">
                             <div class="creator-avatar">
-                                <img src="<?php echo $userAvatarUrl; ?>"
+                                <img src="<?php echo $project['founder_avatar']; ?>"
                                     alt="<?php echo htmlspecialchars($project['founder_name']); ?>">
                             </div>
                             <div class="creator-info">
@@ -453,7 +541,7 @@ try {
                                     <span class="meta-item">👥 <?php echo count($teamMembers); ?> członków
                                         zespołu</span>
                                 </div>
-                                <a href="profil.php?id=<?php echo $project['founder_id']; ?>"
+                                <a href="profile.php?id=<?php echo $project['founder_id']; ?>"
                                     class="creator-link">Zobacz profil twórcy →</a>
                             </div>
                         </div>
@@ -540,7 +628,8 @@ try {
                                         <div class="task-main">
                                             <h3 class="task-title"><?php echo htmlspecialchars($task['name']); ?></h3>
                                             <?php if ($task['description']): ?>
-                                                <p class="task-description"><?php echo htmlspecialchars($task['description']); ?>
+                                                <p class="task-description">
+                                                    <?php echo htmlspecialchars($task['description']); ?>
                                                 </p>
                                             <?php endif; ?>
 
@@ -581,8 +670,17 @@ try {
                                                 <?php echo $taskStatusMap[$task['status']] ?? $task['status']; ?>
                                             </span>
 
-                                            <?php if ($isMember && $task['status'] !== 'done' && $task['status'] !== 'cancelled'): ?>
-                                                <div class="member-actions">
+                                            <div class="member-actions">
+                                                <!-- Szczegóły dla zakończonych zadań dla ownera/developera -->
+                                                <?php if ($task['status'] === 'done' && ($isOwner || $userProjectRole === 'developer')): ?>
+                                                    <a href="task_details.php?task_id=<?php echo $task['id']; ?>"
+                                                        class="btn-secondary btn-small">
+                                                        <span class="btn-icon">📄</span> Szczegóły
+                                                    </a>
+                                                <?php endif; ?>
+
+                                                <!-- Akcje dla zadań otwartych / w trakcie -->
+                                                <?php if ($task['status'] !== 'done' && $task['status'] !== 'cancelled'): ?>
                                                     <?php if (!$task['assigned_to'] || $task['assigned_to'] == $userId): ?>
                                                         <?php if ($task['assigned_to'] == $userId): ?>
                                                             <form method="POST" action="task_actions.php" class="task-action-form">
@@ -591,14 +689,6 @@ try {
                                                                 <input type="hidden" name="action" value="complete_task">
                                                                 <button type="submit" class="btn-success btn-small">
                                                                     <span class="btn-icon">✓</span> Wykonane
-                                                                </button>
-                                                            </form>
-                                                            <form method="POST" action="task_actions.php" class="task-action-form">
-                                                                <input type="hidden" name="task_id" value="<?php echo $task['id']; ?>">
-                                                                <input type="hidden" name="project_id" value="<?php echo $projectId; ?>">
-                                                                <input type="hidden" name="action" value="release_task">
-                                                                <button type="submit" class="btn-warning btn-small">
-                                                                    <span class="btn-icon">✏️</span> Szczegóły
                                                                 </button>
                                                             </form>
                                                         <?php else: ?>
@@ -612,9 +702,10 @@ try {
                                                             </form>
                                                         <?php endif; ?>
                                                     <?php endif; ?>
-                                                </div>
-                                            <?php endif; ?>
+                                                <?php endif; ?>
+                                            </div>
                                         </div>
+
                                     </div>
                                 <?php endforeach; ?>
                             </div>
@@ -640,6 +731,7 @@ try {
                             <?php endif; ?>
                         </section>
                     <?php endif; ?>
+
 
                     <!-- 👥 Zespół projektu -->
                     <section class="content-section team-section">
@@ -699,7 +791,7 @@ try {
                                 <?php foreach ($joinRequests as $req): ?>
                                     <div class="request-card">
                                         <div class="request-avatar">
-                                            <img src="<?php echo htmlspecialchars($req['avatar'] ?? '../photos/default-avatar.jpg'); ?>"
+                                            <img src="<?php echo htmlspecialchars($req['avatar'] ?? '../photos/avatars/default_avatar.png'); ?>"
                                                 alt="Avatar <?php echo htmlspecialchars($req['nick']); ?>">
                                         </div>
 
@@ -713,7 +805,8 @@ try {
                                             <div class="request-details">
                                                 <div class="detail-item">
                                                     <span class="detail-label">Motywacja:</span>
-                                                    <p class="detail-value"><?php echo htmlspecialchars($req['motivation']); ?></p>
+                                                    <p class="detail-value"><?php echo htmlspecialchars($req['motivation']); ?>
+                                                    </p>
                                                 </div>
 
                                                 <div class="detail-row">
@@ -757,19 +850,21 @@ try {
                                                     </button>
                                                 </form>
 
-                                                <form action="project_decline.php" method="POST" class="action-form">
-                                                    <input type="hidden" name="request_id" value="<?php echo $req['id']; ?>">
-                                                    <input type="hidden" name="project_id" value="<?php echo $projectId; ?>">
-                                                    <button type="submit" class="btn-danger" name="decline_request">
-                                                        <span class="btn-icon">✕</span>
-                                                        Odrzuć
-                                                    </button>
-                                                </form>
+                                                <!-- ZMIENIONY PRZYCISK ODRZUCANIA -->
+                                                <button type="button" class="btn-danger"
+                                                    onclick="openRejectionPrompt(<?php echo $req['id']; ?>, '<?php echo htmlspecialchars($req['nick']); ?>', <?php echo $projectId; ?>)">
+                                                    <span class="btn-icon">✕</span>
+                                                    Odrzuć
+                                                </button>
                                             <?php else: ?>
                                                 <div class="request-status-info">
                                                     <span class="status-message">
                                                         Zgłoszenie zostało
                                                         <?php echo $req['status'] === 'accepted' ? 'zaakceptowane' : 'odrzucone'; ?>
+                                                        <?php if ($req['status'] === 'rejected' && !empty($req['rejection_reason'])): ?>
+                                                            <br><small>Powód:
+                                                                <?php echo htmlspecialchars($req['rejection_reason']); ?></small>
+                                                        <?php endif; ?>
                                                     </span>
                                                 </div>
                                             <?php endif; ?>
@@ -800,7 +895,8 @@ try {
                                     <textarea id="commentInput" class="comment-input"
                                         placeholder="Podziel się swoją opinią lub zadaj pytanie..."></textarea>
                                     <div class="comment-actions">
-                                        <button id="btnAddComment" class="btn-primary btn-comment">Dodaj komentarz</button>
+                                        <button id="btnAddComment" class="btn-primary btn-comment">Dodaj
+                                            komentarz</button>
                                     </div>
                                 </div>
                             </div>
@@ -812,10 +908,10 @@ try {
 
                         <div class="comments-list">
                             <?php if (!empty($comments)): ?>
-                                <?php foreach ($comments as $comment): ?>
+                                <?php foreach (array_reverse($comments) as $comment): ?> <!-- 🔥 odwracamy kolejność -->
                                     <div class="comment-item">
                                         <div class="comment-avatar">
-                                            <img src="<?php echo $comment['avatar'] ?? 'default-avatar.jpg'; ?>"
+                                            <img src="<?php echo $comment['avatar'] ?? 'default_avatar.png'; ?>"
                                                 alt="<?php echo htmlspecialchars($comment['nick']); ?>">
                                         </div>
                                         <div class="comment-content">
@@ -832,21 +928,22 @@ try {
                                 </div>
                             <?php endif; ?>
                         </div>
+
                     </section>
 
                     <script>
-                        document.getElementById('btnAddComment')?.addEventListener('click', function(e) {
+                        document.getElementById('btnAddComment')?.addEventListener('click', function (e) {
                             e.preventDefault();
                             const comment = document.getElementById('commentInput').value.trim();
                             if (!comment) return alert('Komentarz nie może być pusty!');
 
                             fetch('add_comment.php', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/x-www-form-urlencoded'
-                                    },
-                                    body: 'project_id=<?php echo $projectId; ?>&comment=' + encodeURIComponent(comment)
-                                })
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded'
+                                },
+                                body: 'project_id=<?php echo $projectId; ?>&comment=' + encodeURIComponent(comment)
+                            })
                                 .then(res => res.json())
                                 .then(data => {
                                     if (data.success) {
@@ -891,9 +988,9 @@ try {
                                 foreach ($tags as $tag):
                                     $tag = trim($tag);
                                     if ($tag):
-                                ?>
+                                        ?>
                                         <span class="project-tag"><?php echo htmlspecialchars($tag); ?></span>
-                                <?php
+                                        <?php
                                     endif;
                                 endforeach;
                                 ?>
@@ -973,14 +1070,21 @@ try {
                                     zespołem</a>
                                 <a href="manage_tasks.php?project_id=<?php echo $projectId; ?>" class="tool-btn">✅ Zarządzaj
                                     zadaniami</a>
-
-                                <!-- DODAJ TEN LINK -->
                                 <a href="project_reports.php?project_id=<?php echo $projectId; ?>" class="tool-btn">📊
                                     Raporty projektu</a>
 
-                                <!-- Usuwanie projektu przez formularz POST -->
-                                <form method="POST" action="" style="display:inline;">
-                                    <input type="hidden" name="delete_project_id" value="<?php echo $projectId; ?>">
+                                <!-- DODAJ TĘ LINIĘ -->
+                                <button class="tool-btn" onclick="openMessageModal()">📨 Wyślij wiadomość do
+                                    zespołu</button>
+                                <button class="tool-btn" onclick="openMessageModalSelectMember()">📨 Wyślij wiadomość do
+                                    członka projektu</button>
+
+
+
+
+                                <form method="POST" class="message-form" onsubmit="handleMessageSubmit(event)">
+                                    <input type="hidden" name="send_team_message" value="1">
+
                                     <button type="submit" class="tool-btn danger"
                                         onclick="return confirm('Na pewno chcesz usunąć projekt?');">🗑️ Usuń
                                         projekt</button>
@@ -1013,7 +1117,7 @@ try {
                     <img src="../photos/website-logo.jpg" alt="Logo TeenCollab">
                     <div>
                         <h3>TeenCollab</h3>
-                        <p>Platforma dla młodych zmieniaczy świata</p>
+                        <p>Platforma dla kreatorów przyszłości</p>
                     </div>
                 </div>
                 <div class="footer-copyright">
@@ -1062,17 +1166,36 @@ try {
         </div>
     </div>
 
+    <?php if (isset($_SESSION['success_message'])): ?>
+        setTimeout(() => {
+        alert('<?php echo $_SESSION['success_message'];
+        unset($_SESSION['success_message']); ?>');
+        }, 100);
+    <?php endif; ?>
+
+    <?php if (isset($_SESSION['error_message'])): ?>
+        setTimeout(() => {
+        alert('Błąd: <?php echo $_SESSION['error_message'];
+        unset($_SESSION['error_message']); ?>');
+        }, 100);
+    <?php endif; ?>
     <script src="../scripts/project.js"></script>
     <script>
-        // Przekazanie danych do JavaScript
+        const USER_LOGGED_IN = <?= $isLoggedIn ? 'true' : 'false' ?>;
+
+
         const projectData = {
-            id: <?php echo $projectId; ?>,
-            name: "<?php echo addslashes($project['name']); ?>",
-            isOwner: <?php echo $isOwner ? 'true' : 'false'; ?>,
-            isMember: <?php echo $isMember ? 'true' : 'false'; ?>,
-            allowApplications: <?php echo $project['allow_applications'] ? 'true' : 'false'; ?>,
-            autoAccept: <?php echo $project['auto_accept'] ? 'true' : 'false'; ?>
+            id: <?= $projectId ?>,
+            name: <?= json_encode($project['name']) ?>,
+            isOwner: <?= $isOwner ? 'true' : 'false' ?>,
+            isMember: <?= $isMember ? 'true' : 'false' ?>,
+            allowApplications: <?= $project['allow_applications'] ? 'true' : 'false' ?>,
+            autoAccept: <?= $project['auto_accept'] ? 'true' : 'false' ?>,
+            members: <?= json_encode($members) ?>
         };
+
+        const PROJECT_ID = <?= (int) $projectId ?>;
+        const USER_AVATAR_URL = '<?= addslashes($userAvatarUrl ?? "default.png") ?>';
     </script>
 </body>
 

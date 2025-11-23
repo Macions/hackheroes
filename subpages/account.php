@@ -10,7 +10,7 @@ if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
 
 $userId = $_SESSION["user_id"]; // musi być liczba
 
-// Dane użytkownika
+
 $stmt = $conn->prepare("SELECT first_name, last_name, email, created_at, avatar, nick, phone, verification_status FROM users WHERE id = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
@@ -30,28 +30,28 @@ if ($result && $result->num_rows === 1) {
     exit();
 }
 
-// Liczba wszystkich projektów
+
 $stmt = $conn->prepare("SELECT COUNT(*) AS count FROM project_team WHERE user_id = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
 $result = $stmt->get_result();
 $amountOfProjects = $result->fetch_assoc()['count'] ?? 0;
 
-// Liczba własnych projektów (role = 'owner')
+
 $stmt = $conn->prepare("SELECT COUNT(*) AS count FROM project_team WHERE user_id = ? AND role = 'owner'");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
 $result = $stmt->get_result();
 $amountOfOwnProjects = $result->fetch_assoc()['count'] ?? 0;
 
-// Liczba odznak
+
 $stmt = $conn->prepare("SELECT COUNT(*) AS count FROM badges WHERE user_id = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
 $result = $stmt->get_result();
 $amountOfBadges = $result->fetch_assoc()['count'] ?? 0;
 
-// Liczba komentarzy
+
 $stmt = $conn->prepare("SELECT COUNT(*) AS count FROM comments WHERE user_id = ?");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
@@ -66,25 +66,25 @@ if ($amountOfBadges > 99) {
     $addedCommentsAmmount = '<span>' . $count . '</span>';
 }
 
-// Engagement (projekty + komentarze)
+
 $engagement = $amountOfProjects + $count; // tutaj dodajesz same liczby
 
 
-// Liczba logowań
+
 $stmt = $conn->prepare("SELECT COUNT(*) AS count FROM logs WHERE user_id = ? AND action = 'login'");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
 $result = $stmt->get_result();
 $loginCount = $result->fetch_assoc()['count'] ?? 0;
 
-// Ostatnia zmiana profilu
+
 $stmt = $conn->prepare("SELECT created_at FROM logs WHERE user_id = ? AND action = 'update' ORDER BY created_at DESC LIMIT 1");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
 $result = $stmt->get_result();
 $lastChange = $result->fetch_assoc()['created_at'] ?? 'Brak danych';
 
-// Ostatnie logowanie
+
 $stmt = $conn->prepare("SELECT created_at FROM logs WHERE user_id = ? AND action = 'login' ORDER BY created_at DESC LIMIT 1");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
@@ -100,7 +100,7 @@ if ($lastLogin) {
     $fullDate = '';
 }
 
-// Ostatnio edytowany projekt
+
 $stmt = $conn->prepare("SELECT details FROM logs WHERE user_id = ? AND action = 'project_edit' ORDER BY created_at DESC LIMIT 1");
 $stmt->bind_param("i", $userId);
 $stmt->execute();
@@ -109,7 +109,7 @@ $lastEditedProject = $result->fetch_assoc()['details'] ?? 'Brak';
 
 
 
-// Odznaki
+
 
 $badgesStmt = $conn->prepare("SELECT name, description, emoji FROM badges WHERE user_id = ? ORDER BY created_at DESC");
 $badgesStmt->bind_param("i", $userId);
@@ -356,7 +356,7 @@ $badgesStmt->close();
                             if ($myProjects->num_rows > 0) {
                                 while ($project = $myProjects->fetch_assoc()) {
                                     echo '<div class="project-item">
-                                                <a href = "https://teencollab.pl/project.php?id=' . htmlspecialchars($project['id']) . '">
+                                                <a href = "project.php?id=' . htmlspecialchars($project['id']) . '">
                                                 <h3>' . htmlspecialchars($project['name']) . '</h3></a>
                                                 <p>' . htmlspecialchars($project['short_description']) . '</p>
                                                 <span class="project-role">Rola: ' . htmlspecialchars($project['role']) . '</span>
@@ -565,7 +565,7 @@ $badgesStmt->close();
                     <img src="../photos/website-logo.jpg" alt="Logo TeenCollab">
                     <div>
                         <h3>TeenCollab</h3>
-                        <p>Platforma dla młodych zmieniaczy świata</p>
+                        <p>Platforma dla kreatorów przyszłości</p>
                     </div>
                 </div>
                 <div class="footer-copyright">

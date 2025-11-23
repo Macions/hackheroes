@@ -17,11 +17,11 @@ if (!isset($_SESSION["logged_in"])) {
                         </div>';
 }
 
-// Liczba zrealizowanych projektów
+
 $result = $conn->query("SELECT COUNT(*) AS total_projects FROM projects WHERE status = 'Zrealizowany'");
 $projectsCount = $result->fetch_assoc()['total_projects'] ?? 0;
 
-// Liczba aktywnych uczestników (userów)
+
 $result = $conn->query("SELECT COUNT(*) AS total_users FROM users");
 $usersCount = $result->fetch_assoc()['total_users'] ?? 0;
 
@@ -43,7 +43,7 @@ if ($interval->y >= 1) {
 
 
 
-// Liczba miast w Polsce (unikalne location z projects)
+
 $result = $conn->query("SELECT COUNT(DISTINCT location) AS citiesCount FROM projects WHERE country = 'PL'");
 $citiesCount = $result->fetch_assoc()['citiesCount'] ?? 0;
 
@@ -418,7 +418,7 @@ $countryCount = $result->fetch_assoc()['countryCount'] ?? 0;
                     <img src="../photos/website-logo.jpg" alt="Logo TeenCollab">
                     <div>
                         <h3>TeenCollab</h3>
-                        <p>Platforma dla młodych zmieniaczy świata</p>
+                        <p>Platforma dla kreatorów przyszłości</p>
                     </div>
                 </div>
                 <div class="footer-copyright">
@@ -429,7 +429,7 @@ $countryCount = $result->fetch_assoc()['countryCount'] ?? 0;
     </footer>
 
     <script>
-        // Burger menu
+
         const burgerMenu = document.getElementById('burger-menu');
         const navMenu = document.querySelector('.nav-menu');
 
@@ -438,7 +438,7 @@ $countryCount = $result->fetch_assoc()['countryCount'] ?? 0;
             navMenu.classList.toggle('active');
         });
 
-        // Animacje przy scrollowaniu
+
         const observerOptions = {
             threshold: 0.1,
             rootMargin: '0px 0px -50px 0px'
@@ -453,7 +453,7 @@ $countryCount = $result->fetch_assoc()['countryCount'] ?? 0;
             });
         }, observerOptions);
 
-        // Obserwuj elementy do animacji
+
         document.querySelectorAll('.goal-card, .timeline-item, .process-step, .achievement-card, .story-card').forEach(el => {
             el.style.opacity = '0';
             el.style.transform = 'translateY(30px)';
@@ -461,7 +461,7 @@ $countryCount = $result->fetch_assoc()['countryCount'] ?? 0;
             observer.observe(el);
         });
 
-        // Dodaj opóźnienia dla lepszego efektu
+
         document.querySelectorAll('.goal-card').forEach((card, index) => {
             card.style.transitionDelay = `${index * 0.1}s`;
         });

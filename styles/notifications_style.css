@@ -156,7 +156,7 @@ header {
 
 /* Notifications Styles */
 .notifications-container {
-	max-width: 800px;
+	max-width: 1000px;
 	margin: 0 auto;
 	padding: 3rem 1.5rem;
 }
@@ -265,6 +265,11 @@ header {
 	color: var(--text);
 	line-height: 1.5;
 	margin-bottom: 0.5rem;
+	white-space: normal;
+	overflow-wrap: anywhere; /* preferred: breaks long words/URLs */
+	word-wrap: break-word; /* fallback */
+	word-break: break-word; /* legacy support */
+	-ms-word-break: break-all; /* IE fallback */
 }
 
 .notification-time {

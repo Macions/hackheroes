@@ -5,18 +5,17 @@ include("global/nav_global.php");
 include("global/log_action.php");
 
 
-// Sprawdź czy użytkownik jest zalogowany
 if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
     header("Location: login.php");
     exit();
 }
 
 $user_id = $_SESSION['user_id'];
-$user_email = $_SESSION['email'] ?? '';
+$user_email = $_SESSION['user_email'] ?? $_SESSION['email'] ?? ''; // Ulepszone pobieranie emaila
 $error = '';
 $success = '';
 
-// Sprawdź, czy konto istnieje dłużej niż miesiąc
+
 try {
     $user_stmt = $conn->prepare("
         SELECT created_at 
@@ -27,12 +26,23 @@ try {
     $user_stmt->execute();
     $has_account_long_enough = $user_stmt->get_result()->num_rows > 0;
     $user_stmt->close();
+
+
+    logAction(
+        $conn,
+        $user_id,
+        $user_email,
+        "account_age_check",
+        "Konto istnieje dłużej niż miesiąc: " . ($has_account_long_enough ? 'TAK' : 'NIE')
+    );
+
 } catch (Exception $e) {
     $has_account_long_enough = false;
     error_log("Błąd przy sprawdzaniu wieku konta: " . $e->getMessage());
+    logAction($conn, $user_id, $user_email, "account_age_check_error", "Błąd: " . $e->getMessage());
 }
 
-// Sprawdź, czy użytkownik już dodał opinię o stronie (project_id IS NULL)
+
 $has_existing_review = false;
 if ($has_account_long_enough) {
     try {
@@ -44,22 +54,37 @@ if ($has_account_long_enough) {
         $review_stmt->execute();
         $has_existing_review = $review_stmt->get_result()->num_rows > 0;
         $review_stmt->close();
+
+
+        logAction(
+            $conn,
+            $user_id,
+            $user_email,
+            "existing_review_check",
+            "Użytkownik ma już opinię: " . ($has_existing_review ? 'TAK' : 'NIE')
+        );
+
     } catch (Exception $e) {
         error_log("Błąd przy sprawdzaniu istniejącej opinii: " . $e->getMessage());
+        logAction($conn, $user_id, $user_email, "existing_review_check_error", "Błąd: " . $e->getMessage());
     }
 }
 
-// Obsługa formularza
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $has_account_long_enough && !$has_existing_review) {
-    $rating = $_POST['rating'] ?? '';
+    $rating = (int) ($_POST['rating'] ?? 0);
     $comment = trim($_POST['comment'] ?? '');
 
-    if (empty($rating) || empty($comment)) {
-        $error = "Wszystkie pola są wymagane!";
-        logAction($conn, $user_id, $user_email, "review_attempt_failed", "Brak oceny lub komentarza");
+
+    if ($rating < 1 || $rating > 5) {
+        $error = "Ocena musi być w zakresie od 1 do 5 gwiazdek!";
+        logAction($conn, $user_id, $user_email, "review_validation_failed", "Nieprawidłowa ocena: $rating");
+    } elseif (empty($comment)) {
+        $error = "Komentarz jest wymagany!";
+        logAction($conn, $user_id, $user_email, "review_validation_failed", "Brak komentarza");
     } elseif (strlen($comment) < 10) {
         $error = "Komentarz musi mieć co najmniej 10 znaków!";
-        logAction($conn, $user_id, $user_email, "review_attempt_failed", "Komentarz za krótki");
+        logAction($conn, $user_id, $user_email, "review_validation_failed", "Komentarz za krótki: " . strlen($comment) . " znaków");
     } else {
         try {
             $insert_stmt = $conn->prepare("
@@ -69,23 +94,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $has_account_long_enough && !$has_e
             $insert_stmt->bind_param("iis", $user_id, $rating, $comment);
 
             if ($insert_stmt->execute()) {
+                $review_id = $insert_stmt->insert_id;
                 $success = "Twoja opinia o stronie została dodana pomyślnie! Dziękujemy za feedback!";
-                logAction($conn, $user_id, $user_email, "review_added", "Rating: $rating, Comment: $comment");
-                $_POST = [];
-                $has_existing_review = true;
+
+
+                logAction(
+                    $conn,
+                    $user_id,
+                    $user_email,
+                    "review_added_success",
+                    "ID opinii: $review_id, Ocena: $rating/5, Komentarz: " . substr($comment, 0, 50) . "..."
+                );
+
+                $_POST = []; // Wyczyść dane formularza
+                $has_existing_review = true; // Zaktualizuj status
+
             } else {
-                $error = "Wystąpił błąd podczas dodawania opinii.";
-                logAction($conn, $user_id, $user_email, "review_attempt_failed", "Błąd wykonania INSERT");
+                $error = "Wystąpił błąd podczas dodawania opinii. Spróbuj ponownie.";
+                logAction(
+                    $conn,
+                    $user_id,
+                    $user_email,
+                    "review_insert_failed",
+                    "Błąd wykonania INSERT: " . $insert_stmt->error
+                );
             }
             $insert_stmt->close();
+
         } catch (Exception $e) {
-            $error = "Wystąpił błąd: " . $e->getMessage();
-            logAction($conn, $user_id, $user_email, "review_attempt_failed", "Exception: " . $e->getMessage());
+            $error = "Wystąpił nieoczekiwany błąd. Spróbuj ponownie później.";
+            logAction(
+                $conn,
+                $user_id,
+                $user_email,
+                "review_exception",
+                "Wyjątek: " . $e->getMessage()
+            );
         }
     }
 }
-?>
 
+
+logAction(
+    $conn,
+    $user_id,
+    $user_email,
+    "review_page_accessed",
+    "Warunki: konto > 1 miesiąc: " . ($has_account_long_enough ? 'TAK' : 'NIE') .
+    ", ma opinię: " . ($has_existing_review ? 'TAK' : 'NIE')
+);
+?>
 
 <!DOCTYPE html>
 <html lang="pl">
@@ -471,7 +529,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $has_account_long_enough && !$has_e
                     <img src="../photos/website-logo.jpg" alt="Logo TeenCollab">
                     <div>
                         <h3>TeenCollab</h3>
-                        <p>Platforma dla młodych zmieniaczy świata</p>
+                        <p>Platforma dla kreatorów przyszłości</p>
                     </div>
                 </div>
                 <div class="footer-copyright">
@@ -482,19 +540,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $has_account_long_enough && !$has_e
     </footer>
 
     <script>
-        // Rating stars
+
         const stars = document.querySelectorAll('.star');
         const ratingInput = document.getElementById('rating');
         const commentTextarea = document.getElementById('comment');
         const charCount = document.getElementById('charCount');
 
-        // Rating stars functionality
+
         stars.forEach(star => {
             star.addEventListener('click', () => {
                 const rating = star.getAttribute('data-rating');
                 ratingInput.value = rating;
 
-                // Update stars appearance
+
                 stars.forEach((s, index) => {
                     if (index < rating) {
                         s.classList.add('active');
@@ -505,7 +563,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $has_account_long_enough && !$has_e
             });
         });
 
-        // Character count for comment
+
         commentTextarea.addEventListener('input', () => {
             const length = commentTextarea.value.length;
             charCount.textContent = `${length}/500 znaków`;
@@ -522,7 +580,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $has_account_long_enough && !$has_e
             }
         });
 
-        // Form validation
+
         document.getElementById('opinionForm')?.addEventListener('submit', (e) => {
             if (!ratingInput.value) {
                 e.preventDefault();
@@ -537,7 +595,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $has_account_long_enough && !$has_e
             }
         });
 
-        // Initialize existing values if any
+
         const existingRating = ratingInput.value;
         if (existingRating) {
             stars.forEach((star, index) => {
@@ -547,7 +605,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $has_account_long_enough && !$has_e
             });
         }
 
-        // Initialize character count
+
         if (commentTextarea) {
             charCount.textContent = `${commentTextarea.value.length}/500 znaków`;
         }

@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dsada - Zadanie | TeenCollab</title>
+    <link rel="shortcut icon" href="../photos/website-logo.jpg" type="image/x-icon">
+    <link rel="stylesheet" href="../styles/task_details_style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <header>
+        <nav>
+            <div class="nav-container">
+                <div class="nav-brand">
+                    <img src="../photos/website-logo.jpg" alt="Logo TeenCollab">
+                    <span>TeenCollab</span>
+                </div>
+                <ul class="nav-menu">
+                    <li><a href="../index.php">Strona główna</a></li>
+                    <li><a href="projects.php">Projekty</a></li>
+                    <li><a href="community.php">Społeczność</a></li>
+                    <li><a href="about.php">O projekcie</a></li>
+                    <li><a href="notifications.php">Powiadomienia</a></li>
+                    <li class="nav-user-dropdown">
+    <div class="user-menu-trigger">
+        <img src="../photos/default_avatar.png" alt="Avatar" class="user-avatar">
+        <span class="user-greeting">Cześć, Maciej!</span>
+        <span class="dropdown-arrow">▼</span>
+    </div>
+    <div class="user-dropdown-menu">
+        <a href="create_project.php" class="dropdown-item">
+            <span class="dropdown-icon">➕</span> Stwórz projekt
+        </a>
+        <a href="account.php" class="dropdown-item">
+            <span class="dropdown-icon">👤</span> Mój profil
+        </a>
+        <div class="dropdown-divider"></div>
+        <a href="logout.php" class="dropdown-item logout-item">
+            <span class="dropdown-icon">🚪</span> Wyloguj się
+        </a>
+    </div>
+</li>                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <main class="task-details-container">
+        <div class="container">
+            <div class="page-header">
+                <div class="header-main">
+                    <a href="project.php?id=3" class="btn-back">← Powrót do
+                        projektu</a>
+                    <h1>dsada</h1>
+                    <p class="project-name">Projekt: SmartHome</p>
+                </div>
+                <div class="header-status">
+                    <span class="task-status-badge status-in_progress">
+                        W trakcie                    </span>
+                    <span class="task-priority-badge priority-medium">
+                        Średni                    </span>
+                </div>
+            </div>
+
+            <div class="task-layout">
+                <!-- Lewa kolumna - główne informacje -->
+                <div class="main-content">
+                    <!-- Opis zadania -->
+                    <section class="content-section">
+                        <h2>📝 Opis zadania</h2>
+                        <div class="task-description">
+                            dasd                        </div>
+                    </section>
+
+                    <!-- Szczegóły zadania -->
+                    <section class="content-section">
+                        <h2>📋 Szczegóły</h2>
+                        <div class="details-grid">
+                            <div class="detail-item">
+                                <span class="detail-label">Status:</span>
+                                <span class="detail-value status-in_progress">
+                                    W trakcie                                </span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Priorytet:</span>
+                                <span class="detail-value priority-medium">
+                                    Średni                                </span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Termin:</span>
+                                <span
+                                    class="detail-value deadline ">
+                                    20.11.2025                                                                    </span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Szacowany czas:</span>
+                                <span class="detail-value">2.00 godzin</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Przypisane do:</span>
+                                <span class="detail-value">
+                                                                            <div class="user-info">
+                                            <img src="../photos/default_avatar.png"
+                                                alt="maciushehe12153"
+                                                class="user-avatar">
+                                            <span>maciushehe12153</span>
+                                        </div>
+                                                                    </span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Utworzył:</span>
+                                <span class="detail-value">
+                                    <div class="user-info">
+                                        <img src="../photos/avatars/avatar_9_1763741517.jpg"
+                                            alt="maciushehe123"
+                                            class="user-avatar">
+                                        <span>maciushehe123</span>
+                                    </div>
+                                </span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Data utworzenia:</span>
+                                <span class="detail-value">23.11.2025 20:48</span>
+                            </div>
+                                                    </div>
+                    </section>
+
+                    <!-- Akcje -->
+                    <section class="content-section">
+                        <h2>⚡ Akcje</h2>
+                        <div class="action-buttons">
+
+                            
+                            
+
+                            
+                                                                    <!-- Akcje dla przypisanego użytkownika -->
+                                    <div class="assigned-badge">
+                                        ✅ To zadanie jest przypisane do Ciebie
+                                    </div>
+
+                                    <!-- Wyświetl opis zadania pod akcjami -->
+                                    <div class="task-action-description">
+                                        <h3>Instrukcje:</h3>
+                                        <p>dasd</p>
+                                    </div>
+
+                                    <!-- Formularz dodawania pliku -->
+                                    <form action="task_actions.php" method="POST" enctype="multipart/form-data"
+                                        class="action-form">
+                                        <input type="hidden" name="task_id" value="7">
+                                        <input type="hidden" name="project_id" value="3">
+                                        <input type="hidden" name="action" value="upload_file"> <!-- <--- dodaj -->
+                                        <input type="file" name="attachment" required>
+                                        <button type="submit" class="btn-secondary">📎 Dodaj plik</button>
+                                    </form>
+
+
+                                    <!-- Przyciski zmiany statusu -->
+                                                                            <form method="POST" action="task_actions.php" class="action-form">
+                                            <input type="hidden" name="task_id" value="7">
+                                            <input type="hidden" name="project_id" value="3">
+                                            <input type="hidden" name="action" value="complete_task">
+                                            <button type="submit" class="btn-success"
+                                                onclick="return confirm('Czy na pewno chcesz oznaczyć to zadanie jako wykonane?')">
+                                                ✅ Oznacz jako wykonane
+                                            </button>
+                                        </form>
+                                                                    
+                            
+                            <!-- Link do edycji dla właściciela projektu -->
+                            
+                        </div>
+                    </section>
+
+                </div>
+                <!-- Notatki do zadania -->
+                
+                                    <section class="content-section">
+                        <h2>📝 Notatki</h2>
+                        <div class="notes-list">
+                                                            <div class="note-item">
+                                    <div class="note-header">
+                                        <div class="note-user">
+                                            <img src="../photos/default_avatar.png"
+                                                alt="maciushehe12153" class="user-avatar">
+                                            <span class="user-name">maciushehe12153</span>
+                                        </div>
+                                        <span class="note-date">23.11.2025 21:17</span>
+                                    </div>
+                                    <div class="note-content">
+                                        dsasa                                    </div>
+                                </div>
+                                                            <div class="note-item">
+                                    <div class="note-header">
+                                        <div class="note-user">
+                                            <img src="../photos/default_avatar.png"
+                                                alt="maciushehe12153" class="user-avatar">
+                                            <span class="user-name">maciushehe12153</span>
+                                        </div>
+                                        <span class="note-date">23.11.2025 21:17</span>
+                                    </div>
+                                    <div class="note-content">
+                                        dsadas                                    </div>
+                                </div>
+                                                            <div class="note-item">
+                                    <div class="note-header">
+                                        <div class="note-user">
+                                            <img src="../photos/default_avatar.png"
+                                                alt="maciushehe12153" class="user-avatar">
+                                            <span class="user-name">maciushehe12153</span>
+                                        </div>
+                                        <span class="note-date">23.11.2025 21:16</span>
+                                    </div>
+                                    <div class="note-content">
+                                        dsadsad                                    </div>
+                                </div>
+                                                            <div class="note-item">
+                                    <div class="note-header">
+                                        <div class="note-user">
+                                            <img src="../photos/default_avatar.png"
+                                                alt="maciushehe12153" class="user-avatar">
+                                            <span class="user-name">maciushehe12153</span>
+                                        </div>
+                                        <span class="note-date">23.11.2025 21:16</span>
+                                    </div>
+                                    <div class="note-content">
+                                        dsdas                                    </div>
+                                </div>
+                                                    </div>
+                    </section>
+                
+                <!-- Załączniki do zadania -->
+                
+                                    <section class="content-section">
+                        <h2>📎 Załączniki</h2>
+                        <div class="attachments-list">
+                                                                                            <div class="attachment-item">
+                                    <div class="attachment-icon">
+                                        🖼️                                    </div>
+                                    <div class="attachment-info">
+                                        <div class="attachment-name">szescian_prostopadloscian.jpg</div>
+                                        <div class="attachment-meta">
+                                            <span>Dodane przez: maciushehe12153</span>
+                                            <span>Rozmiar: 30.78 KB</span>
+                                            <span>Data: 23.11.2025 21:26</span>
+                                        </div>
+                                    </div>
+                                    <a href=""
+                                        download="szescian_prostopadloscian.jpg" class="btn-download">📥
+                                        Pobierz</a>
+                                </div>
+                                                                                            <div class="attachment-item">
+                                    <div class="attachment-icon">
+                                        🖼️                                    </div>
+                                    <div class="attachment-info">
+                                        <div class="attachment-name">szescian_prostopadloscian1.png</div>
+                                        <div class="attachment-meta">
+                                            <span>Dodane przez: maciushehe12153</span>
+                                            <span>Rozmiar: 20.44 KB</span>
+                                            <span>Data: 23.11.2025 21:26</span>
+                                        </div>
+                                    </div>
+                                    <a href=""
+                                        download="szescian_prostopadloscian1.png" class="btn-download">📥
+                                        Pobierz</a>
+                                </div>
+                                                                                            <div class="attachment-item">
+                                    <div class="attachment-icon">
+                                        📄                                    </div>
+                                    <div class="attachment-info">
+                                        <div class="attachment-name"></div>
+                                        <div class="attachment-meta">
+                                            <span>Dodane przez: maciushehe12153</span>
+                                            <span>Rozmiar: 30.78 KB</span>
+                                            <span>Data: 23.11.2025 21:21</span>
+                                        </div>
+                                    </div>
+                                    <a href="szescian_prostopadloscian.jpg"
+                                        download="" class="btn-download">📥
+                                        Pobierz</a>
+                                </div>
+                                                    </div>
+                    </section>
+                
+
+
+                
+                <!-- Prawa kolumna - informacje dodatkowe -->
+                <div class="sidebar">
+                    <!-- Postęp -->
+                    <section class="sidebar-section">
+                        <h3>📊 Postęp</h3>
+                        <div class="progress-info">
+                            <div class="progress-item">
+                                <span class="progress-label">Status zadania</span>
+                                <div class="progress-bar">
+                                                                        <div class="progress-fill" style="width: 50%"></div>
+                                </div>
+                                <span class="progress-text">50%</span>
+                            </div>
+
+                                                    </div>
+                    </section>
+
+                    <!-- Szybkie informacje -->
+                    <section class="sidebar-section">
+                        <h3>ℹ️ Informacje</h3>
+                        <div class="quick-info">
+                            <div class="info-item">
+                                <span class="info-icon">⏱️</span>
+                                <div class="info-content">
+                                    <strong>2.00h</strong>
+                                    <span>Szacowany czas</span>
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-icon">📅</span>
+                                <div class="info-content">
+                                    <strong>20.11.2025</strong>
+                                    <span>Termin wykonania</span>
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-icon">👤</span>
+                                <div class="info-content">
+                                    <strong>maciushehe12153</strong>
+                                    <span>Odpowiedzialna osoba</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Notatki -->
+                                            <section class="sidebar-section">
+                            <h3>📝 Notatki</h3>
+                            <form method="POST" action="task_actions.php" class="notes-form">
+                                <input type="hidden" name="task_id" value="7">
+                                <input type="hidden" name="project_id" value="3">
+                                <textarea name="notes" placeholder="Dodaj notatkę do zadania..." rows="4"></textarea>
+                                <button type="submit" name="add_notes" class="btn-secondary">Dodaj notatkę</button>
+                            </form>
+                        </section>
+                                    </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <img src="../photos/website-logo.jpg" alt="Logo TeenCollab">
+                    <div>
+                        <h3>TeenCollab</h3>
+                        <p>Platforma dla kreatorów przyszłości</p>
+                    </div>
+                </div>
+                <div class="footer-copyright">
+                    <p>©2025 TeenCollab | Zadanie wyświetlone: 23.11.2025 21:27</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const forms = document.querySelectorAll('.action-form');
+            forms.forEach(form => {
+                form.addEventListener('submit', function (e) {
+                    const actionInput = this.querySelector('input[name="action"]');
+                    const actionName = actionInput ? actionInput.value : 'akcję';
+                    if (!confirm(`Czy na pewno chcesz wykonać akcję: "${actionName}"?`)) {
+                        e.preventDefault();
+                    }
+                });
+            });
+        });
+
+
+    </script>
+</body>
+
+</html>

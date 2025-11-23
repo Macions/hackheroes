@@ -2,9 +2,8 @@
 session_start();
 include("global/connection.php");
 include("global/nav_global.php");
+include("global/log_action.php"); // Dodaj include pliku z funkcją logowania
 
-
-// Sprawdź czy użytkownik jest zalogowany
 if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
     header("Location: join.php");
     exit();
@@ -13,23 +12,48 @@ if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
 $userId = $_SESSION["user_id"];
 $userEmail = $_SESSION["user_email"] ?? '';
 
-// Oznacz wszystkie jako przeczytane
+// Logowanie wejścia na stronę powiadomień
+logAction($conn, $userId, $userEmail, "notifications_page_accessed", "");
+
 if (isset($_POST['mark_all_read'])) {
     $stmt = $conn->prepare("UPDATE notifications SET is_read = TRUE WHERE user_id = ?");
     $stmt->bind_param("i", $userId);
     $stmt->execute();
     $stmt->close();
+
+    // Logowanie oznaczenia wszystkich jako przeczytane
+    logAction($conn, $userId, $userEmail, "notifications_marked_all_read", "");
+
     header("Location: notifications.php");
     exit();
 }
 
-// Oznacz jedno jako przeczytane
 if (isset($_GET['mark_read'])) {
     $notificationId = $_GET['mark_read'];
+
+    // Pobierz szczegóły powiadomienia przed aktualizacją dla logu
+    $stmt = $conn->prepare("SELECT title, message FROM notifications WHERE id = ? AND user_id = ?");
+    $stmt->bind_param("ii", $notificationId, $userId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $notification = $result->fetch_assoc();
+    $stmt->close();
+
     $stmt = $conn->prepare("UPDATE notifications SET is_read = TRUE WHERE id = ? AND user_id = ?");
     $stmt->bind_param("ii", $notificationId, $userId);
     $stmt->execute();
     $stmt->close();
+
+    // Logowanie oznaczenia pojedynczego powiadomienia jako przeczytane
+    if ($notification) {
+        logAction(
+            $conn,
+            $userId,
+            $userEmail,
+            "notification_marked_read",
+            "ID powiadomienia: $notificationId, Tytuł: {$notification['title']}"
+        );
+    }
 
     if (isset($_GET['redirect'])) {
         header("Location: " . $_GET['redirect']);
@@ -40,7 +64,6 @@ if (isset($_GET['mark_read'])) {
     }
 }
 
-// Pobierz powiadomienia
 $notifications = [];
 $stmt = $conn->prepare("
     SELECT * FROM notifications 
@@ -56,7 +79,6 @@ while ($row = $result->fetch_assoc()) {
 }
 $stmt->close();
 
-// Pobierz liczbę nieprzeczytanych
 $unreadCount = 0;
 $countStmt = $conn->prepare("SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = FALSE");
 $countStmt->bind_param("i", $userId);
@@ -64,7 +86,6 @@ $countStmt->execute();
 $unreadCount = $countStmt->get_result()->fetch_assoc()['count'];
 $countStmt->close();
 
-// Funkcja do wyświetlania czasu w formie "x temu"
 function time_elapsed_string($datetime, $full = false)
 {
     $now = new DateTime;
@@ -98,7 +119,6 @@ function time_elapsed_string($datetime, $full = false)
     return $string ? implode(', ', $string) . ' temu' : 'przed chwilą';
 }
 
-// Funkcje wysyłania powiadomień
 function sendNotification($conn, $userId, $title, $message, $type = 'info', $relatedUrl = null)
 {
     $stmt = $conn->prepare("
@@ -108,6 +128,19 @@ function sendNotification($conn, $userId, $title, $message, $type = 'info', $rel
     $stmt->bind_param("issss", $userId, $title, $message, $type, $relatedUrl);
     $result = $stmt->execute();
     $stmt->close();
+
+    // Logowanie wysłania powiadomienia
+    if ($result) {
+        $notificationId = $conn->insert_id;
+        logAction(
+            $conn,
+            $userId,
+            '',
+            "notification_sent",
+            "ID powiadomienia: $notificationId, Tytuł: $title, Typ: $type"
+        );
+    }
+
     return $result;
 }
 
@@ -255,7 +288,7 @@ function sendProjectInvitation($conn, $userId, $projectId, $projectName, $invite
                 <img src="../photos/website-logo.jpg" alt="Logo TeenCollab">
                 <div>
                     <h3>TeenCollab</h3>
-                    <p>Platforma dla młodych zmieniaczy świata</p>
+                    <p>Platforma dla kreatorów przyszłości</p>
                 </div>
             </div>
             <div class="footer-copyright">

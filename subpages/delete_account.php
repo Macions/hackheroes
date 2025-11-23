@@ -1,6 +1,7 @@
 <?php
 session_start();
 include("global/connection.php");
+include("global/log_action.php");
 
 if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
     header("Location: join.php");
@@ -8,53 +9,40 @@ if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
 }
 
 $userId = $_SESSION["user_id"];
+$userEmail = $_SESSION["user_email"] ?? '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_delete'])) {
-    
-    // Rozpocznij transakcję
+
+    // 2. Logowanie faktycznego usunięcia (OSOBNY COMMIT - przed transakcją główną)
+    logAction($conn, $userId, $userEmail, "account_deleted", "Usunięto konto o ID $userId");
+
+    // Ręczny commit dla logów
+    $conn->commit();
+
+    // 3. Teraz główna transakcja usuwania
     $conn->begin_transaction();
-    
+
     try {
-        // 1. Usuń powiązane dane z innych tabel (jeśli istnieją)
-        
-        // Usuń odznaki użytkownika
-        $stmt = $conn->prepare("DELETE FROM badges WHERE user_id = ?");
-        $stmt->bind_param("i", $userId);
-        $stmt->execute();
-        $stmt->close();
-        
-        // Usuń logi użytkownika
-        $stmt = $conn->prepare("DELETE FROM logs WHERE user_id = ?");
-        $stmt->bind_param("i", $userId);
-        $stmt->execute();
-        $stmt->close();
-        
-        // Usuń z project_team (jeśli tabela istnieje)
-        $stmt = $conn->prepare("DELETE FROM project_team WHERE user_id = ?");
-        $stmt->bind_param("i", $userId);
-        $stmt->execute();
-        $stmt->close();
-        
-        // Usuń komentarze (jeśli tabela istnieje)
-        $stmt = $conn->prepare("DELETE FROM comments WHERE user_id = ?");
-        $stmt->bind_param("i", $userId);
-        $stmt->execute();
-        $stmt->close();
-        
-        // 2. Usuń główny rekord użytkownika
+        // Usuwanie danych powiązanych z użytkownikiem
+        $tablesToDelete = ['badges', 'project_team', 'comments'];
+        foreach ($tablesToDelete as $table) {
+            $stmt = $conn->prepare("DELETE FROM $table WHERE user_id = ?");
+            $stmt->bind_param("i", $userId);
+            $stmt->execute();
+            $stmt->close();
+        }
+
+        // Usuwanie samego użytkownika (to uruchomi CASCADE w logs)
         $stmt = $conn->prepare("DELETE FROM users WHERE id = ?");
         $stmt->bind_param("i", $userId);
         $stmt->execute();
-        
+
         if ($stmt->affected_rows > 0) {
-            // Zatwierdź transakcję
             $conn->commit();
-            
-            // Zakończ sesję
+
             session_unset();
             session_destroy();
-            
-            // Zwróć sukces
+
             echo json_encode([
                 'success' => true,
                 'message' => 'Konto zostało pomyślnie usunięte'
@@ -62,19 +50,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_delete'])) {
         } else {
             throw new Exception("Nie udało się usunąć konta");
         }
-        
+
         $stmt->close();
-        
+
     } catch (Exception $e) {
-        // Cofnij transakcję w przypadku błędu
         $conn->rollback();
-        
+
         echo json_encode([
             'success' => false,
             'message' => $e->getMessage()
         ]);
     }
-    
+
 } else {
     echo json_encode([
         'success' => false,

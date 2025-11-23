@@ -10,7 +10,7 @@ $benefits = 'Co zyskujesz dołączając do nas';
 if (isset($_SESSION['user_email'])) {
     $email = $_SESSION['user_email'];
 
-    // Przygotowanie zapytania
+
     $stmt = $conn->prepare("SELECT first_name, avatar FROM users WHERE email = ?");
     if ($stmt === false) {
         die("Błąd przygotowania zapytania: " . $conn->error);
@@ -24,14 +24,14 @@ if (isset($_SESSION['user_email'])) {
 }
 
 
-// Funkcja logowania akcji - POPRAWIONA
+
 function logAction($conn, $userId, $email, $action)
 {
-    // POPRAWIONE: Bezpieczne sprawdzenie istnienia tabeli
+
     try {
         $tableCheck = $conn->query("SELECT 1 FROM logs LIMIT 1");
         if ($tableCheck === false) {
-            // Tabela nie istnieje, pomiś logowanie
+
             return;
         }
         $tableCheck->close();
@@ -42,19 +42,19 @@ function logAction($conn, $userId, $email, $action)
     $ip = $_SERVER['REMOTE_ADDR'] ?? '';
     $agent = $_SERVER['HTTP_USER_AGENT'] ?? '';
 
-    // POPRAWIONE: Dostosowane do struktury tabeli logs
+
     $stmt = $conn->prepare("
         INSERT INTO logs (user_id, email, action, details, ip_address, user_agent, created_at)
         VALUES (?, ?, ?, '', ?, ?, NOW())
     ");
 
-    // Sprawdź czy prepare się powiodło
+
     if ($stmt === false) {
         error_log("Błąd przygotowania zapytania: " . $conn->error);
         return;
     }
 
-    // POPRAWIONE: 5 parametrów dla 5 placeholderów
+
     $stmt->bind_param("issss", $userId, $email, $action, $ip, $agent);
     if (!$stmt->execute()) {
         error_log("Błąd wykonania zapytania: " . $stmt->error);
@@ -69,7 +69,7 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
 
     $email = $_SESSION['user_email'];
 
-    // POPRAWIONE: Używamy first_name i last_name
+
     $stmt = $conn->prepare("SELECT id, first_name, last_name FROM users WHERE email = ?");
     if ($stmt === false) {
         die("Błąd przygotowania zapytania: " . $conn->error);
@@ -81,7 +81,7 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
     $stmt->fetch();
     $stmt->close();
 
-    // Użyj first_name z bazy danych
+
     $firstName = $dbFirstName ?: "Użytkowniku";
     $benefits = "Co u nas zyskujesz?";
 
@@ -99,27 +99,32 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
         $firstName = trim($_POST['firstName'] ?? '');
         $lastName = trim($_POST['lastName'] ?? '');
         $nick = trim($_POST['nick'] ?? '');
-        $phoneNumber = trim($_POST['phone'] ?? ''); // Tutaj jest $phoneNumber
+        $phone = trim($_POST['phone'] ?? '');
         $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
-        $age = $_POST['age'] ?? '';
-        $school = $_POST['school'] ?? '';
+        $confirmPassword = $_POST['confirmPassword'] ?? '';
+        $age = trim($_POST['age'] ?? '');
+        $school = trim($_POST['school'] ?? '');
         $interests = $_POST['interests'] ?? '';
-        $experience = $_POST['experience'] ?? '';
-        $goals = $_POST['goals'] ?? '';
+        $experience = trim($_POST['experience'] ?? '');
+        $goals = trim($_POST['goals'] ?? '');
         $acceptedTerms = isset($_POST['terms']) ? 1 : 0;
         $acceptedPrivacy = isset($_POST['privacy']) ? 1 : 0;
         $newsletter = isset($_POST['newsletter']) ? 1 : 0;
 
-        if (empty($firstName) || empty($nick) || empty($lastName) || empty($email) || empty($password) || empty($goals)) {
-            echo "<script>alert('Uzupełnij wymagane pola!');</script>";
+        // Walidacja pól wymaganych
+        if (empty($firstName) || empty($lastName) || empty($nick) || empty($email) || empty($password) || empty($confirmPassword) || empty($goals)) {
+            echo "<script>alert('Wypełnij wszystkie wymagane pola!');</script>";
+        } elseif (strlen($password) < 8) {
+            echo "<script>alert('Hasło musi mieć co najmniej 8 znaków!');</script>";
+        } elseif ($password !== $confirmPassword) {
+            echo "<script>alert('Hasła nie są identyczne!');</script>";
+        } elseif (!$acceptedTerms || !$acceptedPrivacy) {
+            echo "<script>alert('Musisz zaakceptować regulamin i politykę prywatności!');</script>";
         } else {
 
+            // Sprawdź czy email już istnieje
             $check = $conn->prepare("SELECT id FROM users WHERE email=?");
-            if ($check === false) {
-                die("Błąd przygotowania zapytania: " . $conn->error);
-            }
-
             $check->bind_param("s", $email);
             $check->execute();
             $check->store_result();
@@ -127,51 +132,68 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
             if ($check->num_rows > 0) {
                 echo "<script>window.emailExistsFlag = true;</script>";
             } else {
+                // Sprawdź czy nick już istnieje
+                $checkNick = $conn->prepare("SELECT id FROM users WHERE nick=?");
+                $checkNick->bind_param("s", $nick);
+                $checkNick->execute();
+                $checkNick->store_result();
 
-                $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
-
-                // POPRAWIONE: Używamy first_name i last_name zamiast full_name
-                $stmt = $conn->prepare("
-                INSERT INTO users 
-                (first_name, last_name, nick, email, phone, password_hash, age_class, school, interests, experience, goals, accepted_terms, accepted_privacy, newsletter, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-            ");
-
-                if ($stmt === false) {
-                    die("Błąd przygotowania zapytania: " . $conn->error);
-                }
-
-                // POPRAWIONE: Zmieniono $phone na $phoneNumber - 14 parametrów dla 14 wartości
-                $stmt->bind_param(
-                    "ssssssssssiiii",
-                    $firstName,        // first_name
-                    $lastName,         // last_name
-                    $nick,             // nick
-                    $email,            // email
-                    $phoneNumber,      // phone - POPRAWIONE: było $phone, ma być $phoneNumber
-                    $hashedPassword,   // password_hash
-                    $age,              // age_class
-                    $school,           // school
-                    $interests,        // interests
-                    $experience,       // experience
-                    $goals,            // goals
-                    $acceptedTerms,    // accepted_terms
-                    $acceptedPrivacy,  // accepted_privacy
-                    $newsletter        // newsletter
-                );
-
-                if ($stmt->execute()) {
-                    $newUserId = $stmt->insert_id;
-                    logAction($conn, $newUserId, $email, 'registration');
-
-                    echo "<script>alert('Rejestracja udana! Możesz się zalogować.');</script>";
+                if ($checkNick->num_rows > 0) {
+                    echo "<script>alert('Ten nick jest już zajęty! Wybierz inny.');</script>";
                 } else {
-                    echo "Błąd SQL: " . $stmt->error;
+                    $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
+
+                    // INSERT uwzględniający wszystkie pola i domyślne wartości
+                    $stmt = $conn->prepare("
+                  INSERT INTO users 
+(first_name, last_name, nick, email, phone, password_hash, age_class, school, interests, experience, goals, accepted_terms, accepted_privacy, newsletter, verification_status, new_tasks_email, new_comments_email, system_email, default_role, engagement_level, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1, 1, 1, 'user', 0, NOW())
+
+                ");
+                    $stmt->bind_param(
+                        "ssssssssssssss", // 14 liter 's' odpowiadających 14 zmiennym
+                        $firstName,
+                        $lastName,
+                        $nick,
+                        $email,
+                        $phone,
+                        $hashedPassword,
+                        $age,
+                        $school,
+                        $interests,
+                        $experience,
+                        $goals,
+                        $acceptedTerms,
+                        $acceptedPrivacy,
+                        $newsletter
+                    );
+
+
+
+
+                    if ($stmt->execute()) {
+                        $newUserId = $stmt->insert_id;
+
+                        logAction(
+                            $conn,
+                            $newUserId,
+                            $email,
+                            "user_registered",
+                            "Nick: $nick, Wiek: $age, Zainteresowania: $interests"
+                        );
+
+                        echo "<script>
+                        alert('Rejestracja udana! Możesz się zalogować.');
+                        setTimeout(function() { showLogin(); }, 1000);
+                    </script>";
+                    } else {
+                        echo "<script>alert('Błąd podczas rejestracji: " . addslashes($stmt->error) . "');</script>";
+                    }
+
+                    $stmt->close();
                 }
-
-                $stmt->close();
+                $checkNick->close();
             }
-
             $check->close();
         }
     }
@@ -185,7 +207,7 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
         $password = $_POST['loginPassword'] ?? '';
 
         if ($email && $password) {
-            // POPRAWIONE: Używamy first_name i last_name
+
             $stmt = $conn->prepare("SELECT id, password_hash, first_name, last_name FROM users WHERE email=?");
             if ($stmt === false) {
                 die("Błąd przygotowania zapytania: " . $conn->error);
@@ -194,7 +216,7 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
             $stmt->bind_param("s", $email);
             $stmt->execute();
             $stmt->store_result();
-            // POPRAWIONE: Cztery zmienne dla czterech kolumn
+
             $stmt->bind_result($userId, $hashedPassword, $dbFirstName, $dbLastName);
 
             if ($stmt->num_rows === 1) {
@@ -450,13 +472,13 @@ $conn->close();
                         </div>
 
                         <div class="form-group">
-                            <label for="age">Wiek / Klasa</label>
-                            <input type="text" id="age" name="age" placeholder="np. 16 lat / 2 klasa technikum">
+                            <label for="age">Wiek</label>
+                            <input type="text" id="age" name="age" placeholder="np. 16">
                         </div>
 
                         <div class="form-group">
-                            <label for="school">Szkoła</label>
-                            <input type="text" id="school" name="school" placeholder="Nazwa Twojej szkoły">
+                            <label for="school">Szkoła i klasa</label>
+                            <input type="text" id="school" name="school" placeholder="Nazwa Twojej szkoły oraz klasa">
                         </div>
 
                         <div class="form-group">
@@ -674,7 +696,7 @@ $conn->close();
                     <img src="../photos/website-logo.jpg" alt="Logo TeenCollab">
                     <div>
                         <h3>TeenCollab</h3>
-                        <p>Platforma dla młodych zmieniaczy świata</p>
+                        <p>Platforma dla kreatorów przyszłości</p>
                     </div>
                 </div>
                 <div class="footer-copyright">
@@ -693,12 +715,12 @@ $conn->close();
 
         let nickTimeout = null;
 
-        nickInput.addEventListener('input', function() {
+        nickInput.addEventListener('input', function () {
             const nick = this.value.trim();
 
             if (nickTimeout) clearTimeout(nickTimeout);
 
-            // Małe opóźnienie żeby nie spamować bazy
+
             nickTimeout = setTimeout(() => {
                 if (nick.length < 3) {
                     nickFeedback.textContent = 'Nick za krótki';
@@ -725,7 +747,7 @@ $conn->close();
             }, 500);
         });
 
-        // Funkcja wyświetlająca alert o istnieniu emaila
+
         function emailExist() {
             showLogin();
             let emailAlert = document.querySelector('.email_exist');
@@ -742,7 +764,7 @@ $conn->close();
             authChoice.style.display = 'none';
         }
 
-        // Po załadowaniu strony sprawdzamy flagę
+
         window.addEventListener('DOMContentLoaded', () => {
             if (window.emailExistsFlag) {
                 emailExist();
@@ -755,7 +777,7 @@ $conn->close();
             }
         });
 
-        // Funkcje przełączania między formularzami
+
         function showRegister() {
             document.querySelector('.auth-choice').style.display = 'none';
             document.querySelector('.register-form').style.display = 'block';
@@ -786,7 +808,7 @@ $conn->close();
             });
         }
 
-        // Burger menu
+
         const burgerMenu = document.getElementById('burger-menu');
         const navMenu = document.querySelector('.nav-menu');
 
@@ -795,18 +817,18 @@ $conn->close();
             navMenu.classList.toggle('active');
         });
 
-        // Event listeners dla przycisków wyboru
+
         document.getElementById('registerChoice').addEventListener('click', showRegister);
         document.getElementById('loginChoice').addEventListener('click', showLogin);
 
-        // Obsługa formularza rejestracji
+
         const joinForm = document.getElementById('joinForm');
 
-        joinForm.addEventListener('submit', function(e) {
+        joinForm.addEventListener('submit', function (e) {
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
 
-            // Walidacja hasła
+
             if (password.length < 8) {
                 e.preventDefault();
                 alert('Hasło musi mieć minimum 8 znaków!');
@@ -819,26 +841,26 @@ $conn->close();
                 return;
             }
 
-            // Formularz może wysłać się normalnie do PHP
+
         });
 
-        // Obsługa formularza logowania
+
         const loginForm = document.getElementById('loginFormData');
-        loginForm.addEventListener('submit', function(e) {
-            // e.preventDefault();
+        loginForm.addEventListener('submit', function (e) {
+
 
             const formData = new FormData(this);
             const formObject = Object.fromEntries(formData);
 
             console.log('Formularz logowania wysłany:', formObject);
-            // alert('Zalogowano pomyślnie! Przenoszenie do panelu użytkownika...');
-            // Tutaj można dodać przekierowanie do dashboardu
+
+
         });
 
-        // Płynne przewijanie do formularza
+
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function(e) {
-                // e.preventDefault();
+            anchor.addEventListener('click', function (e) {
+
                 const target = document.querySelector(this.getAttribute('href'));
                 if (target) {
                     target.scrollIntoView({
@@ -849,7 +871,7 @@ $conn->close();
             });
         });
 
-        // Animacje przy scrollowaniu
+
         const observerOptions = {
             threshold: 0.1,
             rootMargin: '0px 0px -50px 0px'
@@ -864,7 +886,7 @@ $conn->close();
             });
         }, observerOptions);
 
-        // Obserwuj elementy do animacji
+
         document.querySelectorAll('.benefit-card, .info-card, .choice-card').forEach(el => {
             el.style.opacity = '0';
             el.style.transform = 'translateY(30px)';
@@ -872,7 +894,7 @@ $conn->close();
             observer.observe(el);
         });
 
-        // Dodaj opóźnienia dla lepszego efektu
+
         document.querySelectorAll('.benefit-card').forEach((card, index) => {
             card.style.transitionDelay = `${index * 0.1}s`;
         });

@@ -1,8 +1,9 @@
 <?php
 session_start();
 include("global/connection.php");
+include("global/log_action.php"); // Funkcja logowania
 
-// Sprawdź czy użytkownik jest zalogowany
+// Sprawdzenie zalogowania
 if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
     header("Location: join.php");
     exit();
@@ -11,131 +12,268 @@ if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
 $userId = $_SESSION["user_id"];
 $userEmail = $_SESSION["user_email"] ?? '';
 
-// Pobierz ID projektu z URL
-$projectId = $_GET['id'] ?? null;
-
+$projectId = isset($_GET['id']) ? (int) $_GET['id'] : null;
 if (!$projectId) {
     header("Location: projects.php");
     exit();
 }
 
-// Pobierz dane projektu
 try {
-    $sql = "SELECT * FROM projects WHERE id = ? AND founder_id = ?";
-    $stmt = $conn->prepare($sql);
-
-    if ($stmt === false) {
+    // Pobranie projektu
+    $stmt = $conn->prepare("SELECT * FROM projects WHERE id = ? AND founder_id = ?");
+    if (!$stmt)
         throw new Exception("Błąd przygotowania zapytania: " . $conn->error);
-    }
-
     $stmt->bind_param("ii", $projectId, $userId);
-
-    if (!$stmt->execute()) {
-        throw new Exception("Błąd wykonania zapytania: " . $stmt->error);
-    }
-
+    $stmt->execute();
     $result = $stmt->get_result();
     $project = $result->fetch_assoc();
-
-    if (!$project) {
-        throw new Exception("Projekt nie istnieje lub nie masz uprawnień do jego edycji");
-    }
-
     $stmt->close();
 
-    // Pobierz kategorie projektu
+    if (!$project)
+        throw new Exception("Projekt nie istnieje lub brak uprawnień");
+
+    logAction($conn, $userId, $userEmail, "project_edit_page_accessed", "ID projektu: $projectId");
+
+    // Pobranie kategorii
     $selectedCategories = [];
-    $catStmt = $conn->prepare("
+    $stmt = $conn->prepare("
         SELECT c.name 
-        FROM categories c 
-        JOIN project_categories pc ON c.id = pc.category_id 
+        FROM categories c
+        JOIN project_categories pc ON c.id = pc.category_id
         WHERE pc.project_id = ?
     ");
-    if ($catStmt) {
-        $catStmt->bind_param("i", $projectId);
-        $catStmt->execute();
-        $catResult = $catStmt->get_result();
-        while ($row = $catResult->fetch_assoc()) {
+    if ($stmt) {
+        $stmt->bind_param("i", $projectId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($row = $res->fetch_assoc()) {
             $selectedCategories[] = $row['name'];
         }
-        $catStmt->close();
+        $stmt->close();
     }
 
-    // Pobierz umiejętności projektu
+    // Pobranie umiejętności
     $selectedSkills = [];
-    $skillStmt = $conn->prepare("
+    $stmt = $conn->prepare("
         SELECT s.name 
-        FROM skills s 
-        JOIN project_skills ps ON s.id = ps.skill_id 
+        FROM skills s
+        JOIN project_skills ps ON s.id = ps.skill_id
         WHERE ps.project_id = ?
     ");
-    if ($skillStmt) {
-        $skillStmt->bind_param("i", $projectId);
-        $skillStmt->execute();
-        $skillResult = $skillStmt->get_result();
-        while ($row = $skillResult->fetch_assoc()) {
+    if ($stmt) {
+        $stmt->bind_param("i", $projectId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($row = $res->fetch_assoc()) {
             $selectedSkills[] = $row['name'];
         }
-        $skillStmt->close();
+        $stmt->close();
     }
 
-    // Pobierz zadania projektu
-    $tasks = [];
-    $taskStmt = $conn->prepare("SELECT id, name, description, priority FROM tasks WHERE project_id = ?");
-    if ($taskStmt) {
-        $taskStmt->bind_param("i", $projectId);
-        $taskStmt->execute();
-        $taskResult = $taskStmt->get_result();
-        while ($row = $taskResult->fetch_assoc()) {
-            $tasks[] = $row;
-        }
-        $taskStmt->close();
-    }
-
-    // Pobierz cele projektu
+    // Pobranie celów
     $goals = [];
-    $goalStmt = $conn->prepare("SELECT id, description, status FROM goals WHERE project_id = ?");
-    if ($goalStmt) {
-        $goalStmt->bind_param("i", $projectId); // "i" bo project_id to liczba całkowita
-        $goalStmt->execute();
-        $goalResult = $goalStmt->get_result();
-        while ($row = $goalResult->fetch_assoc()) {
-            $goals[] = $row; // teraz każda tablica $row ma id, description i status
+    $stmt = $conn->prepare("SELECT id, description, status FROM goals WHERE project_id = ?");
+    if ($stmt) {
+        $stmt->bind_param("i", $projectId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($row = $res->fetch_assoc()) {
+            $goals[] = $row;
         }
-        $goalStmt->close();
-    }
-
-    // Obsługa dodania nowego celu
-    if (isset($_POST['add_goal'])) {
-        $new_goal = $_POST['new_goal'];
-        $stmt = $conn->prepare("INSERT INTO goals (project_id, description, status) VALUES (?, ?, 0)");
-        $stmt->bind_param("is", $projectId, $new_goal);
-        $stmt->execute();
         $stmt->close();
-        header("Location: edit_project.php?id=$projectId");
-        exit;
     }
 
-    // Obsługa edycji istniejącego celu
-    if (isset($_POST['edit_goal'])) {
-        $goal_id = $_POST['goal_id'];
-        $goal_text = $_POST['goal_text'];
-        $completed = isset($_POST['completed']) ? 1 : 0; // checkbox
-        $stmt = $conn->prepare("UPDATE goals SET description = ?, status = ? WHERE id = ?");
-        $stmt->bind_param("sii", $goal_text, $completed, $goal_id);
-        $stmt->execute();
-        $stmt->close();
-        header("Location: edit_project.php?id=$projectId");
-        exit;
+    // Obsługa formularza
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+        // Dodawanie nowego celu
+        if (isset($_POST['add_goal'])) {
+            $new_goal = trim($_POST['new_goal'] ?? '');
+            if ($new_goal) {
+                $stmt = $conn->prepare("INSERT INTO goals (project_id, description, status) VALUES (?, ?, 0)");
+                $stmt->bind_param("is", $projectId, $new_goal);
+                $stmt->execute();
+                $stmt->close();
+                logAction($conn, $userId, $userEmail, "project_goal_added", "ID projektu: $projectId, Cel: " . substr($new_goal, 0, 50));
+                header("Location: edit_project.php?id=$projectId");
+                exit();
+            }
+        }
+
+        // Aktualizacja projektu i celów
+        if (isset($_POST['save_project'])) {
+            $conn->begin_transaction();
+            try {
+                $projectName = trim($_POST['projectName'] ?? '');
+                $shortDescription = trim($_POST['shortDescription'] ?? '');
+                $fullDescription = trim($_POST['fullDescription'] ?? '');
+                $deadline = $_POST['deadline'] ?? null;
+                $visibility = $_POST['visibility'] ?? 'public';
+                $status = $_POST['status'] ?? 'active';
+                $allowApplications = isset($_POST['allowApplications']) ? 1 : 0;
+                $autoAccept = isset($_POST['autoAccept']) ? 1 : 0;
+                $seoTags = trim($_POST['seoTags'] ?? '');
+
+                // Zbieranie informacji o zmianach
+                $changes = [];
+
+                if ($projectName !== $project['name']) {
+                    $changes[] = "Nazwa: '{$project['name']}' -> '$projectName'";
+                }
+                if ($shortDescription !== $project['short_description']) {
+                    $changes[] = "Krótki opis zmieniony";
+                }
+                if ($fullDescription !== ($project['full_description'] ?? '')) {
+                    $changes[] = "Pełny opis zmieniony";
+                }
+                if ($deadline !== $project['deadline']) {
+                    $changes[] = "Termin: '{$project['deadline']}' -> '$deadline'";
+                }
+                if ($visibility !== $project['visibility']) {
+                    $changes[] = "Widoczność: '{$project['visibility']}' -> '$visibility'";
+                }
+                if ($status !== $project['status']) {
+                    $changes[] = "Status: '{$project['status']}' -> '$status'";
+                }
+                if ($allowApplications != $project['allow_applications']) {
+                    $changes[] = "Zgłoszenia: " . ($allowApplications ? 'WŁĄCZONE' : 'WYŁĄCZONE');
+                }
+                if ($autoAccept != $project['auto_accept']) {
+                    $changes[] = "Auto-akceptacja: " . ($autoAccept ? 'WŁĄCZONA' : 'WYŁĄCZONA');
+                }
+                if ($seoTags !== ($project['seo_tags'] ?? '')) {
+                    $changes[] = "Tagi SEO zmienione";
+                }
+
+                // Aktualizacja projektu
+                $updateStmt = $conn->prepare("
+                    UPDATE projects
+                    SET name=?, short_description=?, full_description=?, deadline=?,
+                        visibility=?, status=?, allow_applications=?, auto_accept=?,
+                        seo_tags=?, updated_at=NOW()
+                    WHERE id=? AND founder_id=?
+                ");
+                if (!$updateStmt)
+                    throw new Exception($conn->error);
+                $updateStmt->bind_param(
+                    "ssssiiisiii",
+                    $projectName,
+                    $shortDescription,
+                    $fullDescription,
+                    $deadline,
+                    $visibility,
+                    $status,
+                    $allowApplications,
+                    $autoAccept,
+                    $seoTags,
+                    $projectId,
+                    $userId
+                );
+                $updateStmt->execute();
+                $updateStmt->close();
+
+                // Aktualizacja istniejących celów
+                $goalChanges = [];
+                if (isset($_POST['goal_ids']) && is_array($_POST['goal_ids'])) {
+                    foreach ($_POST['goal_ids'] as $goal_id) {
+                        $goal_text = $_POST['goal_text'][$goal_id] ?? '';
+                        $completed = isset($_POST['completed_goals'][$goal_id]) ? 1 : 0;
+
+                        if (!empty($goal_text)) {
+                            // Znajdź oryginalny cel
+                            $originalGoal = null;
+                            foreach ($goals as $goal) {
+                                if ($goal['id'] == $goal_id) {
+                                    $originalGoal = $goal;
+                                    break;
+                                }
+                            }
+
+                            if ($originalGoal) {
+                                if ($goal_text !== $originalGoal['description']) {
+                                    $goalChanges[] = "Cel $goal_id: opis zmieniony";
+                                }
+                                if ($completed != $originalGoal['status']) {
+                                    $statusText = $completed ? 'ukończony' : 'w trakcie';
+                                    $goalChanges[] = "Cel $goal_id: status -> $statusText";
+                                }
+                            }
+
+                            $stmt = $conn->prepare("UPDATE goals SET description = ?, status = ? WHERE id = ?");
+                            $stmt->bind_param("sii", $goal_text, $completed, $goal_id);
+                            $stmt->execute();
+                            $stmt->close();
+                        }
+                    }
+                }
+
+                // Dodawanie nowego celu (jeśli został wpisany)
+                $newGoalAdded = false;
+                if (!empty(trim($_POST['new_goal'] ?? ''))) {
+                    $new_goal = trim($_POST['new_goal']);
+                    $stmt = $conn->prepare("INSERT INTO goals (project_id, description, status) VALUES (?, ?, 0)");
+                    $stmt->bind_param("is", $projectId, $new_goal);
+                    $stmt->execute();
+                    $stmt->close();
+                    $newGoalAdded = true;
+                    $changes[] = "Dodano nowy cel: " . substr($new_goal, 0, 50);
+                }
+
+                // Logowanie szczegółowych zmian
+                $changeDetails = "";
+                if (!empty($changes)) {
+                    $changeDetails .= "Zmiany w projekcie: " . implode(", ", $changes) . ". ";
+                }
+                if (!empty($goalChanges)) {
+                    $changeDetails .= "Zmiany w celach: " . implode(", ", $goalChanges) . ". ";
+                }
+                if ($newGoalAdded) {
+                    logAction($conn, $userId, $userEmail, "project_goal_added", "ID projektu: $projectId, Cel: " . substr($new_goal, 0, 50));
+                }
+
+                if (!empty($changeDetails)) {
+                    logAction($conn, $userId, $userEmail, "project_updated", "ID projektu: $projectId. " . $changeDetails);
+                } else {
+                    logAction($conn, $userId, $userEmail, "project_updated", "ID projektu: $projectId (brak zmian)");
+                }
+
+                // Upload miniatury
+                if (isset($_FILES['thumbnail']) && $_FILES['thumbnail']['error'] === UPLOAD_ERR_OK) {
+                    $allowed = ['image/jpeg', 'image/png', 'image/gif'];
+                    if (in_array($_FILES['thumbnail']['type'], $allowed)) {
+                        $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/Konkurs/photos/projects/';
+                        if (!file_exists($uploadDir))
+                            mkdir($uploadDir, 0755, true);
+                        $ext = pathinfo($_FILES['thumbnail']['name'], PATHINFO_EXTENSION);
+                        $fileName = "project_{$projectId}_" . time() . ".$ext";
+                        $filePath = $uploadDir . $fileName;
+                        if (move_uploaded_file($_FILES['thumbnail']['tmp_name'], $filePath)) {
+                            $thumbUrl = "../photos/projects/$fileName";
+                            $stmt = $conn->prepare("UPDATE projects SET thumbnail=? WHERE id=?");
+                            $stmt->bind_param("si", $thumbUrl, $projectId);
+                            $stmt->execute();
+                            $stmt->close();
+                            logAction($conn, $userId, $userEmail, "project_thumbnail_updated", "ID projektu: $projectId, Plik: $fileName");
+                        }
+                    }
+                }
+
+                $conn->commit();
+                header("Location: project.php?id=$projectId&success=1");
+                exit();
+            } catch (Exception $e) {
+                $conn->rollback();
+                logAction($conn, $userId, $userEmail, "project_edit_failed", "ID projektu: $projectId, Błąd: " . $e->getMessage());
+                $error = "Błąd podczas aktualizacji projektu: " . $e->getMessage();
+            }
+        }
     }
-
-
 
 } catch (Exception $e) {
     die("Błąd: " . $e->getMessage());
 }
 
-// Mapowanie kategorii
+// Mapy kategorii, umiejętności, priorytetów
 $categoryMap = [
     'technology' => 'Technologia',
     'social' => 'Społeczne',
@@ -146,7 +284,6 @@ $categoryMap = [
     'media' => 'Media'
 ];
 
-// Mapowanie umiejętności
 $skillMap = [
     'programming' => 'Programowanie',
     'design' => 'Grafika',
@@ -157,93 +294,9 @@ $skillMap = [
     'ai' => 'AI Tools'
 ];
 
-// Mapowanie priorytetów
-$priorityMap = [
-    'low' => 'Niski',
-    'medium' => 'Średni',
-    'high' => 'Wysoki'
-];
-
-// Obsługa formularza edycji
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    try {
-        $conn->begin_transaction();
-
-        // Podstawowe dane projektu
-        $projectName = trim($_POST['projectName'] ?? '');
-        $shortDescription = trim($_POST['shortDescription'] ?? '');
-        $fullDescription = trim($_POST['fullDescription'] ?? '');
-        $deadline = $_POST['deadline'] ?? null;
-        $visibility = $_POST['visibility'] ?? 'public';
-        $status = $_POST['status'] ?? 'active';
-        $allowApplications = isset($_POST['allowApplications']) ? 1 : 0;
-        $autoAccept = isset($_POST['autoAccept']) ? 1 : 0;
-        $seoTags = trim($_POST['seoTags'] ?? '');
-
-        // Aktualizacja projektu
-        $updateStmt = $conn->prepare("
-    UPDATE projects 
-    SET name = ?, short_description = ?, full_description = ?, deadline = ?, 
-        visibility = ?, status = ?, allow_applications = ?, auto_accept = ?, 
-        seo_tags = ?, updated_at = NOW()
-    WHERE id = ? AND founder_id = ?
-");
-
-        if (!$updateStmt) {
-            die("SQL ERROR: " . $conn->error);
-        }
-
-        $updateStmt->bind_param(
-            "ssssiiisiii",
-            $projectName,
-            $shortDescription,
-            $fullDescription,
-            $deadline,
-            $visibility,
-            $status,
-            $allowApplications,
-            $autoAccept,
-            $seoTags,
-            $projectId,
-            $userId
-        );
-
-        $updateStmt->execute();
-        $updateStmt->close();
-
-        // Thumbnail
-        if (isset($_FILES['thumbnail']) && $_FILES['thumbnail']['error'] === UPLOAD_ERR_OK) {
-            $allowed = ['image/jpeg', 'image/png', 'image/gif'];
-            if (in_array($_FILES['thumbnail']['type'], $allowed)) {
-                $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/Konkurs/photos/projects/';
-                if (!file_exists($uploadDir)) {
-                    mkdir($uploadDir, 0755, true);
-                }
-                $ext = pathinfo($_FILES['thumbnail']['name'], PATHINFO_EXTENSION);
-                $fileName = "project_{$projectId}_" . time() . ".$ext";
-                $filePath = $uploadDir . $fileName;
-
-                if (move_uploaded_file($_FILES['thumbnail']['tmp_name'], $filePath)) {
-                    $thumbnailUrl = "../photos/projects/$fileName";
-                    $thumbStmt = $conn->prepare("UPDATE projects SET thumbnail = ? WHERE id = ?");
-                    $thumbStmt->bind_param("si", $thumbnailUrl, $projectId);
-                    $thumbStmt->execute();
-                    $thumbStmt->close();
-                }
-            }
-        }
-
-        $conn->commit();
-
-        header("Location: project.php?id=" . $projectId . "&success=1");
-        exit();
-
-    } catch (Exception $e) {
-        $conn->rollback();
-        $error = "Błąd podczas aktualizacji projektu: " . $e->getMessage();
-    }
-}
+$priorityMap = ['low' => 'Niski', 'medium' => 'Średni', 'high' => 'Wysoki'];
 ?>
+
 <!DOCTYPE html>
 <html lang="pl">
 
@@ -290,7 +343,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php endif; ?>
             </div>
 
+            <!-- JEDEN główny formularz -->
             <form id="editProjectForm" class="edit-project-form" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="save_project" value="1">
+
                 <!-- Podstawowe informacje -->
                 <section class="form-section">
                     <h2>Podstawowe informacje</h2>
@@ -354,43 +410,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </section>
 
-                <!-- 🎯 Cele projektu -->
+                <!-- 🎯 Cele projektu - TERAZ W GŁÓWNYM FORMULARZU -->
                 <section class="form-section">
                     <h2>Cele projektu</h2>
                     <div class="goals-management">
-                        <!-- Formularz dodawania nowego celu -->
-                        <form method="POST" class="add-goal-form">
-                            <div class="goal-input-group">
-                                <input type="text" name="new_goal" placeholder="Dodaj nowy cel..." maxlength="255"
-                                    required>
-                                <button type="submit" name="add_goal" class="btn-primary btn-sm">Dodaj cel</button>
-                            </div>
-                        </form>
+                        <!-- Dodawanie nowego celu -->
+                        <div class="goal-input-group">
+                            <input type="text" name="new_goal" placeholder="Dodaj nowy cel..." maxlength="255">
+                            <button type="submit" name="add_goal" class="btn-primary btn-sm">Dodaj cel</button>
+                        </div>
 
                         <!-- Lista istniejących celów -->
                         <div class="goals-list">
                             <?php if (!empty($goals)): ?>
                                 <?php foreach ($goals as $goal): ?>
-                                    <form method="POST" class="goal-item">
-                                        <input type="hidden" name="goal_id" value="<?php echo $goal['id']; ?>">
-
+                                    <?php
+                                    $goalId = $goal['id'];
+                                    $goalDesc = htmlspecialchars($goal['description']);
+                                    $checked = $goal['status'] == 1 ? 'checked' : '';
+                                    ?>
+                                    <div class="goal-item">
                                         <div class="goal-content">
                                             <div class="goal-checkbox">
-                                                <input type="checkbox" name="completed" id="goal_<?php echo $goal['id']; ?>"
-                                                    <?php echo $goal['status'] == 1 ? 'checked' : ''; ?>>
-                                                <label for="goal_<?php echo $goal['id']; ?>" class="checkmark"></label>
+                                                <input type="checkbox" name="completed_goals[<?= $goalId ?>]"
+                                                    id="goal_<?= $goalId ?>" <?= $checked ?>>
+                                                <label for="goal_<?= $goalId ?>" class="checkmark"></label>
                                             </div>
 
-                                            <input type="text" name="goal_text"
-                                                value="<?php echo htmlspecialchars($goal['description']); ?>" class="goal-input"
-                                                placeholder="Opis celu..." required>
+                                            <input type="text" name="goal_text[<?= $goalId ?>]" value="<?= $goalDesc ?>"
+                                                class="goal-input" placeholder="Opis celu...">
 
-                                            <div class="goal-actions">
-                                                <button type="submit" name="edit_goal"
-                                                    class="btn-success btn-sm">Zapisz</button>
-                                            </div>
+                                            <input type="hidden" name="goal_ids[]" value="<?= $goalId ?>">
                                         </div>
-                                    </form>
+                                    </div>
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <div class="no-goals">
@@ -398,6 +450,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 </div>
                             <?php endif; ?>
                         </div>
+
                     </div>
                 </section>
 
@@ -431,6 +484,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <?php } ?>
                     </div>
                 </section>
+
                 <!-- Umiejętności -->
                 <section class="form-section">
                     <h2>Wymagane umiejętności</h2>
@@ -444,6 +498,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <?php endforeach; ?>
                     </div>
                 </section>
+
                 <!-- Ustawienia zaawansowane -->
                 <section class="form-section">
                     <h2>Ustawienia zaawansowane</h2>
@@ -466,8 +521,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         <div class="settings-group">
                             <label class="checkbox-label">
-                                <input type="checkbox" name="allowApplications" <?php echo (int) $project['allow_applications'] === 1 ? 'checked' : ''; ?>> <span
-                                    class="checkmark"></span>
+                                <input type="checkbox" name="allowApplications" <?php echo (int) $project['allow_applications'] === 1 ? 'checked' : ''; ?>>
+                                <span class="checkmark"></span>
                                 Pozwalaj użytkownikom składać zgłoszenia do projektu
                             </label>
 
@@ -490,7 +545,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <!-- Przyciski akcji -->
                 <section class="form-actions">
                     <a href="project.php?id=<?php echo $projectId; ?>" class="btn-secondary">Anuluj</a>
-                    <button type="submit" class="btn-primary">Zapisz zmiany</button>
+                    <button type="submit" class="btn-primary" name="save_project">Zapisz zmiany</button>
                 </section>
             </form>
         </div>
@@ -503,7 +558,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <img src="../photos/website-logo.jpg" alt="Logo TeenCollab">
                     <div>
                         <h3>TeenCollab</h3>
-                        <p>Platforma dla młodych zmieniaczy świata</p>
+                        <p>Platforma dla kreatorów przyszłości</p>
                     </div>
                 </div>
                 <div class="footer-copyright">

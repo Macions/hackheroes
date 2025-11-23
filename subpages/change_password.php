@@ -1,10 +1,10 @@
 <?php
-// change_password.php
+
 error_reporting(0);
 ini_set('display_errors', 0);
 header('Content-Type: application/json');
 
-// Prosty test - usuń później
+
 if ($_POST['test'] ?? false) {
     echo json_encode(['success' => true, 'message' => 'Test OK']);
     exit;
@@ -33,7 +33,7 @@ if (!$currentPassword || !$newPassword) {
     exit();
 }
 
-// Tymczasowa symulacja sukcesu - usuń później
+
 echo json_encode(['success' => true, 'message' => 'Hasło zmienione pomyślnie']);
 exit();
 ?>

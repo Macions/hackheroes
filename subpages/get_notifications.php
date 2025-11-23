@@ -1,10 +1,10 @@
 <?php
-// get_notifications.php
+
 error_reporting(0);
 ini_set('display_errors', 0);
 header('Content-Type: application/json');
 
-// Prosty test - usuń później
+
 if (isset($_GET['test'])) {
     echo json_encode(['success' => true, 'settings' => [
         'new_tasks_email' => true,
@@ -16,7 +16,7 @@ if (isset($_GET['test'])) {
 
 include("global/connection.php");
 
-// Sprawdź połączenie z bazą
+
 if (!$conn) {
     echo json_encode(['success' => false, 'message' => 'Brak połączenia z bazą']);
     exit;
@@ -43,7 +43,7 @@ try {
 
     if ($result->num_rows === 1) {
         $settings = $result->fetch_assoc();
-        // Konwertuj 1/0 na true/false
+
         $settings['new_tasks_email'] = (bool)$settings['new_tasks_email'];
         $settings['new_comments_email'] = (bool)$settings['new_comments_email'];
         $settings['system_email'] = (bool)$settings['system_email'];

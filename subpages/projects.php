@@ -3,17 +3,17 @@ session_start();
 include("global/connection.php");
 include("global/nav_global.php");
 
-// Sprawdź czy użytkownik jest zalogowany
+
 if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
-    // Nie przekierowujemy, bo strona projektów może być publiczna
+
 }
 
 $userId = $_SESSION["user_id"] ?? null;
 $userEmail = $_SESSION["user_email"] ?? '';
 
-// Pobierz projekty z bazy danych
+
 try {
-    // Pobierz wszystkie aktywne projekty
+
     $projects = [];
     $projectStmt = $conn->prepare("
         SELECT 
@@ -42,7 +42,7 @@ try {
         $projectStmt->close();
     }
 
-    // Pobierz kategorie dla każdego projektu
+
     foreach ($projects as &$project) {
         $categories = [];
         $catStmt = $conn->prepare("
@@ -62,22 +62,22 @@ try {
         }
         $project['categories'] = $categories;
 
-        // Jeśli nie ma lokalizacji, ustaw domyślną
+
         if (empty($project['location'])) {
             $project['location'] = 'Online';
         }
     }
 
-    // Statystyki
+
     $totalProjects = count($projects);
 
-    // Liczba unikalnych użytkowników we wszystkich projektach
+
     $usersStmt = $conn->prepare("SELECT COUNT(DISTINCT user_id) as total_users FROM project_team");
     $usersStmt->execute();
     $totalUsers = $usersStmt->get_result()->fetch_assoc()['total_users'] ?? 0;
     $usersStmt->close();
 
-    // Liczba unikalnych miast (jeśli kolumna location istnieje)
+
     $citiesStmt = $conn->prepare("SELECT COUNT(DISTINCT location) as total_cities FROM projects WHERE location IS NOT NULL AND location != ''");
     if ($citiesStmt) {
         $citiesStmt->execute();
@@ -89,7 +89,7 @@ try {
     }
 
 } catch (Exception $e) {
-    // W przypadku błędu, ustaw puste dane
+
     $projects = [];
     $totalProjects = 0;
     $totalUsers = 0;
@@ -97,7 +97,7 @@ try {
     $error = "Błąd ładowania projektów: " . $e->getMessage();
 }
 
-// Mapowanie kategorii do klas CSS
+
 $categoryMap = [
     'Ekologia' => 'ekologia',
     'Zdrowie' => 'zdrowie',
@@ -262,15 +262,15 @@ function truncateText($text, $length = 150)
                                         <img src="<?php echo htmlspecialchars($project['thumbnail']); ?>"
                                             alt="<?php echo htmlspecialchars($project['name']); ?>">
                                     <?php else: ?>
-                                        <img src="../photos/project-sample.jpg"
+                                        <img src="../photos/project-default.jpg"
                                             alt="<?php echo htmlspecialchars($project['name']); ?>">
                                     <?php endif; ?>
                                     <span class="project-category"><?php echo $primaryCategory; ?></span>
                                     <div class="project-overlay">
                                         <div class="project-stats">
                                             <span class="stat">👥 <?php echo $project['member_count'] ?? 0; ?></span>
-                                            <span class="stat">❤️ <?php echo $project['like_count'] ?? 0; ?></span>
-                                            <span class="stat">👁️ <?php echo $project['follows_count'] ?? 0; ?></span>
+                                            <span class="stat">👍 <?php echo $project['like_count'] ?? 0; ?></span>
+                                            <span class="stat">❤️ <?php echo $project['follows_count'] ?? 0; ?></span>
                                         </div>
                                     </div>
                                 </div>
@@ -283,24 +283,45 @@ function truncateText($text, $length = 150)
                                         <span class="project-date">📅 <?php echo formatDate($project['created_at']); ?></span>
                                     </div>
                                     <div class="project-founder">
-                                        <?php if ($project['founder_avatar']): ?>
-                                            <img src="<?php echo htmlspecialchars($project['founder_avatar']); ?>"
-                                                alt="<?php echo htmlspecialchars($project['founder_name']); ?>"
-                                                class="founder-avatar">
+
+                                        <?php if (!empty($project['founder_name'])): ?>
+
+                                            <!-- Avatar + nazwa gdy użytkownik istnieje -->
+                                            <?php if (!empty($project['founder_avatar'])): ?>
+                                                <img src="<?php echo htmlspecialchars($project['founder_avatar']); ?>"
+                                                    alt="<?php echo htmlspecialchars($project['founder_name']); ?>"
+                                                    class="founder-avatar">
+                                            <?php else: ?>
+                                                <img src="../photos/avatars/default_avatar.png"
+                                                    alt="<?php echo htmlspecialchars($project['founder_name']); ?>"
+                                                    class="founder-avatar">
+                                            <?php endif; ?>
+
+                                            <span class="founder-name">
+                                                <?php echo htmlspecialchars($project['founder_name']); ?>
+                                            </span>
+
                                         <?php else: ?>
-                                            <img src="../photos/default-avatar.jpg"
-                                                alt="<?php echo htmlspecialchars($project['founder_name']); ?>"
-                                                class="founder-avatar">
+
+                                            <!-- Tylko info o usunięciu konta -->
+                                            <span class="founder-name" style="font-style: italic; opacity: 0.7;">
+                                                Użytkownik usunął konto
+                                            </span>
+
                                         <?php endif; ?>
-                                        <span
-                                            class="founder-name"><?php echo htmlspecialchars($project['founder_name']); ?></span>
+
                                     </div>
-                                    <a href="project.php?id=<?php echo $project['id']; ?>" class="project-link">
+                                    <a href="<?php echo !empty($project['founder_name']) ? 'project.php?id=' . $project['id'] : 'javascript:void(0)'; ?>"
+                                        class="project-link <?php echo empty($project['founder_name']) ? 'disabled-project' : ''; ?>"
+                                        title="<?php echo empty($project['founder_name']) ? 'Projekt oczekuje na przydzielenie administratora' : ''; ?>">
                                         <span>Zobacz szczegóły</span>
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                                             <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" />
                                         </svg>
                                     </a>
+
+
+
                                 </div>
                             </article>
                         <?php endforeach; ?>
@@ -319,7 +340,7 @@ function truncateText($text, $length = 150)
     </footer>
 
     <script>
-        // Filtracja projektów
+
         const filterButtons = document.querySelectorAll('.filter-btn');
         const projects = document.querySelectorAll('.project-card');
 
@@ -348,7 +369,7 @@ function truncateText($text, $length = 150)
             });
         });
 
-        // Burger menu
+
         const burgerMenu = document.getElementById('burger-menu');
         const navMenu = document.querySelector('.nav-menu');
 
@@ -357,7 +378,7 @@ function truncateText($text, $length = 150)
             navMenu.classList.toggle('active');
         });
 
-        // Animacje przy scrollowaniu
+
         const observerOptions = {
             threshold: 0.1,
             rootMargin: '0px 0px -50px 0px'
@@ -372,7 +393,7 @@ function truncateText($text, $length = 150)
             });
         }, observerOptions);
 
-        // Obserwuj wszystkie karty projektów
+
         document.querySelectorAll('.project-card').forEach(card => {
             card.style.opacity = '0';
             card.style.transform = 'translateY(20px)';

@@ -9,7 +9,7 @@ function initializeForm() {
 }
 
 function setupEventListeners() {
-    // Liczniki znaków
+
     document.getElementById("projectName").addEventListener("input", function () {
         updateCharCounter("projectName", "nameCounter");
     });
@@ -18,19 +18,19 @@ function setupEventListeners() {
         updateCharCounter("shortDescription", "descCounter");
     });
 
-    // Podgląd nowej miniatury
+
     document.getElementById("thumbnailUpload").addEventListener("change", function (e) {
         previewThumbnail(e);
     });
 
-    // Walidacja formularza
+
     document.getElementById("editProjectForm").addEventListener("submit", function (e) {
         if (!validateForm()) {
             e.preventDefault();
         }
     });
 
-    // Auto-save draft (opcjonalne)
+
     setupAutoSave();
 }
 
@@ -109,10 +109,10 @@ function saveDraft() {
     const formData = new FormData(document.getElementById("editProjectForm"));
     const projectData = Object.fromEntries(formData.entries());
     
-    // Zapisz do localStorage
+
     localStorage.setItem('projectEditDraft_' + projectData.id, JSON.stringify(projectData));
     
-    // Pokaz krótkie powiadomienie
+
     showNotification('Szkic zapisany', 'success');
 }
 
@@ -141,7 +141,7 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
-// CSS dla powiadomień (można dodać do CSS)
+
 const notificationStyles = `
 @keyframes slideIn {
     from {
@@ -166,12 +166,12 @@ const notificationStyles = `
 }
 `;
 
-// Dodaj style do dokumentu
+
 const styleSheet = document.createElement('style');
 styleSheet.textContent = notificationStyles;
 document.head.appendChild(styleSheet);
 
-// Ładowanie zapisanego szkicu
+
 function loadDraft() {
     const projectId = new URLSearchParams(window.location.search).get('id');
     const draft = localStorage.getItem('projectEditDraft_' + projectId);
@@ -179,10 +179,10 @@ function loadDraft() {
     if (draft) {
         if (confirm('Znaleziono zapisany szkic. Czy chcesz go wczytać?')) {
             const data = JSON.parse(draft);
-            // Wypełnij formularz danymi...
+
         }
     }
 }
 
-// Wywołaj przy ładowaniu strony
+
 loadDraft();

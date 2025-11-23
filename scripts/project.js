@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", function () {
-	initializeProjectPage();
 	setupEventListeners();
 
 	const followBtn = document.getElementById("followBtn");
@@ -8,17 +7,7 @@ document.addEventListener("DOMContentLoaded", function () {
 	}
 });
 
-function initializeProjectPage() {
-	// Sprawdź czy użytkownik jest właścicielem lub członkiem
-	if (projectData.isOwner) {
-		console.log("Jesteś właścicielem tego projektu");
-	} else if (projectData.isMember) {
-		console.log("Jesteś członkiem tego projektu");
-	}
-}
-
 function setupEventListeners() {
-	// Przycisk dołączania do projektu
 	const joinBtn = document.getElementById("joinProjectBtn");
 	const applyBtn = document.getElementById("applyBtn");
 
@@ -30,25 +19,21 @@ function setupEventListeners() {
 		applyBtn.addEventListener("click", openJoinModal);
 	}
 
-	// Filtrowanie zadań
 	const filterBtns = document.querySelectorAll(".filter-btn");
 	filterBtns.forEach((btn) => {
 		btn.addEventListener("click", function () {
 			filterTasks(this.dataset.filter);
 
-			// Aktualizacja aktywnych przycisków
 			filterBtns.forEach((b) => b.classList.remove("active"));
 			this.classList.add("active");
 		});
 	});
 
-	// Obsługa like'ów
 	const likeBtn = document.querySelector(".like-btn");
 	if (likeBtn) {
 		likeBtn.addEventListener("click", toggleLike);
 	}
 
-	// Obsługa udostępniania
 	const shareBtn = document.querySelector(".share-btn");
 	if (shareBtn) {
 		shareBtn.addEventListener("click", shareProject);
@@ -88,7 +73,6 @@ function submitApplication() {
 		return;
 	}
 
-	// Tutaj wyślij zgłoszenie do serwera
 	const formData = new FormData();
 	formData.append("project_id", projectData.id);
 	formData.append("motivation", motivation);
@@ -137,17 +121,18 @@ function filterTasks(filter) {
 }
 
 function toggleLike() {
+	if (!USER_LOGGED_IN) {
+		alert("Musisz się zalogować, aby polubić projekt!");
+		return;
+	}
+
 	const likeBtn = document.querySelector(".like-btn");
 	const likeCount = document.querySelector(".reaction-item .reaction-count");
 
 	fetch("toggle_like.php", {
 		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-		},
-		body: JSON.stringify({
-			project_id: projectData.id,
-		}),
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ project_id: projectData.id }),
 	})
 		.then((response) => response.json())
 		.then((data) => {
@@ -156,9 +141,7 @@ function toggleLike() {
 				likeCount.textContent = data.likeCount;
 			}
 		})
-		.catch((error) => {
-			console.error("Error:", error);
-		});
+		.catch((error) => console.error("Error:", error));
 }
 
 function shareProject() {
@@ -174,14 +157,12 @@ function shareProject() {
 			})
 			.catch((error) => console.log("Błąd udostępniania:", error));
 	} else {
-		// Fallback - kopiowanie do schowka
 		navigator.clipboard.writeText(url).then(() => {
 			alert("Link skopiowany do schowka!");
 		});
 	}
 }
 
-// Obsługa modalów
 document.addEventListener("click", function (event) {
 	if (event.target.classList.contains("modal")) {
 		event.target.style.display = "none";
@@ -197,20 +178,21 @@ document.addEventListener("keydown", function (event) {
 });
 
 function toggleFollow() {
-	const projectId = projectData.id;
+	if (!USER_LOGGED_IN) {
+		alert("Musisz się zalogować, aby obserwować projekt!");
+		return;
+	}
+
 	const followBtn = document.getElementById("followBtn");
 
 	fetch("follow_project.php", {
 		method: "POST",
-		headers: {
-			"Content-Type": "application/x-www-form-urlencoded",
-		},
-		body: `project_id=${projectId}`,
+		headers: { "Content-Type": "application/x-www-form-urlencoded" },
+		body: `project_id=${projectData.id}`,
 	})
 		.then((response) => response.json())
 		.then((data) => {
 			if (data.success) {
-				// Aktualizuj tekst i styl przycisku
 				if (data.action === "follow") {
 					followBtn.innerHTML =
 						"<span title='Przestań obserwować'>Obserwujesz</span>";
@@ -232,7 +214,6 @@ function toggleFollow() {
 }
 
 function showNotification(message, type) {
-	// Tworzenie i wyświetlanie powiadomienia
 	const notification = document.createElement("div");
 	notification.className = `notification notification-${type}`;
 	notification.textContent = message;
@@ -243,48 +224,61 @@ function showNotification(message, type) {
 		notification.remove();
 	}, 3000);
 }
+document.addEventListener("DOMContentLoaded", () => {
+	const btn = document.getElementById("btnAddComment");
+	if (!btn) return;
 
-document.getElementById("btnAddComment").addEventListener("click", function (e) {
-	e.preventDefault();
-	const comment = document.getElementById("commentInput").value.trim();
-	if (!comment) return alert("Komentarz nie może być pusty!");
+	btn.addEventListener("click", function (e) {
+		e.preventDefault();
 
-	const formData = new URLSearchParams();
-	formData.append("project_id", PROJECT_ID);
-	formData.append("comment", comment);
+		const commentInput = document.getElementById("commentInput");
+		if (!commentInput) return;
 
-	fetch("add_comment.php", {
-		method: "POST",
-		headers: { "Content-Type": "application/x-www-form-urlencoded" },
-		body: formData.toString(),
-	})
-		.then((response) => response.json())
-		.then((data) => {
-			if (data.success) {
-				const list = document.querySelector(".comments-list");
-				const newComment = document.createElement("div");
-				newComment.classList.add("comment-item");
-				newComment.innerHTML = `
-					<div class="comment-avatar">
-						<img src="${USER_AVATAR_URL}" alt="Twój avatar">
-					</div>
-					<div class="comment-content">
-						<h4>Ty</h4>
-						<p>${comment.replace(/\n/g, "<br>")}</p>
-						<span class="comment-date">Właśnie teraz</span>
-					</div>
-				`;
-				list.prepend(newComment);
-				document.getElementById("commentInput").value = "";
-			} else {
-				alert("Błąd: " + data.message);
-			}
+		const comment = commentInput.value.trim();
+		if (!comment) return alert("Komentarz nie może być pusty!");
+
+		fetch("add_comment.php", {
+			method: "POST",
+			body: new URLSearchParams({
+				project_id: PROJECT_ID,
+				comment: comment,
+			}),
 		})
-		.catch(() => alert("Coś poszło nie tak..."));
+			.then((res) => res.json())
+			.then((data) => {
+				if (data.success) {
+					commentInput.value = "";
+					addCommentToTop(comment); // funkcja do wstawienia komentarza na górę listy
+				} else {
+					alert("Nie udało się dodać komentarza."); // uniwersalny komunikat
+				}
+			})
+			.catch((err) => {
+				console.error("Fetch error:", err);
+				alert("Błąd serwera. Sprawdź konsolę.");
+			});
+	});
 });
 
+function addCommentToTop(commentText) {
+	const commentsList = document.querySelector(".comments-list");
+	if (!commentsList) return;
 
-// Obsługa formularzy akceptacji/odrzucania zgłoszeń
+	const newComment = document.createElement("div");
+	newComment.className = "comment-item";
+	newComment.innerHTML = `
+		<div class="comment-avatar">
+			<img src="${USER_AVATAR_URL}" alt="Ty">
+		</div>
+		<div class="comment-content">
+			<h4>Ty</h4>
+			<p>${commentText}</p>
+			<span class="comment-date">Teraz</span>
+		</div>
+	`;
+	commentsList.prepend(newComment);
+}
+
 document.addEventListener("DOMContentLoaded", function () {
 	const requestForms = document.querySelectorAll(".action-form");
 
@@ -297,17 +291,14 @@ document.addEventListener("DOMContentLoaded", function () {
 			const isAccept = button.classList.contains("btn-primary");
 			const action = isAccept ? "akceptowania" : "odrzucania";
 
-			// Pokazanie stanu ładowania
 			button.classList.add("loading");
 			button.disabled = true;
 			button.innerHTML = '<span class="btn-icon">⏳</span> Przetwarzanie...';
 
-			// Wyłącz wszystkie przyciski na czas przetwarzania
 			const allButtons =
 				this.closest(".request-actions").querySelectorAll("button");
 			allButtons.forEach((btn) => (btn.disabled = true));
 
-			// Wyślij formularz
 			fetch(this.action, {
 				method: "POST",
 				body: new FormData(this),
@@ -320,14 +311,12 @@ document.addEventListener("DOMContentLoaded", function () {
 					}
 				})
 				.then((data) => {
-					// Sukces - przekierowanie nastąpi automatycznie
 					showNotification(`Pomyślnie ${action} zgłoszenie!`, "success");
 				})
 				.catch((error) => {
 					console.error("Error:", error);
 					showNotification(`Błąd podczas ${action} zgłoszenia`, "error");
 
-					// Przywróć przyciski
 					button.classList.remove("loading");
 					button.disabled = false;
 					button.innerHTML = originalText;
@@ -401,13 +390,11 @@ const notificationStyles = `
 }
 `;
 
-// Dodaj style do dokumentu
 const styleSheet = document.createElement("style");
 styleSheet.textContent = notificationStyles;
 document.head.appendChild(styleSheet);
-// Funkcja pokazująca powiadomienia
+
 function showNotification(message, type = "info") {
-	// Usuń istniejące powiadomienia
 	const existingNotifications = document.querySelectorAll(
 		".custom-notification"
 	);
@@ -422,7 +409,6 @@ function showNotification(message, type = "info") {
 
 	document.body.appendChild(notification);
 
-	// Automatyczne ukrywanie po 5 sekundach
 	setTimeout(() => {
 		if (notification.parentElement) {
 			notification.remove();
@@ -430,9 +416,266 @@ function showNotification(message, type = "info") {
 	}, 5000);
 }
 
+// Modal wysyłania wiadomości do zespołu
+function openMessageModal() {
+	if (!projectData.isOwner) return;
 
+	const modal = document.createElement("div");
+	modal.className = "modal message-modal";
+	modal.style.display = "block";
+	modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📨 Wyślij wiadomość do zespołu</h3>
+                <button class="modal-close" onclick="closeModal(this)">×</button>
+            </div>
+            <form method="POST" class="message-form">
+                <div class="modal-body">
+                    <div class="recipients-info">
+                        <strong>Adresaci:</strong> Wszyscy członkowie projektu "${
+													projectData.name
+												}" (${
+		document.querySelectorAll(".team-member-card").length
+	} osób)
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Tytuł wiadomości *</label>
+                        <input type="text" name="message_title" class="form-input" placeholder="Wpisz tytuł wiadomości..." required maxlength="255">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Treść wiadomości *</label>
+                        <textarea name="message_content" class="form-textarea" placeholder="Wpisz treść wiadomości dla zespołu..." required></textarea>
+                    </div>
+                    
+                    <div class="message-preview" style="display: none;">
+                        <h4>Podgląd wiadomości:</h4>
+                        <p id="previewContent"></p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="modal-btn secondary" onclick="closeModal(this)">Anuluj</button>
+                    <button type="submit" class="modal-btn primary" name="send_team_message">Wyślij wiadomość</button>
+                </div>
+            </form>
+        </div>
+    `;
 
-// Menu burger
+	document.body.appendChild(modal);
+
+	// Obsługa podglądu na żywo
+	const titleInput = modal.querySelector('input[name="message_title"]');
+	const contentInput = modal.querySelector('textarea[name="message_content"]');
+
+	[titleInput, contentInput].forEach((input) => {
+		input.addEventListener("input", updatePreview);
+	});
+}
+
+function updatePreview() {
+	const modal = document.querySelector(".message-modal");
+	if (!modal) return;
+
+	const title = modal.querySelector('input[name="message_title"]').value;
+	const content = modal.querySelector('textarea[name="message_content"]').value;
+	const preview = modal.querySelector(".message-preview");
+	const previewContent = modal.querySelector("#previewContent");
+
+	if (title || content) {
+		preview.style.display = "block";
+		previewContent.innerHTML = `<strong>${
+			title || "(Brak tytułu)"
+		}</strong>\n\n${content || "(Brak treści)"}`;
+	} else {
+		preview.style.display = "none";
+	}
+}
+
+function closeModal(btn) {
+	const modal = btn.closest(".modal");
+	if (modal) {
+		modal.remove();
+	}
+}
+// =========================
+// Funkcja otwierająca modal do wysyłki wiadomości do członka
+// =========================
+function openMessageModalSelectMember() {
+	if (!projectData.isOwner) return;
+
+	let optionsHTML = "";
+	if (projectData.members && projectData.members.length > 0) {
+		projectData.members.forEach((member) => {
+			optionsHTML += `<option value="${member.id}">${member.nick}</option>`;
+		});
+	}
+
+	const modal = document.createElement("div");
+	modal.className = "modal message-modal";
+	modal.style.display = "block";
+	modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📨 Wyślij wiadomość do członka projektu</h3>
+                <button class="modal-close" onclick="closeModal(this)">×</button>
+            </div>
+            <form method="POST" class="message-form" onsubmit="handleMemberMessageSubmit(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Wybierz członka *</label>
+                        <select name="recipient_id" class="form-input" required>
+                            <option value="">-- Wybierz członka --</option>
+                            ${optionsHTML}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tytuł wiadomości *</label>
+                        <input type="text" name="message_title" class="form-input" placeholder="Wpisz tytuł wiadomości..." required maxlength="255">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Treść wiadomości *</label>
+                        <textarea name="message_content" class="form-textarea" placeholder="Wpisz treść wiadomości..." required></textarea>
+                    </div>
+                    <div class="message-preview" style="display: none;">
+                        <h4>Podgląd wiadomości:</h4>
+                        <p id="previewContent"></p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="modal-btn secondary" onclick="closeModal(this)">Anuluj</button>
+                    <button type="submit" class="modal-btn primary">Wyślij wiadomość</button>
+                </div>
+            </form>
+        </div>
+    `;
+	document.body.appendChild(modal);
+
+	// Obsługa podglądu na żywo
+	const titleInput = modal.querySelector('input[name="message_title"]');
+	const contentInput = modal.querySelector('textarea[name="message_content"]');
+	[titleInput, contentInput].forEach((input) =>
+		input.addEventListener("input", updatePreview)
+	);
+}
+
+// =========================
+// Funkcja podglądu wiadomości
+// =========================
+function updatePreview() {
+	const modal = document.querySelector(".message-modal");
+	if (!modal) return;
+
+	const title = modal.querySelector('input[name="message_title"]').value;
+	const content = modal.querySelector('textarea[name="message_content"]').value;
+	const preview = modal.querySelector(".message-preview");
+	const previewContent = modal.querySelector("#previewContent");
+
+	if (title || content) {
+		preview.style.display = "block";
+		previewContent.innerHTML = `<strong>${
+			title || "(Brak tytułu)"
+		}</strong><br>${content || "(Brak treści)"}`;
+	} else {
+		preview.style.display = "none";
+	}
+}
+
+// =========================
+// Funkcja zamykająca modal
+// =========================
+function closeModal(btn) {
+	const modal = btn.closest(".modal");
+	if (modal) {
+		modal.remove();
+	}
+}
+
+// =========================
+// Obsługa wysyłki formularza do członka (ajax lub standard POST)
+// =========================
+function handleMemberMessageSubmit(event) {
+	event.preventDefault();
+	const form = event.target;
+	const recipientId = form.recipient_id.value;
+	const title = form.message_title.value;
+	const content = form.message_content.value;
+
+	if (!recipientId || !title || !content) {
+		alert("Wszystkie pola są wymagane!");
+		return;
+	}
+
+	// Możesz tu wysłać AJAX POST do np. send_message.php
+	fetch("send_message.php", {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({
+			recipient_id: recipientId,
+			title: title,
+			content: content,
+			project_id: PROJECT_ID,
+		}),
+	})
+		.then((res) => res.json())
+		.then((data) => {
+			if (data.success) {
+				alert("Wiadomość wysłana!");
+				const modal = document.querySelector(".message-modal");
+				if (modal) modal.remove();
+			} else {
+				alert("Błąd: " + (data.error || "Nieznany"));
+			}
+		})
+		.catch((err) => {
+			console.error(err);
+			alert("Wystąpił błąd podczas wysyłki wiadomości.");
+		});
+}
+
+function openRejectionPrompt(requestId, userName, projectId) {
+	// Wyświetlamy prompt z prośbą o powód odrzucenia
+	const reason = prompt(
+		`Odrzucasz zgłoszenie użytkownika ${userName}.\nPodaj powód odrzucenia (min. 10 znaków):`
+	);
+
+	if (reason === null) {
+		// Użytkownik kliknął Anuluj
+		return;
+	}
+
+	if (reason.trim().length < 10) {
+		alert("Powód odrzucenia musi mieć co najmniej 10 znaków!");
+		return;
+	}
+
+	// Tworzymy formę i wysyłamy POST do project_decline.php
+	const form = document.createElement("form");
+	form.method = "POST";
+	form.action = "project_decline.php";
+
+	const requestInput = document.createElement("input");
+	requestInput.type = "hidden";
+	requestInput.name = "request_id";
+	requestInput.value = requestId;
+	form.appendChild(requestInput);
+
+	const projectInput = document.createElement("input");
+	projectInput.type = "hidden";
+	projectInput.name = "project_id";
+	projectInput.value = projectId;
+	form.appendChild(projectInput);
+
+	const reasonInput = document.createElement("input");
+	reasonInput.type = "hidden";
+	reasonInput.name = "rejection_reason";
+	reasonInput.value = reason;
+	form.appendChild(reasonInput);
+
+	document.body.appendChild(form);
+	form.submit();
+}
+
 const burgerMenu = document.getElementById("burger-menu");
 const navMenu = document.querySelector(".nav-menu");
 

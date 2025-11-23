@@ -7,7 +7,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 
-// Obsługa zarówno GET jak i POST
+
 $nick = trim($_REQUEST['nick'] ?? '');
 
 if ($nick === '') {
@@ -15,7 +15,7 @@ if ($nick === '') {
     exit;
 }
 
-// Sprawdź czy nick istnieje u innych użytkowników (nie licząc aktualnego użytkownika)
+
 $userId = $_SESSION["user_id"] ?? 0;
 if ($userId > 0) {
     $stmt = $conn->prepare("SELECT id FROM users WHERE nick = ? AND id != ?");

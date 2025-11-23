@@ -666,3 +666,373 @@ footer {
 		font-size: 0.8rem;
 	}
 }
+
+/* Sekcja Akcji */
+.action-buttons {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+/* Alerty */
+.alert {
+	padding: 16px;
+	border-radius: 8px;
+	font-weight: 500;
+	border: 1px solid;
+	margin-bottom: 10px;
+}
+
+.alert-success {
+	background-color: #d4edda;
+	color: #155724;
+	border-color: #c3e6cb;
+}
+
+.alert-error {
+	background-color: #f8d7da;
+	color: #721c24;
+	border-color: #f5c6cb;
+}
+
+.alert-info {
+	background-color: #d1ecf1;
+	color: #0c5460;
+	border-color: #bee5eb;
+}
+
+.alert-warning {
+	background-color: #fff3cd;
+	color: #856404;
+	border-color: #ffeaa7;
+}
+
+/* Przyciski */
+.btn-primary,
+.btn-secondary,
+.btn-success {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 12px 20px;
+	border: none;
+	border-radius: 6px;
+	font-size: 14px;
+	font-weight: 600;
+	text-decoration: none;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	text-align: center;
+	justify-content: center;
+}
+
+.btn-primary {
+	background-color: #007bff;
+	color: white;
+}
+
+.btn-primary:hover {
+	background-color: #0056b3;
+	transform: translateY(-2px);
+}
+
+.btn-secondary {
+	background-color: #6c757d;
+	color: white;
+}
+
+.btn-secondary:hover {
+	background-color: #545b62;
+	transform: translateY(-2px);
+}
+
+.btn-success {
+	background-color: #28a745;
+	color: white;
+}
+
+.btn-success:hover {
+	background-color: #1e7e34;
+	transform: translateY(-2px);
+}
+
+.btn-large {
+	padding: 16px 24px;
+	font-size: 16px;
+	font-weight: 700;
+}
+
+/* Badge przypisanego zadania */
+.assigned-badge {
+	background: linear-gradient(135deg, #e7f7ef, #d4f1e4);
+	color: #0d6832;
+	padding: 16px;
+	border-radius: 8px;
+	font-weight: 600;
+	border: 2px solid #b8ebd0;
+	text-align: center;
+	font-size: 16px;
+}
+
+/* Opis akcji */
+.action-description {
+	color: #666;
+	font-size: 14px;
+	line-height: 1.5;
+	margin-top: -10px;
+	margin-bottom: 10px;
+	font-style: italic;
+}
+
+/* Formularze akcji */
+.action-form {
+	background: #f8f9fa;
+	padding: 20px;
+	border-radius: 8px;
+	border: 1px solid #e9ecef;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.action-form textarea {
+	width: 100%;
+	padding: 12px;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	font-family: inherit;
+	font-size: 14px;
+	resize: vertical;
+	min-height: 80px;
+}
+
+.action-form textarea:focus {
+	outline: none;
+	border-color: #007bff;
+	box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* Input pliku */
+.action-form input[type="file"] {
+	padding: 8px;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	background: white;
+	font-size: 14px;
+	width: 100%;
+}
+
+.action-form input[type="file"]:focus {
+	outline: none;
+	border-color: #007bff;
+}
+
+/* Opis zadania dla przypisanego użytkownika */
+.task-action-description {
+	background: white;
+	padding: 20px;
+	border-radius: 8px;
+	border: 1px solid #e9ecef;
+	margin-bottom: 15px;
+}
+
+.task-action-description h3 {
+	margin: 0 0 12px 0;
+	color: #333;
+	font-size: 16px;
+	font-weight: 600;
+}
+
+.task-action-description p {
+	margin: 0;
+	color: #666;
+	line-height: 1.6;
+	font-size: 14px;
+}
+
+/* Linki */
+a.btn-secondary {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 12px 20px;
+	background-color: #6c757d;
+	color: white;
+	text-decoration: none;
+	border-radius: 6px;
+	font-size: 14px;
+	font-weight: 600;
+	transition: all 0.3s ease;
+}
+
+a.btn-secondary:hover {
+	background-color: #545b62;
+	transform: translateY(-2px);
+}
+
+/* Responsywność */
+@media (max-width: 768px) {
+	.action-buttons {
+		gap: 15px;
+	}
+
+	.action-form {
+		padding: 15px;
+	}
+
+	.btn-primary,
+	.btn-secondary,
+	.btn-success,
+	a.btn-secondary {
+		padding: 10px 16px;
+		font-size: 13px;
+	}
+
+	.btn-large {
+		padding: 14px 20px;
+		font-size: 15px;
+	}
+
+	.assigned-badge {
+		padding: 12px;
+		font-size: 14px;
+	}
+}
+
+/* Animacje */
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.alert,
+.action-form,
+.assigned-badge,
+.task-action-description {
+	animation: fadeIn 0.3s ease-out;
+}
+
+/* Stany przycisków */
+.btn-primary:active,
+.btn-secondary:active,
+.btn-success:active,
+a.btn-secondary:active {
+	transform: translateY(0);
+}
+
+/* Notatki */
+.notes-list {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+.note-item {
+	background: white;
+	padding: 16px;
+	border-radius: 8px;
+	border: 1px solid #e9ecef;
+}
+
+.note-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 12px;
+	padding-bottom: 8px;
+	border-bottom: 1px solid #f1f3f4;
+}
+
+.note-user {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.user-avatar {
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	object-fit: cover;
+}
+
+.user-name {
+	font-weight: 600;
+	color: #333;
+}
+
+.note-date {
+	color: #666;
+	font-size: 12px;
+}
+
+.note-content {
+	color: #444;
+	line-height: 1.5;
+}
+
+/* Załączniki */
+.attachments-list {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.attachment-item {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	padding: 16px;
+	background: white;
+	border-radius: 8px;
+	border: 1px solid #e9ecef;
+	transition: all 0.3s ease;
+}
+
+.attachment-item:hover {
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	transform: translateY(-1px);
+}
+
+.attachment-icon {
+	font-size: 24px;
+}
+
+.attachment-info {
+	flex: 1;
+}
+
+.attachment-name {
+	font-weight: 600;
+	color: #333;
+	margin-bottom: 4px;
+}
+
+.attachment-meta {
+	display: flex;
+	gap: 16px;
+	font-size: 12px;
+	color: #666;
+}
+
+.btn-download {
+	padding: 8px 16px;
+	background: #28a745;
+	color: white;
+	text-decoration: none;
+	border-radius: 4px;
+	font-size: 12px;
+	font-weight: 600;
+	transition: all 0.3s ease;
+}
+
+.btn-download:hover {
+	background: #1e7e34;
+	transform: translateY(-1px);
+}

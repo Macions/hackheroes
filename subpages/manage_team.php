@@ -2,11 +2,14 @@
 session_start();
 include("global/connection.php");
 include("global/nav_global.php");
+include("global/log_action.php"); // Dodaj include pliku z funkcją logowania
 
-
-// Sprawdzenie uprawnień właściciela
 $projectId = $_GET['project_id'] ?? 0;
 $currentUserId = $_SESSION['user_id'] ?? 0;
+$userEmail = $_SESSION["user_email"] ?? '';
+
+// Logowanie wejścia na stronę zarządzania zespołem
+logAction($conn, $currentUserId, $userEmail, "team_management_page_accessed", "ID projektu: $projectId");
 
 $stmt = $conn->prepare("SELECT founder_id FROM projects WHERE id = ?");
 $stmt->bind_param("i", $projectId);
@@ -15,18 +18,24 @@ $stmt->bind_result($projectOwner);
 $stmt->fetch();
 $stmt->close();
 
-// Sprawdzenie czy user jest ownerem lub członkiem projektu
 $isOwner = ($currentUserId == $projectOwner);
 if (!$isOwner) {
+    logAction($conn, $currentUserId, $userEmail, "team_management_unauthorized", "ID projektu: $projectId - Brak uprawnień");
     die("Nie masz dostępu do zarządzania tym projektem.");
 }
 
-// Obsługa dodawania członka
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user_id'])) {
     $newUserId = (int) $_POST['add_user_id'];
     $role = $_POST['role'];
 
-    // Sprawdzenie czy użytkownik już jest w projekcie
+    // Pobierz nick użytkownika dla logu
+    $stmt = $conn->prepare("SELECT nick FROM users WHERE id = ?");
+    $stmt->bind_param("i", $newUserId);
+    $stmt->execute();
+    $stmt->bind_result($userNick);
+    $stmt->fetch();
+    $stmt->close();
+
     $stmt = $conn->prepare("SELECT COUNT(*) FROM project_team WHERE project_id = ? AND user_id = ?");
     $stmt->bind_param("ii", $projectId, $newUserId);
     $stmt->execute();
@@ -39,36 +48,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user_id'])) {
         $stmt->bind_param("iis", $projectId, $newUserId, $role);
         $stmt->execute();
         $stmt->close();
+
+        // Logowanie dodania użytkownika do zespołu
+        logAction($conn, $currentUserId, $userEmail, "team_member_added", "ID projektu: $projectId, ID użytkownika: $newUserId, Nick: $userNick, Rola: $role");
     }
+
     header("Location: manage_team.php?project_id=$projectId");
     exit;
 }
 
-// Obsługa usuwania członka
 if (isset($_GET['remove_user_id'])) {
     $removeUserId = (int) $_GET['remove_user_id'];
 
-    // Nie można usuwać samego ownera
+    // Pobierz nick użytkownika dla logu
+    $stmt = $conn->prepare("SELECT nick FROM users WHERE id = ?");
+    $stmt->bind_param("i", $removeUserId);
+    $stmt->execute();
+    $stmt->bind_result($userNick);
+    $stmt->fetch();
+    $stmt->close();
+
     if ($removeUserId != $projectOwner) {
         $stmt = $conn->prepare("DELETE FROM project_team WHERE project_id = ? AND user_id = ?");
         $stmt->bind_param("ii", $projectId, $removeUserId);
         $stmt->execute();
         $stmt->close();
+
+        // Logowanie usunięcia użytkownika z zespołu
+        logAction($conn, $currentUserId, $userEmail, "team_member_removed", "ID projektu: $projectId, ID użytkownika: $removeUserId, Nick: $userNick");
     }
+
     header("Location: manage_team.php?project_id=$projectId");
     exit;
 }
 
-// Obsługa zmiany roli
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_role_user_id'])) {
     $userId = (int) $_POST['change_role_user_id'];
     $newRole = $_POST['new_role'];
 
-    // Pobranie roli celu i aktualnego usera
-    $stmt = $conn->prepare("SELECT role FROM project_team WHERE project_id = ? AND user_id = ?");
+    // Pobierz nick użytkownika i starą rolę dla logu
+    $stmt = $conn->prepare("SELECT u.nick, pt.role FROM users u JOIN project_team pt ON u.id = pt.user_id WHERE pt.project_id = ? AND pt.user_id = ?");
     $stmt->bind_param("ii", $projectId, $userId);
     $stmt->execute();
-    $stmt->bind_result($targetRole);
+    $stmt->bind_result($userNick, $oldRole);
     $stmt->fetch();
     $stmt->close();
 
@@ -79,19 +101,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_role_user_id']
     $stmt->fetch();
     $stmt->close();
 
-    // Zasady: nie można zdegradować ownera, deweloperzy nie mogą degradować innych deweloperów
     if ($userId != $projectOwner && ($currentUserId == $projectOwner || ($currentUserRole != 'Developer' || $targetRole != 'Developer'))) {
         $stmt = $conn->prepare("UPDATE project_team SET role = ? WHERE project_id = ? AND user_id = ?");
         $stmt->bind_param("sii", $newRole, $projectId, $userId);
         $stmt->execute();
         $stmt->close();
+
+        // Logowanie zmiany roli użytkownika
+        logAction($conn, $currentUserId, $userEmail, "team_member_role_changed", "ID projektu: $projectId, ID użytkownika: $userId, Nick: $userNick, Rola: $oldRole -> $newRole");
     }
 
     header("Location: manage_team.php?project_id=$projectId");
     exit;
 }
 
-// Pobranie członków zespołu (tylko obecnych w projekcie)
 $stmt = $conn->prepare("
     SELECT pt.user_id, pt.role, u.nick, u.avatar
     FROM project_team pt
@@ -104,7 +127,6 @@ $result = $stmt->get_result();
 $teamMembers = $result->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 ?>
-
 
 <!DOCTYPE html>
 <html lang="pl">
@@ -240,7 +262,7 @@ $stmt->close();
                     <img src="../photos/website-logo.jpg" alt="Logo TeenCollab">
                     <div>
                         <h3>TeenCollab</h3>
-                        <p>Platforma dla młodych zmieniaczy świata</p>
+                        <p>Platforma dla kreatorów przyszłości</p>
                     </div>
                 </div>
                 <div class="footer-copyright">

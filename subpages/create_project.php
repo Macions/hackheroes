@@ -2,7 +2,7 @@
 session_start();
 include("global/connection.php");
 include("global/nav_global.php");
-
+include("global/log_action.php");
 
 // Sprawdź czy użytkownik jest zalogowany
 if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
@@ -59,7 +59,6 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
             throw new Exception("Błąd przygotowania zapytania: " . $conn->error);
         }
 
-        // ✅ JEDNO bind_param z location
         if (!$stmt->bind_param("sssssssiiis", $projectName, $shortDescription, $location, $country, $fullDescription, $deadline, $visibility, $userId, $allowApplications, $autoAccept, $seoTags)) {
             throw new Exception("Błąd powiązania parametrów: " . $stmt->error);
         }
@@ -71,9 +70,11 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
         $projectId = $conn->insert_id;
         $stmt->close();
 
+        // Logowanie utworzenia projektu
+        logAction($conn, $userId, $userEmail, "project_created", "ID: $projectId");
+
         // Kategorie
         if (isset($_POST['categories'])) {
-            // Upewnij się, że categories jest tablicą
             $categories = is_array($_POST['categories']) ? $_POST['categories'] : [$_POST['categories']];
 
             $categoryMap = [
@@ -136,7 +137,6 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
 
         // Skills
         if (isset($_POST['skills'])) {
-            // Upewnij się, że skills jest tablicą
             $skills = is_array($_POST['skills']) ? $_POST['skills'] : [$_POST['skills']];
 
             $skillMap = [
@@ -250,8 +250,6 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
         ]);
         exit();
 
-
-
     } catch (Exception $e) {
         $conn->rollback();
 
@@ -263,6 +261,8 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
     }
 }
 
+// Logowanie wejścia na stronę tworzenia projektu
+logAction($conn, $userId, $userEmail, "project_creation_page_accessed", "");
 ?>
 
 
@@ -278,6 +278,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
 </head>
 
 <body>
@@ -729,7 +730,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
                     <img src="../photos/website-logo.jpg" alt="Logo TeenCollab">
                     <div>
                         <h3>TeenCollab</h3>
-                        <p>Platforma dla młodych zmieniaczy świata</p>
+                        <p>Platforma dla kreatorów przyszłości</p>
                     </div>
                 </div>
                 <div class="footer-copyright">

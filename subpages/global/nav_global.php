@@ -16,12 +16,12 @@ if (session_status() === PHP_SESSION_NONE) {
 $nav_cta_action = '';
 $prefix = ($currentPage == 'index.php') ? 'subpages/' : '';
 
-// Sprawdzenie, czy użytkownik jest zalogowany
+
 if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
     $firstName = $_SESSION['first_name'] ?? 'Użytkownik';
     $userId = $_SESSION['user_id'] ?? 0;
 
-    // Domyślny avatar
+
     $userAvatar = $urlToAvatarPhoto;
 
     if ($userId) {
@@ -53,6 +53,9 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
         <span class="dropdown-arrow">▼</span>
     </div>
     <div class="user-dropdown-menu">
+        <a href="{$prefix}create_project.php" class="dropdown-item">
+            <span class="dropdown-icon">➕</span> Stwórz projekt
+        </a>
         <a href="{$prefix}account.php" class="dropdown-item">
             <span class="dropdown-icon">👤</span> Mój profil
         </a>

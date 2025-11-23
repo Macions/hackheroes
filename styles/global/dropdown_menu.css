@@ -112,7 +112,6 @@
 
 .logout-item:hover {
 	background: var(--danger);
-	color: white !important;
 }
 
 /* Responsywność */

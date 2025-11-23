@@ -1,15 +1,17 @@
 <?php
 session_start();
 include("global/connection.php");
+include("global/log_action.php");
 
 $taskId = $_GET['task_id'] ?? 0;
 $currentUserId = $_SESSION['user_id'] ?? 0;
+$userEmail = $_SESSION["user_email"] ?? '';
 
-// Pobierz zadanie do edycji
 $taskStmt = $conn->prepare("
     SELECT t.*, 
            p.name as project_name,
-           p.founder_id as project_owner_id
+           p.founder_id as project_owner_id,
+           p.id as project_id
     FROM tasks t
     LEFT JOIN projects p ON t.project_id = p.id
     WHERE t.id = ?
@@ -23,12 +25,10 @@ if (!$task) {
     die("Zadanie nie istnieje.");
 }
 
-// Sprawdź uprawnienia - tylko właściciel projektu może edytować
 if ($task['project_owner_id'] != $currentUserId) {
     die("Nie masz uprawnień do edycji tego zadania.");
 }
 
-// Pobierz członków zespołu do przypisywania
 $teamMembers = [];
 $memberStmt = $conn->prepare("
     SELECT u.id, u.nick, u.avatar 
@@ -44,7 +44,6 @@ while ($row = $memberResult->fetch_assoc()) {
 }
 $memberStmt->close();
 
-// Obsługa formularza edycji
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_task'])) {
     $name = $_POST['name'];
     $description = $_POST['description'];
@@ -53,6 +52,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_task'])) {
     $deadline = $_POST['deadline'] ?? null;
     $estimatedHours = $_POST['estimated_hours'] ?? null;
     $status = $_POST['status'];
+
+    // Sprawdzanie zmian
+    $changes = [];
+
+    if ($name !== $task['name']) {
+        $changes[] = "nazwa:{$task['name']}->$name";
+    }
+    if ($description !== $task['description']) {
+        $changes[] = "opis";
+    }
+    if ($priority !== $task['priority']) {
+        $changes[] = "priorytet:{$task['priority']}->$priority";
+    }
+    if ($assignedTo != $task['assigned_to']) {
+        $oldAssignee = $task['assigned_to'] ?: 'brak';
+        $newAssignee = $assignedTo ?: 'brak';
+        $changes[] = "przypisanie:$oldAssignee->$newAssignee";
+    }
+    if ($deadline !== $task['deadline']) {
+        $oldDeadline = $task['deadline'] ?: 'brak';
+        $newDeadline = $deadline ?: 'brak';
+        $changes[] = "deadline:$oldDeadline->$newDeadline";
+    }
+    if ($estimatedHours != $task['estimated_hours']) {
+        $oldHours = $task['estimated_hours'] ?: 'brak';
+        $newHours = $estimatedHours ?: 'brak';
+        $changes[] = "godziny:$oldHours->$newHours";
+    }
+    if ($status !== $task['status']) {
+        $changes[] = "status:{$task['status']}->$status";
+    }
 
     $updateStmt = $conn->prepare("
         UPDATE tasks 
@@ -73,11 +103,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_task'])) {
     );
 
     if ($updateStmt->execute()) {
+        // Logowanie tylko jeśli były zmiany
+        if (!empty($changes)) {
+            $changeDetails = "ID zadania: $taskId, Zmiany: " . implode(", ", $changes);
+            logAction($conn, $currentUserId, $userEmail, "task_updated", $changeDetails);
+        }
+
         $_SESSION['success_message'] = "Zadanie zostało zaktualizowane pomyślnie!";
         header("Location: task_details.php?task_id=" . $taskId);
         exit;
     } else {
         $error = "Błąd podczas aktualizacji zadania: " . $conn->error;
+        logAction($conn, $currentUserId, $userEmail, "task_update_failed", "ID zadania: $taskId, Błąd: " . $conn->error);
     }
     $updateStmt->close();
 }
@@ -217,7 +254,7 @@ function formatDateForInput($dateStr)
                     <img src="../photos/website-logo.jpg" alt="Logo TeenCollab">
                     <div>
                         <h3>TeenCollab</h3>
-                        <p>Platforma dla młodych zmieniaczy świata</p>
+                        <p>Platforma dla kreatorów przyszłości</p>
                     </div>
                 </div>
                 <div class="footer-copyright">

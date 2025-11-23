@@ -3,21 +3,21 @@ session_start();
 include("subpages/global/connection.php");
 include("subpages/global/nav_global.php");
 
-// Pobierz statystyki z bazy danych
+
 try {
-    // Liczba projektów
+
     $projectsStmt = $conn->prepare("SELECT COUNT(*) as total FROM projects WHERE status = 'active' OR status = 'completed'");
     $projectsStmt->execute();
     $totalProjects = $projectsStmt->get_result()->fetch_assoc()['total'] ?? 0;
     $projectsStmt->close();
 
-    // Liczba użytkowników
+
     $usersStmt = $conn->prepare("SELECT COUNT(*) as total FROM users");
     $usersStmt->execute();
     $totalUsers = $usersStmt->get_result()->fetch_assoc()['total'] ?? 0;
     $usersStmt->close();
 
-    // Pobierz 3 najnowsze projekty do slidera
+
     $latestProjectsStmt = $conn->prepare("
         SELECT 
             p.id, 
@@ -49,7 +49,7 @@ try {
 
     function pluralForm($number, $forms)
     {
-        // $forms = ['miesiąc', 'miesiące', 'miesięcy'] dla miesięcy
+
         $n = abs($number);
 
         if ($n == 1) return $forms[0]; // 1 miesiąc
@@ -69,18 +69,18 @@ try {
         $months = $diff->m;
         $days = $diff->d;
 
-        // Jeśli ma więcej niż rok, pokaż tylko lata
+
         if ($years > 0) {
             if ($years == 1) return '1 roku';
             return "$years lat";
         }
 
-        // Jeśli ma więcej niż miesiąc, pokaż tylko miesiące
+
         if ($months > 0) {
             return $months . ' ' . pluralForm($months, ['miesiąca', 'miesięcy', 'miesięcy']);
         }
 
-        // Jeśli ma mniej niż miesiąc, pokaż dni
+
         if ($days > 0) {
             if ($days == 1) return '1 dnia';
             return "$days dni";
@@ -89,7 +89,7 @@ try {
         return 'kilku dni';
     }
 
-    // Pobierz opinie użytkowników (opinie/reviews)
+
     $opinionsStmt = $conn->prepare("
         SELECT u.nick, u.avatar, r.comment, r.created_at
         FROM reviews r
@@ -101,14 +101,14 @@ try {
     $opinionsStmt->execute();
     $opinions = $opinionsStmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
-    // Usuń '../' z początku linków do avatarów
+
     foreach ($opinions as &$opinion) {
         $opinion['avatar'] = preg_replace('#^\.\./#', '', $opinion['avatar']);
     }
 
     $opinionsStmt->close();
 } catch (Exception $e) {
-    // W przypadku błędu, ustaw domyślne wartości
+
     $totalProjects = 100;
     $totalUsers = 100;
     $latestProjects = [];
@@ -373,7 +373,7 @@ try {
                     <img src="photos/website-logo.jpg" alt="Logo TeenCollab">
                     <div>
                         <h3>TeenCollab</h3>
-                        <p>Platforma dla młodych zmieniaczy świata</p>
+                        <p>Platforma dla kreatorów przyszłości</p>
                     </div>
                 </div>
                 <div class="footer-copyright">
@@ -384,9 +384,9 @@ try {
     </footer>
 
     <script>
-        // Modern JavaScript with Enhanced Animations - FIXED VERSION
+
         document.addEventListener('DOMContentLoaded', function() {
-            // Projects Grid Manager - dla grid layoutu zamiast slidera
+
             class ProjectsGridManager {
                 constructor() {
                     this.projectsContainer = document.getElementById('projects');
@@ -470,7 +470,7 @@ try {
                 }
             }
 
-            // Opinions Slider
+
             class OpinionsSlider {
                 constructor() {
                     this.container = document.getElementById('opinions');
@@ -503,7 +503,7 @@ try {
                         this.rightArrow.addEventListener('click', () => this.nextSlide());
                     }
 
-                    // Keyboard navigation
+
                     document.addEventListener('keydown', (e) => {
                         const opinionsSection = document.getElementById('future_makers_opinions');
                         if (opinionsSection && opinionsSection.contains(e.target)) {
@@ -539,7 +539,7 @@ try {
                     const translateX = -this.currentSlide * 50;
                     this.container.style.transform = `translateX(${translateX}%)`;
 
-                    // Add animation
+
                     this.container.style.animation = 'none';
                     setTimeout(() => {
                         this.container.style.animation = 'opinionSlide 0.5s ease-out';
@@ -547,7 +547,7 @@ try {
                 }
             }
 
-            // Navigation Manager - SIMPLIFIED VERSION
+
             class NavigationManager {
                 constructor() {
                     this.burgerMenu = document.getElementById('burger-menu');
@@ -564,12 +564,12 @@ try {
 
                     this.burgerMenu.addEventListener('click', () => this.toggleMenu());
 
-                    // Close menu when clicking on links
+
                     document.querySelectorAll('.nav-menu a').forEach(link => {
                         link.addEventListener('click', () => this.closeMenu());
                     });
 
-                    // Close menu when clicking outside
+
                     document.addEventListener('click', (e) => {
                         if (this.navMenu && this.navMenu.classList.contains('active')) {
                             if (!this.navMenu.contains(e.target) && !this.burgerMenu.contains(e.target)) {
@@ -578,7 +578,7 @@ try {
                         }
                     });
 
-                    // Close menu on escape key
+
                     document.addEventListener('keydown', (e) => {
                         if (e.key === 'Escape' && this.navMenu && this.navMenu.classList.contains('active')) {
                             this.closeMenu();
@@ -605,7 +605,7 @@ try {
                 }
             }
 
-            // Scroll Animations Manager - FIXED VERSION (bez navbara!)
+
             class ScrollAnimations {
                 constructor() {
                     this.observerOptions = {
@@ -629,7 +629,7 @@ try {
                         });
                     }, this.observerOptions);
 
-                    // Observe ONLY specific elements - NOT navbar!
+
                     const animatedElements = document.querySelectorAll(
                         '#stats article, #how_it_works .content > div, .project, .opinion, .projects-view-all, #buttons-join_projects, #make_future_with_us'
                     );
@@ -665,19 +665,19 @@ try {
                 }
             }
 
-            // Initialize all components
+
             const projectsGrid = new ProjectsGridManager();
             const opinionsSlider = new OpinionsSlider();
             const navigationManager = new NavigationManager();
             const scrollAnimations = new ScrollAnimations();
 
-            // Add CSS animations dynamically
+
             addCustomAnimations();
 
             console.log('🚀 TeenCollab - JavaScript initialized successfully!');
         });
 
-        // Add custom animations to document
+
         function addCustomAnimations() {
             const style = document.createElement('style');
             style.textContent = `
@@ -726,7 +726,7 @@ try {
             document.head.appendChild(style);
         }
 
-        // Lazy loading for images
+
         function setupLazyLoading() {
             const lazyImages = document.querySelectorAll('img[data-src]');
 
@@ -744,7 +744,7 @@ try {
             lazyImages.forEach(img => imageObserver.observe(img));
         }
 
-        // Utility function for debouncing
+
         function debounce(func, wait) {
             let timeout;
             return function executedFunction(...args) {

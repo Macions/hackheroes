@@ -1,6 +1,222 @@
 <?php
+session_start();
+include("global/connection.php");
 include("global/nav_global.php");
+include("global/log_action.php"); // Dodaj include pliku z funkcją logowania
 
+// Sprawdź czy użytkownik jest zalogowany (opcjonalnie - jeśli strona ma być dostępna tylko dla zalogowanych)
+if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
+    header("Location: join.php");
+    exit();
+}
+
+$currentUserId = $_SESSION["user_id"];
+$userEmail = $_SESSION["user_email"] ?? '';
+
+// Pobierz ID użytkownika z URL (jeśli oglądamy czyjś profil) lub użyj aktualnego użytkownika
+$profileUserId = $_GET['id'] ?? $currentUserId;
+$isOwnProfile = ($profileUserId == $currentUserId);
+
+// Logowanie wejścia na stronę profilu
+logAction($conn, $currentUserId, $userEmail, "profile_page_accessed", "ID profilu: $profileUserId, Własny profil: " . ($isOwnProfile ? 'TAK' : 'NIE'));
+
+// Pobierz dane użytkownika
+$userStmt = $conn->prepare("
+    SELECT u.*, 
+           COUNT(DISTINCT p.id) as project_count,
+           COUNT(DISTINCT f1.id) as followers_count,
+           COUNT(DISTINCT f2.id) as following_count
+    FROM users u
+    LEFT JOIN projects p ON u.id = p.founder_id
+    LEFT JOIN follows f1 ON u.id = f1.user_id
+    LEFT JOIN follows f2 ON u.id = f2.user_id
+    WHERE u.id = ?
+    GROUP BY u.id
+");
+$userStmt->bind_param("i", $profileUserId);
+$userStmt->execute();
+$userResult = $userStmt->get_result();
+$user = $userResult->fetch_assoc();
+$userStmt->close();
+
+if (!$user) {
+    // Logowanie błędu - użytkownik nie istnieje
+    logAction($conn, $currentUserId, $userEmail, "profile_not_found", "ID profilu: $profileUserId");
+    die("Użytkownik nie istnieje.");
+}
+
+// Pobierz projekty użytkownika
+$projects = [];
+$projectStmt = $conn->prepare("
+    SELECT p.*, 
+           COUNT(DISTINCT pt.user_id) as member_count,
+           COUNT(DISTINCT l.id) as like_count
+    FROM projects p
+    LEFT JOIN project_team pt ON p.id = pt.project_id
+    LEFT JOIN likes l ON p.id = l.project_id
+    WHERE p.founder_id = ?
+    GROUP BY p.id
+    ORDER BY p.created_at DESC
+    LIMIT 6
+");
+$projectStmt->bind_param("i", $profileUserId);
+$projectStmt->execute();
+$projectResult = $projectStmt->get_result();
+while ($row = $projectResult->fetch_assoc()) {
+    $projects[] = $row;
+}
+$projectStmt->close();
+
+$skills = [];
+
+if ($userId) {
+    $stmt = $conn->prepare("SELECT interest FROM users WHERE id = ?");
+    if ($stmt) {
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        if ($row = $res->fetch_assoc()) {
+            // zakładam, że w kolumnie 'interest' masz np. wartości oddzielone przecinkami
+            // jeśli tak, możemy je zamienić na tablicę
+            $skills = array_map('trim', explode(',', $row['interest']));
+        }
+        $stmt->close();
+    }
+}
+
+// $skills teraz będzie tablicą zainteresowań użytkownika
+
+
+// Pobierz odznaki użytkownika
+$achievements = [];
+$stmt = $conn->prepare("
+    SELECT * 
+    FROM badges 
+    WHERE user_id = ?
+");
+$stmt->bind_param("i", $profileUserId);
+$stmt->execute();
+$result = $stmt->get_result();
+while ($row = $result->fetch_assoc()) {
+    $achievements[] = $row;
+}
+$stmt->close();
+
+
+// Pobierz ostatnią aktywność
+$activities = [];
+$activityStmt = $conn->prepare("
+    SELECT action, details, created_at 
+    FROM logs 
+    WHERE user_id = ? 
+    ORDER BY created_at DESC 
+    LIMIT 10
+");
+$activityStmt->bind_param("i", $profileUserId);
+$activityStmt->execute();
+$activityResult = $activityStmt->get_result();
+while ($row = $activityResult->fetch_assoc()) {
+    $activities[] = $row;
+}
+$activityStmt->close();
+
+// Sprawdź czy aktualny użytkownik obserwuje tego użytkownika
+$isFollowing = false;
+if (!$isOwnProfile) {
+    $followStmt = $conn->prepare("
+        SELECT id FROM follows 
+        WHERE user_id = ? AND project_id IN (SELECT id FROM projects WHERE founder_id = ?)
+    ");
+    $followStmt->bind_param("ii", $currentUserId, $profileUserId);
+    $followStmt->execute();
+    $isFollowing = $followStmt->get_result()->num_rows > 0;
+    $followStmt->close();
+}
+
+// Obsługa akcji obserwowania/odobserwowania
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['follow_action'])) {
+    if (!$isOwnProfile) {
+        $action = $_POST['follow_action'];
+
+        if ($action === 'follow') {
+            // Znajdź projekt użytkownika do obserwowania
+            $projectStmt = $conn->prepare("SELECT id FROM projects WHERE founder_id = ? LIMIT 1");
+            $projectStmt->bind_param("i", $profileUserId);
+            $projectStmt->execute();
+            $projectResult = $projectStmt->get_result();
+            $project = $projectResult->fetch_assoc();
+            $projectStmt->close();
+
+            if ($project) {
+                $followStmt = $conn->prepare("INSERT INTO follows (user_id, project_id) VALUES (?, ?)");
+                $followStmt->bind_param("ii", $currentUserId, $project['id']);
+                $followStmt->execute();
+                $followStmt->close();
+
+                // Logowanie obserwowania użytkownika
+                logAction($conn, $currentUserId, $userEmail, "user_followed", "ID obserwowanego użytkownika: $profileUserId");
+                $isFollowing = true;
+            }
+        } elseif ($action === 'unfollow') {
+            $followStmt = $conn->prepare("
+                DELETE FROM follows 
+                WHERE user_id = ? AND project_id IN (SELECT id FROM projects WHERE founder_id = ?)
+            ");
+            $followStmt->bind_param("ii", $currentUserId, $profileUserId);
+            $followStmt->execute();
+            $followStmt->close();
+
+            // Logowanie odobserwowania użytkownika
+            logAction($conn, $currentUserId, $userEmail, "user_unfollowed", "ID odobserwowanego użytkownika: $profileUserId");
+            $isFollowing = false;
+        }
+
+        header("Location: profile.php?id=" . $profileUserId);
+        exit();
+    }
+}
+
+// Funkcja formatująca datę
+function formatDate($dateString)
+{
+    if (!$dateString || $dateString == '0000-00-00')
+        return '';
+    $date = new DateTime($dateString);
+    return $date->format('d.m.Y');
+}
+
+// Funkcja obliczająca czas od ostatniej aktywności
+function time_elapsed_string($datetime, $full = false)
+{
+    $now = new DateTime;
+    $ago = new DateTime($datetime);
+    $diff = $now->diff($ago);
+
+    $diff->w = floor($diff->d / 7);
+    $diff->d -= $diff->w * 7;
+
+    $string = [
+        'y' => ['rok', 'lata', 'lat'],
+        'm' => ['miesiąc', 'miesiące', 'miesięcy'],
+        'w' => ['tydzień', 'tygodnie', 'tygodni'],
+        'd' => ['dzień', 'dni', 'dni'],
+        'h' => ['godzinę', 'godziny', 'godzin'],
+        'i' => ['minutę', 'minuty', 'minut'],
+        's' => ['sekundę', 'sekundy', 'sekund']
+    ];
+
+    foreach ($string as $k => &$v) {
+        if ($diff->$k) {
+            $v = $diff->$k . ' ' . $v[($diff->$k == 1) ? 0 : (($diff->$k % 10 >= 2 && $diff->$k % 10 <= 4 && ($diff->$k % 100 < 10 || $diff->$k % 100 >= 20)) ? 1 : 2)];
+        } else {
+            unset($string[$k]);
+        }
+    }
+
+    if (!$full)
+        $string = array_slice($string, 0, 1);
+    return $string ? implode(', ', $string) . ' temu' : 'przed chwilą';
+}
 ?>
 
 <!DOCTYPE html>
@@ -9,7 +225,7 @@ include("global/nav_global.php");
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profil - Anna Nowak | TeenCollab</title>
+    <title>Profil - <?php echo htmlspecialchars($user['nick']); ?> | TeenCollab</title>
     <link rel="shortcut icon" href="../photos/website-logo.jpg" type="image/x-icon">
     <link rel="stylesheet" href="../styles/profile_style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -50,23 +266,38 @@ include("global/nav_global.php");
             <div class="container">
                 <div class="hero-content">
                     <div class="profile-avatar">
-                        <img src="../photos/sample_person.png" alt="Anna Nowak">
+                        <img src="<?php echo htmlspecialchars($user['avatar'] ?? '../photos/sample_person.png'); ?>"
+                            alt="<?php echo htmlspecialchars($user['nick']); ?>">
                     </div>
                     <div class="profile-info">
                         <div class="profile-badge">Aktywny członek</div>
-                        <h1 class="profile-name">Anna Nowak</h1>
-                        <p class="profile-role">Front-end Developer & Organizator społeczny</p>
+                        <h1 class="profile-name"><?php echo htmlspecialchars($user['nick']); ?></h1>
+                        <p class="profile-role">
+                            <?php echo htmlspecialchars($user['role'] ?? 'Uczestnik społeczności'); ?>
+                        </p>
                         <p class="profile-bio">
-                            Uczeń technikum, pasjonatka IT i projektów społecznych. Tworzę rzeczy, które pomagają innym
-                            i zmieniają świat na lepsze.
+                            <?php echo htmlspecialchars($user['bio'] ?? 'Uczeń zaangażowany w projekty społeczne i technologiczne. Wierzę, że razem możemy zmieniać świat na lepsze.'); ?>
                         </p>
                         <div class="profile-actions">
-                            <button class="btn-primary">
-                                <span>✉️ Wyślij wiadomość</span>
-                            </button>
-                            <button class="btn-secondary">
-                                <span>❤️ Obserwuj</span>
-                            </button>
+                            <?php if (!$isOwnProfile): ?>
+                                <form method="POST" style="display: inline;">
+                                    <?php if ($isFollowing): ?>
+                                        <input type="hidden" name="follow_action" value="unfollow">
+                                        <button type="submit" class="btn-secondary">
+                                            <span>❤️ Przestań obserwować</span>
+                                        </button>
+                                    <?php else: ?>
+                                        <input type="hidden" name="follow_action" value="follow">
+                                        <button type="submit" class="btn-primary">
+                                            <span>❤️ Obserwuj</span>
+                                        </button>
+                                    <?php endif; ?>
+                                </form>
+                            <?php else: ?>
+                                <a href="edit_profile.php" class="btn-primary">
+                                    <span>✏️ Edytuj profil</span>
+                                </a>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -83,39 +314,49 @@ include("global/nav_global.php");
                             <h2>Podstawowe informacje</h2>
                         </div>
                         <div class="info-grid">
-                            <div class="info-item">
-                                <span class="info-icon">🏫</span>
-                                <div class="info-content">
-                                    <span class="info-label">Szkoła</span>
-                                    <span class="info-value">Technikum Informatyczne nr 1 w Warszawie</span>
+                            <?php if ($user['school']): ?>
+                                <div class="info-item">
+                                    <span class="info-icon">🏫</span>
+                                    <div class="info-content">
+                                        <span class="info-label">Szkoła</span>
+                                        <span class="info-value"><?php echo htmlspecialchars($user['school']); ?></span>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-icon">🏙️</span>
-                                <div class="info-content">
-                                    <span class="info-label">Miasto</span>
-                                    <span class="info-value">Warszawa</span>
+                            <?php endif; ?>
+
+                            <?php if ($user['city']): ?>
+                                <div class="info-item">
+                                    <span class="info-icon">🏙️</span>
+                                    <div class="info-content">
+                                        <span class="info-label">Miasto</span>
+                                        <span class="info-value"><?php echo htmlspecialchars($user['city']); ?></span>
+                                    </div>
                                 </div>
-                            </div>
+                            <?php endif; ?>
+
                             <div class="info-item">
                                 <span class="info-icon">🎯</span>
                                 <div class="info-content">
                                     <span class="info-label">Dziedziny zainteresowań</span>
-                                    <span class="info-value">Technologia, Ekologia, Edukacja</span>
+                                    <span
+                                        class="info-value"><?php echo htmlspecialchars($user['interests'] ?? 'Technologia, Społeczność, Edukacja'); ?></span>
                                 </div>
                             </div>
+
                             <div class="info-item">
                                 <span class="info-icon">📅</span>
                                 <div class="info-content">
                                     <span class="info-label">Dołączył</span>
-                                    <span class="info-value">15 stycznia 2024</span>
+                                    <span class="info-value"><?php echo formatDate($user['created_at']); ?></span>
                                 </div>
                             </div>
+
                             <div class="info-item">
                                 <span class="info-icon">🌟</span>
                                 <div class="info-content">
                                     <span class="info-label">Rola w TeenCollab</span>
-                                    <span class="info-value">Twórca projektów, Mentor społeczności</span>
+                                    <span
+                                        class="info-value"><?php echo htmlspecialchars($user['community_role'] ?? 'Aktywny uczestnik'); ?></span>
                                 </div>
                             </div>
                         </div>
@@ -124,59 +365,41 @@ include("global/nav_global.php");
                     <!-- 🚀 Aktywne projekty -->
                     <section class="content-section projects-section">
                         <div class="section-header">
-                            <h2>Aktywne projekty</h2>
-                            <a href="projects.php?user=anna" class="see-all-link">Zobacz wszystkie →</a>
+                            <h2>Projekty</h2>
+                            <a href="projects.php?user=<?php echo $profileUserId; ?>" class="see-all-link">Zobacz
+                                wszystkie →</a>
                         </div>
                         <div class="projects-grid">
-                            <div class="project-card">
-                                <div class="project-image">
-                                    <img src="../photos/project-sample.jpg" alt="EcoFuture">
-                                    <span class="project-status status-active">Aktywny</span>
-                                </div>
-                                <div class="project-info">
-                                    <h3 class="project-title">EcoFuture</h3>
-                                    <p class="project-description">Platforma edukacyjna promująca zrównoważony rozwój
-                                        wśród młodzieży</p>
-                                    <div class="project-meta">
-                                        <span class="meta-item">👥 3 członków</span>
-                                        <span class="meta-item">❤️ 132</span>
+                            <?php if (!empty($projects)): ?>
+                                <?php foreach ($projects as $project): ?>
+                                    <div class="project-card">
+                                        <div class="project-image">
+                                            <img src="<?php echo htmlspecialchars($project['thumbnail'] ?? '../photos/project-default.jpg'); ?>"
+                                                alt="<?php echo htmlspecialchars($project['name']); ?>">
+                                            <span class="project-status status-<?php echo $project['status'] ?? 'active'; ?>">
+                                                <?php echo $project['status'] == 'completed' ? 'Zakończony' : 'Aktywny'; ?>
+                                            </span>
+                                        </div>
+                                        <div class="project-info">
+                                            <h3 class="project-title"><?php echo htmlspecialchars($project['name']); ?></h3>
+                                            <p class="project-description">
+                                                <?php echo htmlspecialchars($project['short_description']); ?>
+                                            </p>
+                                            <div class="project-meta">
+                                                <span class="meta-item">👥 <?php echo $project['member_count'] ?? 0; ?>
+                                                    członków</span>
+                                                <span class="meta-item">❤️ <?php echo $project['like_count'] ?? 0; ?></span>
+                                            </div>
+                                            <a href="project.php?id=<?php echo $project['id']; ?>"
+                                                class="btn-secondary btn-sm">Zobacz projekt</a>
+                                        </div>
                                     </div>
-                                    <button class="btn-secondary btn-sm">Zobacz projekt</button>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="no-projects">
+                                    <p>🎯 Ten użytkownik nie ma jeszcze żadnych projektów.</p>
                                 </div>
-                            </div>
-
-                            <div class="project-card">
-                                <div class="project-image">
-                                    <img src="../photos/project-sample2.jpg" alt="CodeMentor">
-                                    <span class="project-status status-active">Aktywny</span>
-                                </div>
-                                <div class="project-info">
-                                    <h3 class="project-title">CodeMentor</h3>
-                                    <p class="project-description">Platforma łącząca młodych programistów z mentorami
-                                    </p>
-                                    <div class="project-meta">
-                                        <span class="meta-item">👥 5 członków</span>
-                                        <span class="meta-item">❤️ 89</span>
-                                    </div>
-                                    <button class="btn-secondary btn-sm">Zobacz projekt</button>
-                                </div>
-                            </div>
-
-                            <div class="project-card">
-                                <div class="project-image">
-                                    <img src="../photos/project-sample3.jpg" alt="GreenCity">
-                                    <span class="project-status status-completed">Zakończony</span>
-                                </div>
-                                <div class="project-info">
-                                    <h3 class="project-title">GreenCity</h3>
-                                    <p class="project-description">Aplikacja do zarządzania odpadami w mieście</p>
-                                    <div class="project-meta">
-                                        <span class="meta-item">👥 8 członków</span>
-                                        <span class="meta-item">❤️ 156</span>
-                                    </div>
-                                    <button class="btn-secondary btn-sm">Zobacz projekt</button>
-                                </div>
-                            </div>
+                            <?php endif; ?>
                         </div>
                     </section>
 
@@ -187,77 +410,55 @@ include("global/nav_global.php");
                         </div>
                         <div class="about-content">
                             <p class="about-text">
-                                Od 3 lat pasjonuję się programowaniem i technologią. Uwielbiam tworzyć projekty, które
-                                mają realny wpływ na społeczność.
-                                Specjalizuję się w front-end development, ale ciągle rozwijam swoje umiejętności w
-                                zakresie UI/UX design i zarządzania projektami.
-                                Wierzę, że technologia może zmieniać świat na lepsze i chcę być częścią tej zmiany.
+                                <?php echo nl2br(htmlspecialchars($user['about'] ?? 'Pasjonat technologii i projektów społecznych. Uwielbiam tworzyć rzeczy, które mają realny wpływ na społeczność i pomagają innym.')); ?>
                             </p>
 
-                            <div class="skills-section">
-                                <h3 class="skills-title">Umiejętności</h3>
-                                <div class="skills-grid">
-                                    <span class="skill-badge">HTML/CSS</span>
-                                    <span class="skill-badge">JavaScript</span>
-                                    <span class="skill-badge">React</span>
-                                    <span class="skill-badge">UI/UX Design</span>
-                                    <span class="skill-badge">Zarządzanie projektami</span>
-                                    <span class="skill-badge">Figma</span>
-                                    <span class="skill-badge">Git</span>
-                                    <span class="skill-badge">Photoshop</span>
+                            <?php if (!empty($skills)): ?>
+                                <div class="skills-section">
+                                    <h3 class="skills-title">Umiejętności</h3>
+                                    <div class="skills-grid">
+                                        <?php foreach ($skills as $skill): ?>
+                                            <span class="skill-badge"><?php echo htmlspecialchars($skill); ?></span>
+                                        <?php endforeach; ?>
+                                    </div>
                                 </div>
-                            </div>
+                            <?php endif; ?>
 
                             <div class="interests-section">
                                 <h3 class="interests-title">Zainteresowania</h3>
                                 <div class="interests-grid">
-                                    <span class="interest-tag">🎨 Design</span>
-                                    <span class="interest-tag">🌱 Ekologia</span>
-                                    <span class="interest-tag">📚 Edukacja</span>
-                                    <span class="interest-tag">🎮 Gry planszowe</span>
-                                    <span class="interest-tag">📸 Fotografia</span>
-                                    <span class="interest-tag">🚴 Rower</span>
+                                    <?php
+                                    $interests = explode(',', $user['interests'] ?? 'Technologia,Ekologia,Edukacja');
+                                    foreach ($interests as $interest):
+                                        $interest = trim($interest);
+                                        if (!empty($interest)):
+                                            ?>
+                                            <span class="interest-tag">🎯 <?php echo htmlspecialchars($interest); ?></span>
+                                        <?php endif; endforeach; ?>
                                 </div>
                             </div>
                         </div>
                     </section>
 
                     <!-- ⭐ Osiągnięcia -->
-                    <section class="content-section achievements-section">
-                        <div class="section-header">
-                            <h2>Osiągnięcia</h2>
-                        </div>
-                        <div class="achievements-grid">
-                            <div class="achievement-card">
-                                <div class="achievement-icon">🏆</div>
-                                <div class="achievement-content">
-                                    <h3>Zrealizował 10+ projektów</h3>
-                                    <p>Aktywnie uczestniczy w tworzeniu społecznościowych inicjatyw</p>
-                                </div>
+                    <?php if (!empty($achievements)): ?>
+                        <section class="content-section achievements-section">
+                            <div class="section-header">
+                                <h2>Osiągnięcia</h2>
                             </div>
-                            <div class="achievement-card">
-                                <div class="achievement-icon">⭐</div>
-                                <div class="achievement-content">
-                                    <h3>Twórca wyróżnionego projektu</h3>
-                                    <p>Projekt EcoFuture został wyróżniony jako "Projekt Tygodnia"</p>
-                                </div>
+                            <div class="achievements-grid">
+                                <?php foreach ($achievements as $achievement): ?>
+                                    <div class="achievement-card">
+                                        <div class="achievement-icon">🏆</div>
+                                        <div class="achievement-content">
+                                            <h3><?php echo htmlspecialchars($achievement['title']); ?></h3>
+                                            <p><?php echo htmlspecialchars($achievement['description']); ?></p>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
                             </div>
-                            <div class="achievement-card">
-                                <div class="achievement-icon">👨‍🏫</div>
-                                <div class="achievement-content">
-                                    <h3>Mentor społeczności</h3>
-                                    <p>Pomaga młodym developerom w rozwijaniu ich umiejętności</p>
-                                </div>
-                            </div>
-                            <div class="achievement-card">
-                                <div class="achievement-icon">💬</div>
-                                <div class="achievement-content">
-                                    <h3>Aktywny uczestnik</h3>
-                                    <p>Zaangażowany w ponad 50 dyskusji i pomocy innym</p>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
+                        </section>
+                    <?php endif; ?>
 
                     <!-- ❤️ Aktywność społecznościowa -->
                     <section class="content-section activity-section">
@@ -265,80 +466,37 @@ include("global/nav_global.php");
                             <h2>Aktywność</h2>
                         </div>
                         <div class="activity-timeline">
-                            <div class="activity-item">
-                                <div class="activity-icon">💬</div>
-                                <div class="activity-content">
-                                    <p><strong>Skomentował projekt</strong> "TechEdu Platform"</p>
-                                    <span class="activity-time">2 godziny temu</span>
+                            <?php if (!empty($activities)): ?>
+                                <?php foreach ($activities as $activity): ?>
+                                    <div class="activity-item">
+                                        <div class="activity-icon">
+                                            <?php
+                                            $icons = [
+                                                'project_created' => '🚀',
+                                                'comment_added' => '💬',
+                                                'project_followed' => '❤️',
+                                                'task_completed' => '✅',
+                                                'profile_updated' => '✏️'
+                                            ];
+                                            echo $icons[$activity['action']] ?? '📝';
+                                            ?>
+                                        </div>
+                                        <div class="activity-content">
+                                            <p><strong><?php echo htmlspecialchars($activity['action']); ?></strong></p>
+                                            <?php if ($activity['details']): ?>
+                                                <p class="activity-details"><?php echo htmlspecialchars($activity['details']); ?>
+                                                </p>
+                                            <?php endif; ?>
+                                            <span
+                                                class="activity-time"><?php echo time_elapsed_string($activity['created_at']); ?></span>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="no-activity">
+                                    <p>📝 Brak ostatniej aktywności do wyświetlenia.</p>
                                 </div>
-                            </div>
-                            <div class="activity-item">
-                                <div class="activity-icon">❤️</div>
-                                <div class="activity-content">
-                                    <p><strong>Polubił projekt</strong> "ArtHub Community"</p>
-                                    <span class="activity-time">1 dzień temu</span>
-                                </div>
-                            </div>
-                            <div class="activity-item">
-                                <div class="activity-icon">👥</div>
-                                <div class="activity-content">
-                                    <p><strong>Dołączył do projektu</strong> "GreenCity Initiative"</p>
-                                    <span class="activity-time">3 dni temu</span>
-                                </div>
-                            </div>
-                            <div class="activity-item">
-                                <div class="activity-icon">🎯</div>
-                                <div class="activity-content">
-                                    <p><strong>Ukończył cel</strong> w projekcie "EcoFuture"</p>
-                                    <span class="activity-time">5 dni temu</span>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- 👥 Współpraca -->
-                    <section class="content-section collaboration-section">
-                        <div class="section-header">
-                            <h2>Współpraca</h2>
-                            <span class="section-subtitle">Osoby, z którymi współpracuję</span>
-                        </div>
-                        <div class="collaboration-grid">
-                            <div class="collaborator-card">
-                                <div class="collaborator-avatar">
-                                    <img src="../photos/sample_person2.png" alt="Jan Kowalski">
-                                </div>
-                                <div class="collaborator-info">
-                                    <h4>Jan Kowalski</h4>
-                                    <p>Wspólnie w: EcoFuture, CodeMentor</p>
-                                </div>
-                            </div>
-                            <div class="collaborator-card">
-                                <div class="collaborator-avatar">
-                                    <img src="../photos/sample_person3.png" alt="Maria Wiśniewska">
-                                </div>
-                                <div class="collaborator-info">
-                                    <h4>Maria Wiśniewska</h4>
-                                    <p>Wspólnie w: EcoFuture</p>
-                                </div>
-                            </div>
-                            <div class="collaborator-card">
-                                <div class="collaborator-avatar">
-                                    <img src="../photos/sample_person4.png" alt="Piotr Nowak">
-                                </div>
-                                <div class="collaborator-info">
-                                    <h4>Piotr Nowak</h4>
-                                    <p>Wspólnie w: CodeMentor</p>
-                                </div>
-                            </div>
-                            <div class="collaborator-card">
-                                <div class="collaborator-avatar">
-                                    <img src="../photos/sample_person5.png" alt="Katarzyna Zielińska">
-                                </div>
-                                <div class="collaborator-info">
-                                    <h4>Katarzyna Zielińska</h4>
-                                    <p>Wspólnie w: GreenCity</p>
-                                </div>
-                            </div>
+                            <?php endif; ?>
                         </div>
                     </section>
                 </div>
@@ -349,23 +507,23 @@ include("global/nav_global.php");
                     <div class="sidebar-card links-card">
                         <h3>Linki</h3>
                         <div class="links-list">
-                            <a href="#" class="profile-link">
-                                <span class="link-icon">💼</span>
-                                <span class="link-text">Portfolio</span>
-                            </a>
-                            <a href="#" class="profile-link">
-                                <span class="link-icon">💻</span>
-                                <span class="link-text">GitHub</span>
-                            </a>
-                            <a href="#" class="profile-link">
-                                <span class="link-icon">📸</span>
-                                <span class="link-text">Instagram</span>
-                            </a>
-                            <a href="#" class="profile-link">
-                                <span class="link-icon">🏫</span>
-                                <span class="link-text">Strona szkoły</span>
-                            </a>
-                            <a href="#" class="profile-link">
+                            <?php if ($user['portfolio_url']): ?>
+                                <a href="<?php echo htmlspecialchars($user['portfolio_url']); ?>" class="profile-link"
+                                    target="_blank">
+                                    <span class="link-icon">💼</span>
+                                    <span class="link-text">Portfolio</span>
+                                </a>
+                            <?php endif; ?>
+
+                            <?php if ($user['github_url']): ?>
+                                <a href="<?php echo htmlspecialchars($user['github_url']); ?>" class="profile-link"
+                                    target="_blank">
+                                    <span class="link-icon">💻</span>
+                                    <span class="link-text">GitHub</span>
+                                </a>
+                            <?php endif; ?>
+
+                            <a href="projects.php?user=<?php echo $profileUserId; ?>" class="profile-link">
                                 <span class="link-icon">🔗</span>
                                 <span class="link-text">Wszystkie projekty</span>
                             </a>
@@ -377,78 +535,37 @@ include("global/nav_global.php");
                         <h3>Statystyki</h3>
                         <div class="stats-grid">
                             <div class="stat-item">
-                                <span class="stat-number">12</span>
+                                <span class="stat-number"><?php echo $user['project_count'] ?? 0; ?></span>
                                 <span class="stat-label">Projektów</span>
                             </div>
                             <div class="stat-item">
-                                <span class="stat-number">156</span>
+                                <span class="stat-number"><?php echo $user['followers_count'] ?? 0; ?></span>
                                 <span class="stat-label">Obserwujących</span>
                             </div>
                             <div class="stat-item">
-                                <span class="stat-number">89</span>
+                                <span class="stat-number"><?php echo $user['following_count'] ?? 0; ?></span>
                                 <span class="stat-label">Obserwowanych</span>
                             </div>
-                            <div class="stat-item">
-                                <span class="stat-number">342</span>
-                                <span class="stat-label">Polubienia</span>
-                            </div>
                         </div>
-                    </div>
-
-                    <!-- 🖼️ Galeria (opcjonalna) -->
-                    <div class="sidebar-card gallery-card">
-                        <h3>Galeria</h3>
-                        <div class="gallery-grid">
-                            <div class="gallery-item">
-                                <img src="../photos/project-sample.jpg" alt="Projekt 1">
-                            </div>
-                            <div class="gallery-item">
-                                <img src="../photos/project-sample2.jpg" alt="Projekt 2">
-                            </div>
-                            <div class="gallery-item">
-                                <img src="../photos/project-sample3.jpg" alt="Projekt 3">
-                            </div>
-                            <div class="gallery-item">
-                                <img src="../photos/project-sample4.jpg" alt="Projekt 4">
-                            </div>
-                        </div>
-                        <button class="btn-secondary btn-full">Zobacz więcej</button>
                     </div>
 
                     <!-- ⚠️ Sekcja niepubliczna (tylko dla właściciela) -->
-                    <div class="sidebar-card private-card" id="privateSection" style="display: none;">
-                        <h3>Twoje konto</h3>
-                        <div class="private-actions">
-                            <button class="private-btn">✏️ Edytuj profil</button>
-                            <button class="private-btn">⚙️ Ustawienia konta</button>
-                            <button class="private-btn">🔐 Zmień hasło</button>
-                            <button class="private-btn danger">🚪 Wyloguj się</button>
-                        </div>
-                        <div class="private-info">
-                            <p><strong>Email:</strong> anna...@gmail.com</p>
-                            <p><strong>Ostatnie logowanie:</strong> Dzisiaj, 14:30</p>
-                        </div>
-                    </div>
-
-                    <!-- 🎯 Ostatnia aktywność -->
-                    <div class="sidebar-card recent-activity-card">
-                        <h3>Ostatnia aktywność</h3>
-                        <div class="recent-activities">
-                            <div class="recent-activity">
-                                <span class="activity-badge new">Nowe</span>
-                                <p>Nowy komentarz w projekcie EcoFuture</p>
-                                <span class="activity-time">10 min temu</span>
+                    <?php if ($isOwnProfile): ?>
+                        <div class="sidebar-card private-card">
+                            <h3>Twoje konto</h3>
+                            <div class="private-actions">
+                                <a href="edit_profile.php" class="private-btn">✏️ Edytuj profil</a>
+                                <a href="settings.php" class="private-btn">⚙️ Ustawienia konta</a>
+                                <a href="logout.php" class="private-btn danger">🚪 Wyloguj się</a>
                             </div>
-                            <div class="recent-activity">
-                                <p>Projekt CodeMentor otrzymał 5 nowych polubień</p>
-                                <span class="activity-time">2 godziny temu</span>
-                            </div>
-                            <div class="recent-activity">
-                                <p>Maria zaakceptowała Twoje zaproszenie do zespołu</p>
-                                <span class="activity-time">Wczoraj</span>
+                            <div class="private-info">
+                                <p><strong>Email:</strong>
+                                    <?php echo substr($userEmail, 0, 3) . '...' . substr($userEmail, strpos($userEmail, '@')); ?>
+                                </p>
+                                <p><strong>Ostatnie logowanie:</strong> Dzisiaj</p>
                             </div>
                         </div>
-                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -461,7 +578,7 @@ include("global/nav_global.php");
                     <img src="../photos/website-logo.jpg" alt="Logo TeenCollab">
                     <div>
                         <h3>TeenCollab</h3>
-                        <p>Platforma dla młodych zmieniaczy świata</p>
+                        <p>Platforma dla kreatorów przyszłości</p>
                     </div>
                 </div>
                 <div class="footer-copyright">
@@ -472,6 +589,13 @@ include("global/nav_global.php");
     </footer>
 
     <script src="../scripts/profile.js"></script>
+    <script>
+        // Pokaż sekcję prywatną tylko dla właściciela profilu
+        const isOwnProfile = <?php echo $isOwnProfile ? 'true' : 'false'; ?>;
+        if (isOwnProfile) {
+            document.getElementById('privateSection')?.style.display = 'block';
+        }
+    </script>
 </body>
 
 </html>

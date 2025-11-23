@@ -4,7 +4,7 @@ include("global/connection.php");
 include("global/nav_global.php");
 
 
-// Sprawdź czy użytkownik jest zalogowany
+
 if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
     header("Location: join.php");
     exit();
@@ -12,14 +12,14 @@ if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
 
 $userId = $_SESSION["user_id"];
 
-// Pobierz ID projektu z URL
+
 $projectId = $_GET['project_id'] ?? null;
 if (!$projectId) {
     header("Location: projects.php");
     exit();
 }
 
-// Sprawdź czy użytkownik ma dostęp do projektu
+
 $accessStmt = $conn->prepare("
     SELECT p.id, p.name, p.founder_id 
     FROM projects p 
@@ -37,7 +37,7 @@ if (!$project) {
 
 $isOwner = ($project['founder_id'] == $userId);
 
-// Funkcje pomocnicze
+
 function formatDate($dateString)
 {
     if (!$dateString || $dateString == '0000-00-00')
@@ -57,7 +57,7 @@ function formatHours($hours)
     return number_format($hours, 1) . 'h';
 }
 
-// Statystyki zadań
+
 $taskStats = [];
 $statsStmt = $conn->prepare("
     SELECT 
@@ -77,7 +77,7 @@ $statsStmt->execute();
 $taskStats = $statsStmt->get_result()->fetch_assoc();
 $statsStmt->close();
 
-// Statystyki priorytetów
+
 $priorityStats = [];
 $priorityStmt = $conn->prepare("
     SELECT 
@@ -105,7 +105,7 @@ while ($row = $priorityResult->fetch_assoc()) {
 }
 $priorityStmt->close();
 
-// Statystyki członków zespołu
+
 $memberStats = [];
 $memberStmt = $conn->prepare("
     SELECT 
@@ -133,7 +133,7 @@ while ($row = $memberResult->fetch_assoc()) {
 }
 $memberStmt->close();
 
-// Zadania z przekroczonym deadline'em
+
 $overdueTasks = [];
 $overdueStmt = $conn->prepare("
     SELECT 
@@ -155,7 +155,7 @@ while ($row = $overdueResult->fetch_assoc()) {
 }
 $overdueStmt->close();
 
-// Najnowsze ukończone zadania
+
 $recentCompleted = [];
 $recentStmt = $conn->prepare("
     SELECT 
@@ -177,7 +177,7 @@ while ($row = $recentResult->fetch_assoc()) {
 }
 $recentStmt->close();
 
-// Statystyki tygodniowe
+
 $weeklyStats = [];
 $weeklyStmt = $conn->prepare("
     SELECT 
@@ -198,14 +198,14 @@ while ($row = $weeklyResult->fetch_assoc()) {
 }
 $weeklyStmt->close();
 
-// Oblicz procenty
+
 $completionRate = $taskStats['total_tasks'] > 0 ?
     round(($taskStats['completed_tasks'] / $taskStats['total_tasks']) * 100, 1) : 0;
 
 $timeEfficiency = $taskStats['total_estimated_hours'] > 0 ?
     round(($taskStats['total_actual_hours'] / $taskStats['total_estimated_hours']) * 100, 1) : 0;
 
-// Mapowania
+
 $priorityLabels = [
     'low' => 'Niski',
     'medium' => 'Średni',
@@ -431,7 +431,7 @@ $statusLabels = [
                     <img src="../photos/website-logo.jpg" alt="Logo TeenCollab">
                     <div>
                         <h3>TeenCollab</h3>
-                        <p>Platforma dla młodych zmieniaczy świata</p>
+                        <p>Platforma dla kreatorów przyszłości</p>
                     </div>
                 </div>
                 <div class="footer-copyright">
@@ -442,7 +442,7 @@ $statusLabels = [
     </footer>
 
     <script>
-        // Wykres statusów zadań
+
         const statusChart = new Chart(
             document.getElementById('statusChart'),
             {
@@ -486,7 +486,7 @@ $statusLabels = [
             }
         );
 
-        // Pobierz dane tygodniowe dla wykresu liniowego
+
         const weeklyData = {
             weeks: [<?php echo implode(',', array_map(function ($week) {
                 return "'" . $week['week'] . "'"; }, array_reverse($weeklyStats))); ?>],

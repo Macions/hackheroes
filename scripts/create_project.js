@@ -440,7 +440,7 @@ if (burgerMenu && navMenu) {
 		navMenu.classList.toggle("active");
 	});
 }
-// Przełączanie typu lokalizacji
+
 const locationTypeRadios = document.querySelectorAll(
 	'input[name="locationType"]'
 );
@@ -453,21 +453,16 @@ const specificLocationInputLocation =
 locationTypeRadios.forEach((radio) => {
 	radio.addEventListener("change", function () {
 		if (this.value === "specific") {
-			// Pokaż pola
 			specificLocationDiv.style.display = "block";
 
-			// Dodaj required
 			specificLocationInputSelect.required = true;
 			specificLocationInputLocation.required = true;
 		} else {
-			// Usuń required PRZED ukrywaniem
 			specificLocationInputSelect.required = false;
 			specificLocationInputLocation.required = false;
 
-			// Ukryj
 			specificLocationDiv.style.display = "none";
 
-			// Wyczyść pole
 			specificLocationInputLocation.value = "";
 		}
 
@@ -475,7 +470,6 @@ locationTypeRadios.forEach((radio) => {
 	});
 });
 
-// Aktualizuj podgląd lokalizacji
 function updatePreviewLocation() {
 	const locationType = document.querySelector(
 		'input[name="locationType"]:checked'
@@ -486,11 +480,8 @@ function updatePreviewLocation() {
 	if (locationType === "specific" && specificLocation) {
 		locationText = specificLocation;
 	}
-
-	// Tutaj możesz dodać aktualizację podglądu jeśli chcesz pokazywać lokalizację
 }
 
-// Pokazywanie/ukrywanie pola lokalizacji
 document.addEventListener("DOMContentLoaded", function () {
 	const locationRadios = document.querySelectorAll(
 		'input[name="locationType"]'
@@ -503,7 +494,7 @@ document.addEventListener("DOMContentLoaded", function () {
 				specificLocationDiv.style.display = "block";
 			} else {
 				specificLocationDiv.style.display = "none";
-				// Opcjonalnie: wyczyść pole gdy przełączasz na Online
+
 				specificLocationDiv.querySelector("input").value = "";
 			}
 		});
@@ -518,7 +509,7 @@ fetch("https://restcountries.com/v3.1/all?fields=name,cca2,translations")
 			return;
 		}
 		const select = document.getElementById("countrySelect");
-		// sortujemy po polskich nazwach, jeśli nie ma to po angielsku
+
 		data.sort((a, b) => {
 			const nameA = a.translations?.pol?.common || a.name.common;
 			const nameB = b.translations?.pol?.common || b.name.common;

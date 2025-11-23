@@ -1,7 +1,7 @@
 <?php
 session_start();
 include("global/connection.php");
-include("global/log_action.php"); // tutaj masz funkcję logAction
+include("global/log_action.php"); // Dodaj include pliku z funkcją logowania
 
 if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
     header("Location: join.php");
@@ -9,56 +9,59 @@ if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
 }
 
 $userId = $_SESSION["user_id"];
-$email = $_SESSION["email"] ?? ''; // musisz mieć email w sesji
+$userEmail = $_SESSION["user_email"] ?? '';
+$projectId = (int) ($_POST['project_id'] ?? 0);
+$comment = trim($_POST['comment'] ?? '');
 
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $projectId = (int)$_POST['project_id'];
-    $comment = trim($_POST['comment']);
 
     try {
-        // Sprawdź czy użytkownik jest członkiem projektu
-        $checkStmt = $conn->prepare("
-            SELECT pt.role 
-            FROM project_team pt 
-            WHERE pt.project_id = ? AND pt.user_id = ?
-        ");
-        $checkStmt->bind_param("ii", $projectId, $userId);
-        $checkStmt->execute();
-        $result = $checkStmt->get_result();
-
-        if ($result->num_rows === 0) {
-            logAction($conn, $userId, $email, 'add_comment_failed', "Nie jest członkiem projektu $projectId");
-            throw new Exception("Nie jesteś członkiem tego projektu.");
-        }
-        $checkStmt->close();
-
         if (empty($comment)) {
-            logAction($conn, $userId, $email, 'add_comment_failed', "Pusty komentarz dla projektu $projectId");
-            throw new Exception("Komentarz nie może być pusty.");
+            throw new Exception("Komentarz nie może być pusty");
         }
 
-        // Dodaj komentarz
-        $insertStmt = $conn->prepare("
-            INSERT INTO comments (project_id, user_id, comment, created_at) 
-            VALUES (?, ?, ?, NOW())
-        ");
-        $insertStmt->bind_param("iis", $projectId, $userId, $comment);
-        $insertStmt->execute();
 
-        if ($insertStmt->affected_rows === 0) {
-            logAction($conn, $userId, $email, 'add_comment_failed', "Nie udało się dodać komentarza do projektu $projectId");
-            throw new Exception("Nie udało się dodać komentarza.");
+        $stmtCheck = $conn->prepare("SELECT founder_id, name FROM projects WHERE id = ?");
+        $stmtCheck->bind_param("i", $projectId);
+        $stmtCheck->execute();
+        $projectData = $stmtCheck->get_result()->fetch_assoc();
+        $founderId = $projectData['founder_id'] ?? 0;
+        $projectName = $projectData['name'] ?? '';
+        $stmtCheck->close();
+
+        $stmtMember = $conn->prepare("SELECT 1 FROM project_team WHERE project_id = ? AND user_id = ?");
+        $stmtMember->bind_param("ii", $projectId, $userId);
+        $stmtMember->execute();
+        $isMember = $stmtMember->get_result()->num_rows > 0;
+        $stmtMember->close();
+
+        if (!$isMember && $userId != $founderId) {
+            throw new Exception("Nie masz uprawnień do komentowania tego projektu");
         }
 
-        logAction($conn, $userId, $email, 'add_comment', "Dodano komentarz do projektu $projectId: $comment");
 
-        $insertStmt->close();
+        $stmtInsert = $conn->prepare("INSERT INTO comments (project_id, user_id, comment, created_at) VALUES (?, ?, ?, NOW())");
+        $stmtInsert->bind_param("iis", $projectId, $userId, $comment);
+        $stmtInsert->execute();
+        $commentId = $stmtInsert->insert_id;
+        $stmtInsert->close();
 
-        echo json_encode(['success' => true, 'message' => 'Komentarz dodany pomyślnie.']);
+
+        $logDetails = "Dodano komentarz do projektu: '{$projectName}' (ID: {$projectId}), Treść: " . substr($comment, 0, 100) . "...";
+        logAction($conn, $userId, $userEmail, "add_comment", $logDetails);
+
+
+        echo json_encode(['success' => true]);
 
     } catch (Exception $e) {
-        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+
+        $errorMessage = $e->getMessage();
+        $logDetails = "Błąd przy dodawaniu komentarza do projektu ID: {$projectId}. Powód: {$errorMessage}";
+        logAction($conn, $userId, $userEmail, "comment_error", $logDetails);
+
+        echo json_encode(['success' => false, 'message' => $errorMessage]);
     }
 }
+?>

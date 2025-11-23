@@ -9,7 +9,7 @@ if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
 $currentUserId = $_SESSION["user_id"];
 $taskId = $_POST['task_id'] ?? 0;
 
-// Sprawdź uprawnienia
+
 $checkStmt = $conn->prepare("SELECT assigned_to, project_id FROM tasks WHERE id = ?");
 $checkStmt->bind_param("i", $taskId);
 $checkStmt->execute();
@@ -20,13 +20,13 @@ if (!$task || ($task['assigned_to'] != $currentUserId)) {
     die("Brak uprawnień do dodawania załączników.");
 }
 
-// Utwórz folder uploads jeśli nie istnieje
+
 $uploadDir = "../uploads/tasks/";
 if (!is_dir($uploadDir)) {
     mkdir($uploadDir, 0755, true);
 }
 
-// Obsługa uploadu plików
+
 if (isset($_FILES['attachments'])) {
     foreach ($_FILES['attachments']['name'] as $key => $name) {
         if ($_FILES['attachments']['error'][$key] === UPLOAD_ERR_OK) {
@@ -34,14 +34,14 @@ if (isset($_FILES['attachments'])) {
             $fileSize = $_FILES['attachments']['size'][$key];
             $fileType = $_FILES['attachments']['type'][$key];
             
-            // Generuj unikalną nazwę pliku
+
             $fileExt = strtolower(pathinfo($name, PATHINFO_EXTENSION));
             $fileName = uniqid() . '_' . preg_replace('/[^a-zA-Z0-9\._-]/', '_', $name);
             $filePath = $uploadDir . $fileName;
             
-            // Przenieś plik
+
             if (move_uploaded_file($tmpName, $filePath)) {
-                // Zapisz do bazy
+
                 $insertStmt = $conn->prepare("
                     INSERT INTO task_attachments (task_id, user_id, filename, filepath, filesize, filetype) 
                     VALUES (?, ?, ?, ?, ?, ?)

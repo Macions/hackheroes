@@ -3,7 +3,6 @@ session_start();
 include("global/connection.php");
 include("global/nav_global.php");
 
-
 $projectId = $_GET['project_id'] ?? 0;
 $currentUserId = $_SESSION['user_id'] ?? 0;
 
@@ -24,33 +23,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_task'])) {
     $name = $_POST['name'];
     $description = $_POST['description'];
     $priority = $_POST['priority'];
-    $assignedTo = $_POST['assigned_to'] ?? null;
-    $deadline = $_POST['deadline'] ?? null;
-    $estimatedHours = $_POST['estimated_hours'] ?? null;
+    $assignedTo = !empty($_POST['assigned_to']) ? (int) $_POST['assigned_to'] : null;
+    $deadline = !empty($_POST['deadline']) ? $_POST['deadline'] : null;
+    $estimatedHours = !empty($_POST['estimated_hours']) ? (float) $_POST['estimated_hours'] : null;
 
-    $stmt = $conn->prepare("INSERT INTO tasks (project_id, name, description, priority, assigned_to, deadline, estimated_hours, created_by, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'open')");
-    $stmt->bind_param("isssisdi", $projectId, $name, $description, $priority, $assignedTo, $deadline, $estimatedHours, $currentUserId);
+    $stmt = $conn->prepare("
+        INSERT INTO tasks (project_id, name, description, priority, assigned_to, deadline, estimated_hours, created_by, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'open')
+    ");
+    // "i" dla int, "s" dla string, "d" dla double/float
+    $stmt->bind_param("isssisd", $projectId, $name, $description, $priority, $assignedTo, $deadline, $estimatedHours, $currentUserId);
     $stmt->execute();
     $stmt->close();
-
-    header("Location: manage_tasks.php?project_id=$projectId");
-    exit;
 }
 
 // Przypisywanie zadania
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_task'])) {
-    $taskId = $_POST['task_id'];
-    $assignedTo = $_POST['assigned_to'];
+    $taskId = (int) $_POST['task_id'];
+    $assignedTo = !empty($_POST['assigned_to']) ? (int) $_POST['assigned_to'] : null;
 
-    $stmt = $conn->prepare("UPDATE tasks SET assigned_to = ?, status = 'in_progress', updated_at = NOW() WHERE id = ? AND project_id = ?");
-    $stmt->bind_param("iii", $assignedTo, $taskId, $projectId);
+    // Pobierz nazwę zadania z bazy
+    $taskName = '';
+    $taskStmt = $conn->prepare("SELECT name FROM tasks WHERE id = ? AND project_id = ?");
+    $taskStmt->bind_param("ii", $taskId, $projectId);
+    $taskStmt->execute();
+    $taskStmt->bind_result($taskName);
+    $taskStmt->fetch();
+    $taskStmt->close();
+
+    $stmt = $conn->prepare("
+        UPDATE tasks
+        SET assigned_to = ?, status = CASE WHEN ? IS NULL THEN 'open' ELSE 'in_progress' END, updated_at = NOW()
+        WHERE id = ? AND project_id = ?
+    ");
+    $stmt->bind_param("iiii", $assignedTo, $assignedTo, $taskId, $projectId);
     $stmt->execute();
     $stmt->close();
+
+    // Wyślij powiadomienie jeśli przypisano
+    if ($assignedTo) {
+        sendTaskAssignmentNotification($conn, $assignedTo, $taskId, $taskName);
+    }
 
     header("Location: manage_tasks.php?project_id=$projectId");
     exit;
 }
-
 // Usuwanie zadania
 if (isset($_GET['delete_task'])) {
     $taskId = (int) $_GET['delete_task'];
@@ -73,7 +90,7 @@ $stmt = $conn->prepare("
     FROM tasks t
     LEFT JOIN users u_assigned ON t.assigned_to = u_assigned.id
     LEFT JOIN users u_created ON t.created_by = u_created.id
-    WHERE t.project_id = ? 
+    WHERE t.project_id = ?
     ORDER BY t.created_at DESC
 ");
 $stmt->bind_param("i", $projectId);
@@ -84,6 +101,7 @@ while ($row = $result->fetch_assoc()) {
 }
 $stmt->close();
 
+// Formatowanie daty
 function formatDate($dateStr)
 {
     if (!$dateStr || $dateStr == '0000-00-00')
@@ -92,7 +110,7 @@ function formatDate($dateStr)
     return $date->format('d.m.Y');
 }
 
-// Pobieranie członków zespołu do przypisywania
+// Pobieranie członków zespołu
 $teamMembers = [];
 $memberStmt = $conn->prepare("
     SELECT u.id, u.nick, u.avatar 
@@ -103,12 +121,16 @@ $memberStmt = $conn->prepare("
 $memberStmt->bind_param("i", $projectId);
 $memberStmt->execute();
 $memberResult = $memberStmt->get_result();
+while ($row = $memberResult->fetch_assoc()) {
+    $teamMembers[] = $row;
+}
+$memberStmt->close();
 
-// W assign_task dodaj:
+// Powiadomienia o przypisaniu
 function sendTaskAssignmentNotification($conn, $userId, $taskId, $taskName)
 {
     $stmt = $conn->prepare("
-        INSERT INTO notifications (user_id, title, message, type, related_url) 
+        INSERT INTO notifications (user_id, title, message, type, related_url)
         VALUES (?, 'Nowe zadanie', ?, 'info', ?)
     ");
     $message = "Zostałeś przypisany do zadania: " . $taskName;
@@ -118,7 +140,7 @@ function sendTaskAssignmentNotification($conn, $userId, $taskId, $taskName)
     $stmt->close();
 }
 
-// Sprawdź zbliżające się deadline'y
+// Zbliżające się deadline'y
 $upcomingDeadlines = [];
 $deadlineStmt = $conn->prepare("
     SELECT t.name, t.deadline, t.priority 
@@ -135,12 +157,8 @@ while ($row = $deadlineResult->fetch_assoc()) {
     $upcomingDeadlines[] = $row;
 }
 $deadlineStmt->close();
-
-while ($row = $memberResult->fetch_assoc()) {
-    $teamMembers[] = $row;
-}
-$memberStmt->close();
 ?>
+
 <!DOCTYPE html>
 <html lang="pl">
 
@@ -317,12 +335,12 @@ $memberStmt->close();
                                 </div>
 
                                 <div class="task-actions-admin">
-                                    <!-- Formularz przypisywania zadania -->
                                     <form method="POST" class="assign-form">
                                         <input type="hidden" name="task_id" value="<?php echo $task['id']; ?>">
                                         <div class="assign-controls">
                                             <select name="assigned_to" class="assign-select">
-                                                <option value="">-- Przypisz --</option>
+                                                <option value="" <?php echo empty($task['assigned_to']) ? 'selected' : ''; ?>>
+                                                    Nieprzypisane</option>
                                                 <?php foreach ($teamMembers as $member): ?>
                                                     <option value="<?php echo $member['id']; ?>" <?php echo $task['assigned_to'] == $member['id'] ? 'selected' : ''; ?>>
                                                         <?php echo htmlspecialchars($member['nick']); ?>
@@ -332,6 +350,7 @@ $memberStmt->close();
                                             <button type="submit" name="assign_task" class="btn-assign">Przypisz</button>
                                         </div>
                                     </form>
+
 
                                     <a href="manage_tasks.php?project_id=<?php echo $projectId; ?>&delete_task=<?php echo $task['id']; ?>"
                                         class="btn-remove" onclick="return confirm('Czy na pewno chcesz usunąć to zadanie?')">

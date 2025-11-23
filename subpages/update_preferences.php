@@ -1,5 +1,5 @@
 <?php
-// update_preference.php
+
 include("global/connection.php");
 session_start();
 

@@ -3,21 +3,21 @@ session_start();
 include("global/connection.php");
 include("global/nav_global.php");
 
-// Sprawdź czy użytkownik jest zalogowany (opcjonalne - strona może być publiczna)
+
 $isLoggedIn = isset($_SESSION["logged_in"]) && $_SESSION["logged_in"] === true;
 $userId = $_SESSION["user_id"] ?? null;
 
 try {
-    // 1. STATYSTYKI SPOŁECZNOŚCI
+
     $stats = [];
 
-    // Całkowita liczba użytkowników
+
     $totalUsersStmt = $conn->prepare("SELECT COUNT(*) as total FROM users");
     $totalUsersStmt->execute();
     $stats['total_users'] = $totalUsersStmt->get_result()->fetch_assoc()['total'] ?? 0;
     $totalUsersStmt->close();
 
-    // Aktywni użytkownicy (logowanie w ostatnich 30 dniach)
+
     $activeUsersStmt = $conn->prepare("
         SELECT COUNT(DISTINCT user_id) as active 
         FROM logs 
@@ -27,7 +27,7 @@ try {
     $stats['active_users'] = $activeUsersStmt->get_result()->fetch_assoc()['active'] ?? 0;
     $activeUsersStmt->close();
 
-    // Liczba projektów aktywnych
+
     $totalProjectsStmt = $conn->prepare("
     SELECT COUNT(*) as total_active 
     FROM projects 
@@ -37,7 +37,7 @@ try {
     $stats['total_projects'] = $totalProjectsStmt->get_result()->fetch_assoc()['total_active'] ?? 0;
     $totalProjectsStmt->close();
 
-    // Liczba projektów zakończonych
+
     $completedProjectsStmt = $conn->prepare("
     SELECT COUNT(*) as total_completed 
     FROM projects 
@@ -47,19 +47,19 @@ try {
     $stats['completed_projects'] = $completedProjectsStmt->get_result()->fetch_assoc()['total_completed'] ?? 0;
     $completedProjectsStmt->close();
 
-    // Unikalne szkoły
+
     $schoolsStmt = $conn->prepare("SELECT COUNT(DISTINCT school) as schools FROM users WHERE school IS NOT NULL AND school != ''");
     $schoolsStmt->execute();
     $stats['total_schools'] = $schoolsStmt->get_result()->fetch_assoc()['schools'] ?? 0;
     $schoolsStmt->close();
 
-    // Liczba komentarzy
+
     $commentsStmt = $conn->prepare("SELECT COUNT(*) as total FROM comments");
     $commentsStmt->execute();
     $stats['total_comments'] = $commentsStmt->get_result()->fetch_assoc()['total'] ?? 0;
     $commentsStmt->close();
 
-    // 2. NAJBARDZIEJ ZASŁUŻENI TWÓRCY (według wzoru)
+
     $topCreatorsStmt = $conn->prepare("
         SELECT 
             u.id,
@@ -101,7 +101,7 @@ try {
     $newTalents = $newTalentsStmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $newTalentsStmt->close();
 
-    // Zamiana podkreślników w interests na spacje
+
     foreach ($newTalents as &$talent) {
         if (!empty($talent['interests'])) {
             $talent['interests'] = str_replace('_', ' ', $talent['interests']);
@@ -109,8 +109,8 @@ try {
     }
 
 
-    // 4. DODATKOWE STATYSTYKI DO SEKCJI CIEKAWOSTEK
-    // Nowi członkowie w ostatnim roku
+
+
     $newMembersYearStmt = $conn->prepare("
         SELECT COUNT(*) as new_members 
         FROM users 
@@ -120,7 +120,7 @@ try {
     $newMembersYear = $newMembersYearStmt->get_result()->fetch_assoc()['new_members'] ?? 0;
     $newMembersYearStmt->close();
 
-    // Nowe projekty w tym roku
+
     $newProjectsYearStmt = $conn->prepare("
         SELECT COUNT(*) as new_projects 
         FROM projects 
@@ -130,7 +130,7 @@ try {
     $newProjectsYear = $newProjectsYearStmt->get_result()->fetch_assoc()['new_projects'] ?? 0;
     $newProjectsYearStmt->close();
 
-    // Międzynarodowe partnerstwa (projekty spoza Polski)
+
     $partnershipsStmt = $conn->prepare("
     SELECT COUNT(*) as international_projects 
     FROM projects 
@@ -142,7 +142,7 @@ try {
 
 
 } catch (Exception $e) {
-    // W przypadku błędu, ustaw puste dane
+
     $stats = ['total_users' => 0, 'active_users' => 0, 'total_projects' => 0, 'total_schools' => 0, 'total_comments' => 0];
     $topCreators = [];
     $newTalents = [];
@@ -152,14 +152,14 @@ try {
     $error = "Błąd ładowania danych społeczności: " . $e->getMessage();
 }
 
-// Funkcje pomocnicze
+
 function formatJoinDate($dateString)
 {
     $joinDate = new DateTime($dateString);
     $now = new DateTime();
     $interval = $now->diff($joinDate);
 
-    // Jeśli dołączył dzisiaj
+
     if ($interval->d == 0 && $interval->m == 0 && $interval->y == 0) {
         return "Dołączył/a dzisiaj";
     }
@@ -261,7 +261,7 @@ function getInterestsPreview($interests)
                             <article class="creator-card featured">
                                 <div class="creator-badge"><?php echo $badges[$index] ?? '🏅'; ?></div>
                                 <div class="creator-image">
-                                    <img src="<?php echo htmlspecialchars($creator['avatar'] ?? '../photos/default-avatar.jpg'); ?>"
+                                    <img src="<?php echo htmlspecialchars($creator['avatar'] ?? '../photos/avatars/default_avatar.png'); ?>"
                                         alt="<?php echo htmlspecialchars($creator['nick']); ?>">
                                 </div>
                                 <div class="creator-content">
@@ -322,7 +322,7 @@ function getInterestsPreview($interests)
                         <?php foreach ($newTalents as $talent): ?>
                             <article class="talent-card">
                                 <div class="talent-image">
-                                    <img src="<?php echo htmlspecialchars($talent['avatar'] ?? '../photos/default-avatar.jpg'); ?>"
+                                    <img src="<?php echo htmlspecialchars($talent['avatar'] ?? '../photos/avatars/default_avatar.png'); ?>"
                                         alt="<?php echo htmlspecialchars($talent['nick']); ?>">
                                 </div>
                                 <div class="talent-content">
@@ -471,7 +471,7 @@ function getInterestsPreview($interests)
     </footer>
 
     <script>
-        // Burger menu
+
         const burgerMenu = document.getElementById('burger-menu');
         const navMenu = document.querySelector('.nav-menu');
 
@@ -480,7 +480,7 @@ function getInterestsPreview($interests)
             navMenu.classList.toggle('active');
         });
 
-        // Animacje przy scrollowaniu
+
         const observerOptions = {
             threshold: 0.1,
             rootMargin: '0px 0px -50px 0px'
@@ -495,7 +495,7 @@ function getInterestsPreview($interests)
             });
         }, observerOptions);
 
-        // Obserwuj elementy do animacji
+
         document.querySelectorAll('.creator-card, .talent-card, .highlight-card, .stat-item').forEach(el => {
             el.style.opacity = '0';
             el.style.transform = 'translateY(30px)';
@@ -503,7 +503,7 @@ function getInterestsPreview($interests)
             observer.observe(el);
         });
 
-        // Dodaj opóźnienia dla lepszego efektu
+
         document.querySelectorAll('.creator-card').forEach((card, index) => {
             card.style.transitionDelay = `${index * 0.1}s`;
         });

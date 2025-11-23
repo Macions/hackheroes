@@ -370,6 +370,11 @@ header {
 }
 
 /* 📝 Opis projektu */
+.project-description {
+	word-wrap: break-word;
+	overflow-wrap: break-word;
+	word-break: break-word;
+}
 .project-description h3 {
 	font-size: 1.25rem;
 	font-weight: 600;
@@ -2128,6 +2133,7 @@ footer {
 	cursor: pointer;
 	font-size: 0.9rem;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+	font-family: "Inter", sans-serif;
 }
 
 .tool-btn:hover {
@@ -2506,4 +2512,143 @@ footer {
 	.quick-actions-grid {
 		grid-template-columns: 1fr;
 	}
+}
+
+/* Modal wysyłania wiadomości */
+.message-modal .modal-content {
+	max-width: 600px;
+	margin: 0 auto;
+}
+
+.message-form .form-group {
+	margin-bottom: 1.5rem;
+}
+
+.message-form .form-label {
+	display: block;
+	margin-bottom: 0.5rem;
+	font-weight: 500;
+	color: #333;
+}
+
+.message-form .form-input,
+.message-form .form-textarea {
+	width: 100%;
+	padding: 0.75rem;
+	border: 1px solid #ddd;
+	border-radius: 8px;
+	font-size: 14px;
+	transition: border-color 0.3s;
+}
+
+.message-form .form-input:focus,
+.message-form .form-textarea:focus {
+	outline: none;
+	border-color: #007bff;
+}
+
+.message-form .form-input::placeholder,
+.message-form .form-textarea::placeholder {
+	font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.message-form .form-textarea {
+	min-height: 120px;
+	resize: vertical;
+}
+
+.message-preview {
+	background: #f8f9fa;
+	border: 1px solid #e9ecef;
+	border-radius: 8px;
+	padding: 1rem;
+	margin-top: 1rem;
+}
+
+.message-preview h4 {
+	margin: 0 0 0.5rem 0;
+	color: #333;
+}
+
+.message-preview p {
+	margin: 0;
+	color: #666;
+	white-space: pre-wrap;
+	word-break: break-word; /* lepsze niż break-all, nie łamie słów brutalnie */
+	max-height: 200px; /* lub np. 50vh jeśli chcesz proporcjonalnie do ekranu */
+	overflow-y: auto; /* scroll pojawi się tylko jeśli zawartość jest większa niż max-height */
+	padding-right: 0.5rem; /* opcjonalnie, żeby pasek nie nachodził na tekst */
+}
+
+.recipients-info {
+	background: #e7f3ff;
+	border: 1px solid #b3d9ff;
+	border-radius: 6px;
+	padding: 0.75rem;
+	margin-bottom: 1rem;
+	font-size: 14px;
+}
+
+.recipients-info strong {
+	color: #0066cc;
+}
+
+.member-actions {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	align-items: flex-start;
+}
+
+.already-assigned {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	align-items: flex-start;
+}
+
+.assigned-badge {
+	background-color: #e7f7ef;
+	color: #0d6832;
+	padding: 4px 8px;
+	border-radius: 4px;
+	font-size: 12px;
+	font-weight: 500;
+	border: 1px solid #b8ebd0;
+}
+
+.assigned-to-other {
+	background-color: #f8f9fa;
+	color: #6c757d;
+	padding: 4px 8px;
+	border-radius: 4px;
+	font-size: 12px;
+	font-weight: 500;
+	border: 1px solid #dee2e6;
+}
+
+.btn-small {
+	padding: 6px 12px;
+	font-size: 12px;
+	text-decoration: none;
+	border-radius: 4px;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.btn-primary.btn-small {
+	background-color: #007bff;
+	color: white;
+	border: none;
+}
+
+.btn-secondary.btn-small {
+	background-color: #6c757d;
+	color: white;
+	border: none;
+}
+
+.btn-icon {
+	font-size: 14px;
 }
