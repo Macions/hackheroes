@@ -336,20 +336,23 @@ function handleFormSubmit(event) {
 		method: "POST",
 		body: formData,
 	})
-		.then((response) => response.text())
-		.then((text) => {
-			try {
-				const jsonMatch = text.match(/\{.*\}/s);
-				if (jsonMatch) {
-					const data = JSON.parse(jsonMatch[0]);
-					return data;
-				} else {
-					throw new Error("Nieprawidłowa odpowiedź serwera");
-				}
-			} catch (e) {
-				throw new Error("Błąd przetwarzania odpowiedzi serwera");
-			}
-		})
+.then((response) => response.text())
+.then((text) => {
+    try {
+        console.log("Odpowiedź serwera:", text); // <-- pokazuje cały tekst, zanim spróbujesz JSON
+        const jsonMatch = text.match(/\{.*\}/s);
+        if (jsonMatch) {
+            const data = JSON.parse(jsonMatch[0]);
+            return data;
+        } else {
+            throw new Error("Nieprawidłowa odpowiedź serwera");
+        }
+    } catch (e) {
+        console.error("Błąd przetwarzania odpowiedzi serwera:", e);
+        throw e; // albo throw new Error(`Błąd JSON: ${e.message}`);
+    }
+})
+
 		.then((data) => {
 			if (data.success) {
 				alert(data.message);

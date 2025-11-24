@@ -492,6 +492,18 @@ textarea {
 	display: none;
 }
 
+.skill-checkbox input[type="checkbox"]:checked + .checkmark {
+	background: var(--primary);
+	color: white;
+}
+
+.skill-checkbox input[type="checkbox"]:checked + .checkmark::after {
+	content: "✓";
+	font-size: 14px;
+	font-weight: bold;
+}
+
+
 .custom-skill {
 	display: flex;
 	gap: 0.75rem;

@@ -1,81 +1,120 @@
 <?php
+ob_start();
 session_start();
+
+if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
+    ob_end_clean();
+    echo json_encode([
+        'success' => false,
+        'message' => 'Musisz być zalogowany, aby utworzyć projekt'
+    ]);
+    exit();
+}
+
 include("global/connection.php");
 include("global/nav_global.php");
 include("global/log_action.php");
 
-// Sprawdź czy użytkownik jest zalogowany
-if (!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true) {
-    header("Location: join.php");
-    exit();
-}
-
 $userId = $_SESSION["user_id"];
 $userEmail = $_SESSION["user_email"] ?? '';
 
-// Obsługa formularza
+function closeStatement($stmt)
+{
+    if ($stmt && $stmt instanceof mysqli_stmt) {
+        $stmt->close();
+    }
+}
+
+function validateInput($data, $maxLength = null)
+{
+    if (!isset($data)) {
+        return '';
+    }
+    $cleaned = trim($data);
+    if ($maxLength !== null && strlen($cleaned) > $maxLength) {
+        throw new Exception("Przekroczono maksymalną długość: $maxLength znaków");
+    }
+    return $cleaned;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    ob_clean();
 
-    $projectName = trim($_POST['projectName'] ?? '');
-    $shortDescription = trim($_POST['shortDescription'] ?? '');
-    $fullDescription = trim($_POST['fullDescription'] ?? '');
-    $deadline = $_POST['deadline'] ?? null;
-    $visibility = $_POST['visibility'] ?? 'public';
-    $allowApplications = isset($_POST['allowApplications']) ? 1 : 0;
-    $autoAccept = isset($_POST['autoAccept']) ? 1 : 0;
-    $seoTags = trim($_POST['seoTags'] ?? '');
-    $location = 'Online';
-    $country = trim($_POST['country'] ?? '');
-
-    if (isset($_POST['locationType']) && $_POST['locationType'] === 'specific' && !empty(trim($_POST['location'] ?? ''))) {
-        $location = trim($_POST['location']);
-    }
-
-    if (empty($projectName) || empty($shortDescription)) {
-        echo json_encode(['success' => false, 'message' => 'Puste dane']);
-        exit();
-    }
-
-    if (strlen($projectName) > 80) {
-        echo json_encode(['success' => false, 'message' => 'Nazwa projektu jest zbyt długa']);
-        exit();
-    }
-
-    if (strlen($shortDescription) > 300) {
-        echo json_encode(['success' => false, 'message' => 'Krótki opis jest zbyt długi']);
-        exit();
-    }
+    $stmt = null;
+    $categoryStmt = null;
+    $projectCategoryStmt = null;
+    $goalStmt = null;
+    $skillStmt = null;
+    $projectSkillStmt = null;
+    $taskStmt = null;
+    $thumbStmt = null;
+    $memberStmt = null;
 
     try {
-        $conn->begin_transaction();
+        $projectName = validateInput($_POST['projectName'] ?? '', 80);
+        $shortDescription = validateInput($_POST['shortDescription'] ?? '', 300);
+        $fullDescription = validateInput($_POST['fullDescription'] ?? '');
+        $deadline = $_POST['deadline'] ?? null;
+        $visibility = $_POST['visibility'] ?? 'public';
+        $allowApplications = isset($_POST['allowApplications']) ? 1 : 0;
+        $autoAccept = isset($_POST['autoAccept']) ? 1 : 0;
+        $seoTags = validateInput($_POST['seoTags'] ?? '', 500);
+        $location = 'Online';
+        $country = validateInput($_POST['country'] ?? '', 100);
+
+        if (empty($projectName)) {
+            throw new Exception("Nazwa projektu jest wymagana");
+        }
+
+        if (empty($shortDescription)) {
+            throw new Exception("Krótki opis projektu jest wymagany");
+        }
+
+        if (isset($_POST['locationType']) && $_POST['locationType'] === 'specific') {
+            $specificLocation = validateInput($_POST['location'] ?? '', 200);
+            if (!empty($specificLocation)) {
+                $location = $specificLocation;
+            }
+        }
+
+        if (!empty($deadline)) {
+            $deadlineDate = DateTime::createFromFormat('Y-m-d', $deadline);
+            $today = new DateTime();
+            if (!$deadlineDate || $deadlineDate < $today) {
+                throw new Exception("Nieprawidłowa data deadline. Data musi być w przyszłości.");
+            }
+        }
+
+        if (!$conn->begin_transaction()) {
+            throw new Exception("Nie można rozpocząć transakcji");
+        }
 
         $stmt = $conn->prepare("
-INSERT INTO projects 
-(name, short_description, location, country, full_description, deadline, visibility, founder_id, allow_applications, auto_accept, seo_tags, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-    ");
+            INSERT INTO projects 
+            (name, short_description, location, country, full_description, deadline, visibility, founder_id, allow_applications, auto_accept, seo_tags, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        ");
 
         if ($stmt === false) {
-            throw new Exception("Błąd przygotowania zapytania: " . $conn->error);
+            throw new Exception("Błąd przygotowania zapytania");
         }
 
         if (!$stmt->bind_param("sssssssiiis", $projectName, $shortDescription, $location, $country, $fullDescription, $deadline, $visibility, $userId, $allowApplications, $autoAccept, $seoTags)) {
-            throw new Exception("Błąd powiązania parametrów: " . $stmt->error);
+            throw new Exception("Błąd powiązania parametrów");
         }
 
         if (!$stmt->execute()) {
-            throw new Exception("Błąd wykonania zapytania: " . $stmt->error);
+            throw new Exception("Błąd wykonania zapytania");
         }
 
         $projectId = $conn->insert_id;
-        $stmt->close();
+        closeStatement($stmt);
 
-        // Logowanie utworzenia projektu
-        logAction($conn, $userId, $userEmail, "project_created", "ID: $projectId");
+        logAction($conn, $userId, $userEmail, "project_created", "ID: $projectId, Name: $projectName");
 
-        // Kategorie
         if (isset($_POST['categories'])) {
             $categories = is_array($_POST['categories']) ? $_POST['categories'] : [$_POST['categories']];
+            $allowedCategories = ['technology', 'social', 'education', 'ecology', 'business', 'art', 'media'];
 
             $categoryMap = [
                 'technology' => 'Technologia',
@@ -87,57 +126,57 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
                 'media' => 'Media'
             ];
 
-            $categoryStmt = $conn->prepare("INSERT INTO categories (name) VALUES (?)");
+            $categoryStmt = $conn->prepare("INSERT IGNORE INTO categories (name) VALUES (?)");
             $projectCategoryStmt = $conn->prepare("INSERT INTO project_categories (project_id, category_id) VALUES (?, ?)");
 
             foreach ($categories as $categoryKey) {
-                if (!isset($categoryMap[$categoryKey])) {
+                if (!in_array($categoryKey, $allowedCategories)) {
                     continue;
                 }
 
                 $categoryName = $categoryMap[$categoryKey];
 
+                $categoryStmt->bind_param("s", $categoryName);
+                if (!$categoryStmt->execute()) {
+                    throw new Exception("Błąd tworzenia kategorii");
+                }
+
                 $checkCat = $conn->prepare("SELECT id FROM categories WHERE name = ?");
                 $checkCat->bind_param("s", $categoryName);
                 $checkCat->execute();
                 $checkCat->bind_result($categoryId);
-
-                if ($checkCat->fetch()) {
-                    $projectCategoryStmt->bind_param("ii", $projectId, $categoryId);
-                    $projectCategoryStmt->execute();
-                } else {
-                    $categoryStmt->bind_param("s", $categoryName);
-                    $categoryStmt->execute();
-                    $newCategoryId = $conn->insert_id;
-
-                    $projectCategoryStmt->bind_param("ii", $projectId, $newCategoryId);
-                    $projectCategoryStmt->execute();
-                }
-
+                $checkCat->fetch();
                 $checkCat->close();
-            }
 
-            $categoryStmt->close();
-            $projectCategoryStmt->close();
+                if ($categoryId) {
+                    $projectCategoryStmt->bind_param("ii", $projectId, $categoryId);
+                    if (!$projectCategoryStmt->execute()) {
+                        throw new Exception("Błąd przypisywania kategorii");
+                    }
+                }
+            }
+            closeStatement($categoryStmt);
+            closeStatement($projectCategoryStmt);
         }
 
-        // Cele
-        if (isset($_POST['goals'])) {
+        if (isset($_POST['goals']) && is_array($_POST['goals'])) {
             $goalStmt = $conn->prepare("INSERT INTO goals (project_id, description) VALUES (?, ?)");
 
             foreach ($_POST['goals'] as $goal) {
-                $goal = trim($goal);
+                $goal = validateInput($goal, 500);
                 if (!empty($goal)) {
                     $goalStmt->bind_param("is", $projectId, $goal);
-                    $goalStmt->execute();
+                    if (!$goalStmt->execute()) {
+                        throw new Exception("Błąd dodawania celu");
+                    }
                 }
             }
-            $goalStmt->close();
+            closeStatement($goalStmt);
         }
 
-        // Skills
         if (isset($_POST['skills'])) {
             $skills = is_array($_POST['skills']) ? $_POST['skills'] : [$_POST['skills']];
+            $allowedSkills = ['programming', 'design', 'social-media', 'logistics', 'copywriting', 'video', 'ai'];
 
             $skillMap = [
                 'programming' => 'Programowanie',
@@ -149,42 +188,40 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
                 'ai' => 'AI Tools'
             ];
 
-            $skillStmt = $conn->prepare("INSERT INTO skills (name) VALUES (?)");
+            $skillStmt = $conn->prepare("INSERT IGNORE INTO skills (name) VALUES (?)");
             $projectSkillStmt = $conn->prepare("INSERT INTO project_skills (project_id, skill_id) VALUES (?, ?)");
 
             foreach ($skills as $skillKey) {
-                if (!isset($skillMap[$skillKey])) {
+                if (!in_array($skillKey, $allowedSkills)) {
                     continue;
                 }
 
                 $skillName = $skillMap[$skillKey];
 
+                $skillStmt->bind_param("s", $skillName);
+                if (!$skillStmt->execute()) {
+                    throw new Exception("Błąd tworzenia umiejętności");
+                }
+
                 $checkSkill = $conn->prepare("SELECT id FROM skills WHERE name = ?");
                 $checkSkill->bind_param("s", $skillName);
                 $checkSkill->execute();
                 $checkSkill->bind_result($skillId);
-
-                if ($checkSkill->fetch()) {
-                    $projectSkillStmt->bind_param("ii", $projectId, $skillId);
-                    $projectSkillStmt->execute();
-                } else {
-                    $skillStmt->bind_param("s", $skillName);
-                    $skillStmt->execute();
-                    $newSkillId = $conn->insert_id;
-
-                    $projectSkillStmt->bind_param("ii", $projectId, $newSkillId);
-                    $projectSkillStmt->execute();
-                }
-
+                $checkSkill->fetch();
                 $checkSkill->close();
-            }
 
-            $skillStmt->close();
-            $projectSkillStmt->close();
+                if ($skillId) {
+                    $projectSkillStmt->bind_param("ii", $projectId, $skillId);
+                    if (!$projectSkillStmt->execute()) {
+                        throw new Exception("Błąd przypisywania umiejętności");
+                    }
+                }
+            }
+            closeStatement($skillStmt);
+            closeStatement($projectSkillStmt);
         }
 
-        // Tasks
-        if (isset($_POST['tasks'])) {
+        if (isset($_POST['tasks']) && is_array($_POST['tasks'])) {
             $taskStmt = $conn->prepare("
                 INSERT INTO tasks (project_id, name, description, priority)
                 VALUES (?, ?, ?, ?)
@@ -192,55 +229,90 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
 
             foreach ($_POST['tasks'] as $task) {
                 if (!empty(trim($task['name'] ?? ''))) {
-                    $name = trim($task['name']);
-                    $description = trim($task['description'] ?? '');
+                    $name = validateInput($task['name'], 200);
+                    $description = validateInput($task['description'] ?? '', 1000);
                     $priority = $task['priority'] ?? 'medium';
 
+                    if (!in_array($priority, ['low', 'medium', 'high'])) {
+                        $priority = 'medium';
+                    }
+
                     $taskStmt->bind_param("isss", $projectId, $name, $description, $priority);
-                    $taskStmt->execute();
-                }
-            }
-
-            $taskStmt->close();
-        }
-
-        // Thumbnail
-        if (isset($_FILES['thumbnail'])) {
-            if ($_FILES['thumbnail']['error'] === UPLOAD_ERR_OK) {
-                $allowed = ['image/jpeg', 'image/png', 'image/gif'];
-                if (in_array($_FILES['thumbnail']['type'], $allowed)) {
-
-                    $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/Konkurs/photos/projects/';
-
-                    if (!file_exists($uploadDir)) {
-                        mkdir($uploadDir, 0755, true);
-                    }
-
-                    $ext = pathinfo($_FILES['thumbnail']['name'], PATHINFO_EXTENSION);
-                    $fileName = "project_{$projectId}_" . time() . ".$ext";
-                    $filePath = $uploadDir . $fileName;
-
-                    if (move_uploaded_file($_FILES['thumbnail']['tmp_name'], $filePath)) {
-                        $thumbnailUrl = "../photos/projects/$fileName";
-                        $thumbStmt = $conn->prepare("UPDATE projects SET thumbnail=? WHERE id=?");
-                        $thumbStmt->bind_param("si", $thumbnailUrl, $projectId);
-                        $thumbStmt->execute();
-                        $thumbStmt->close();
+                    if (!$taskStmt->execute()) {
+                        throw new Exception("Błąd dodawania zadania");
                     }
                 }
             }
+            closeStatement($taskStmt);
         }
 
-        // Founder to project_team
+        if (isset($_FILES['thumbnail']) && $_FILES['thumbnail']['error'] !== UPLOAD_ERR_NO_FILE) {
+            if ($_FILES['thumbnail']['error'] !== UPLOAD_ERR_OK) {
+                $uploadErrors = [
+                    UPLOAD_ERR_INI_SIZE => 'Plik jest zbyt duży (limit serwera)',
+                    UPLOAD_ERR_FORM_SIZE => 'Plik jest zbyt duży (limit formularza)',
+                    UPLOAD_ERR_PARTIAL => 'Plik został tylko częściowo wgrany',
+                    UPLOAD_ERR_NO_FILE => 'Brak pliku',
+                    UPLOAD_ERR_NO_TMP_DIR => 'Brak folderu tymczasowego',
+                    UPLOAD_ERR_CANT_WRITE => 'Błąd zapisu na dysk',
+                    UPLOAD_ERR_EXTENSION => 'Rozszerzenie PHP zatrzymało upload'
+                ];
+                $errorMsg = $uploadErrors[$_FILES['thumbnail']['error']] ?? 'Nieznany błąd uploadu';
+                throw new Exception("Błąd uploadu miniaturki: $errorMsg");
+            }
+
+            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            $fileType = mime_content_type($_FILES['thumbnail']['tmp_name']);
+
+            if (!in_array($fileType, $allowedTypes)) {
+                throw new Exception("Nieprawidłowy typ pliku. Dopuszczalne formaty: JPEG, PNG, GIF, WebP");
+            }
+
+            $maxFileSize = 5 * 1024 * 1024;
+            if ($_FILES['thumbnail']['size'] > $maxFileSize) {
+                throw new Exception("Plik miniaturki jest zbyt duży. Maksymalny rozmiar: 5MB");
+            }
+
+            $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/Konkurs/photos/projects/';
+
+            if (!file_exists($uploadDir)) {
+                if (!mkdir($uploadDir, 0755, true)) {
+                    throw new Exception("Nie można utworzyć folderu uploadu");
+                }
+            }
+
+            $ext = pathinfo($_FILES['thumbnail']['name'], PATHINFO_EXTENSION);
+            $fileName = "project_{$projectId}_" . time() . ".$ext";
+            $filePath = $uploadDir . $fileName;
+
+            if (!move_uploaded_file($_FILES['thumbnail']['tmp_name'], $filePath)) {
+                throw new Exception("Błąd zapisu pliku miniaturki");
+            }
+
+            $thumbnailUrl = "../photos/projects/$fileName";
+            $thumbStmt = $conn->prepare("UPDATE projects SET thumbnail=? WHERE id=?");
+            $thumbStmt->bind_param("si", $thumbnailUrl, $projectId);
+            if (!$thumbStmt->execute()) {
+                throw new Exception("Błąd aktualizacji miniaturki");
+            }
+            closeStatement($thumbStmt);
+        }
+
         $memberStmt = $conn->prepare("
             INSERT INTO project_team (project_id, user_id, role)
             VALUES (?, ?, 'Założyciel')
         ");
         $memberStmt->bind_param("ii", $projectId, $userId);
-        $memberStmt->execute();
-        $memberStmt->close();
+        if (!$memberStmt->execute()) {
+            throw new Exception("Błąd dodawania założyciela do zespołu");
+        }
+        closeStatement($memberStmt);
 
-        $conn->commit();
+        if (!$conn->commit()) {
+            throw new Exception("Błąd zatwierdzania transakcji");
+        }
+
+        ob_end_clean();
 
         echo json_encode([
             'success' => true,
@@ -249,22 +321,39 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
             'redirect' => 'project.php?id=' . $projectId
         ]);
         exit();
-
     } catch (Exception $e) {
-        $conn->rollback();
+        closeStatement($stmt);
+        closeStatement($categoryStmt);
+        closeStatement($projectCategoryStmt);
+        closeStatement($goalStmt);
+        closeStatement($skillStmt);
+        closeStatement($projectSkillStmt);
+        closeStatement($taskStmt);
+        closeStatement($thumbStmt);
+        closeStatement($memberStmt);
+
+        try {
+            if ($conn && $conn instanceof mysqli && $conn->thread_id) {
+                $conn->rollback();
+            }
+        } catch (Exception $rollbackError) {
+        }
+
+        ob_end_clean();
+
+        logAction($conn, $userId, $userEmail, "project_creation_failed", "Error: " . $e->getMessage());
 
         echo json_encode([
             'success' => false,
-            'message' => "Wystąpił błąd: " . $e->getMessage()
+            'message' => $e->getMessage()
         ]);
         exit();
     }
 }
 
-// Logowanie wejścia na stronę tworzenia projektu
+ob_end_flush();
 logAction($conn, $userId, $userEmail, "project_creation_page_accessed", "");
 ?>
-
 
 <!DOCTYPE html>
 <html lang="pl">
@@ -278,7 +367,7 @@ logAction($conn, $userId, $userEmail, "project_creation_page_accessed", "");
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
+
 </head>
 
 <body>

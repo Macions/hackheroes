@@ -89,7 +89,7 @@ if ($action === 'take' && $isMember && $task['status'] === 'open' && !$task['ass
                 INSERT INTO logs (user_id, action, details, ip_address, user_agent, created_at) 
                 VALUES (?, 'take_task', ?, ?, ?, NOW())
             ");
-            $details = "Użytkownik podjął się zadania #{$taskId}: '{$task['name']}' w projekcie #{$task['project_id']}";
+            $details = "Użytkownik {$userNick} podjął się zadania #{$taskId}: '{$task['name']}' w projekcie #{$task['project_id']}";
             $logStmt->bind_param("isss", $currentUserId, $details, $_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT']);
             $logStmt->execute();
             $logStmt->close();

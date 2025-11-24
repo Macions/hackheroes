@@ -432,11 +432,9 @@ function openMessageModal() {
             <form method="POST" class="message-form">
                 <div class="modal-body">
                     <div class="recipients-info">
-                        <strong>Adresaci:</strong> Wszyscy członkowie projektu "${
-													projectData.name
-												}" (${
-		document.querySelectorAll(".team-member-card").length
-	} osób)
+                        <strong>Adresaci:</strong> Wszyscy członkowie projektu "${projectData.name
+		}" (${document.querySelectorAll(".team-member-card").length
+		} osób)
                     </div>
                     
                     <div class="form-group">
@@ -484,9 +482,8 @@ function updatePreview() {
 
 	if (title || content) {
 		preview.style.display = "block";
-		previewContent.innerHTML = `<strong>${
-			title || "(Brak tytułu)"
-		}</strong>\n\n${content || "(Brak treści)"}`;
+		previewContent.innerHTML = `<strong>${title || "(Brak tytułu)"
+			}</strong>\n\n${content || "(Brak treści)"}`;
 	} else {
 		preview.style.display = "none";
 	}
@@ -573,9 +570,8 @@ function updatePreview() {
 
 	if (title || content) {
 		preview.style.display = "block";
-		previewContent.innerHTML = `<strong>${
-			title || "(Brak tytułu)"
-		}</strong><br>${content || "(Brak treści)"}`;
+		previewContent.innerHTML = `<strong>${title || "(Brak tytułu)"
+			}</strong><br>${content || "(Brak treści)"}`;
 	} else {
 		preview.style.display = "none";
 	}
@@ -594,42 +590,69 @@ function closeModal(btn) {
 // =========================
 // Obsługa wysyłki formularza do członka (ajax lub standard POST)
 // =========================
+// =========================
+// Obsługa wysyłki formularza do członka
+// =========================
 function handleMemberMessageSubmit(event) {
 	event.preventDefault();
 	const form = event.target;
+	const submitBtn = form.querySelector('button[type="submit"]');
+	const originalText = submitBtn.textContent;
+
 	const recipientId = form.recipient_id.value;
-	const title = form.message_title.value;
-	const content = form.message_content.value;
+	const title = form.message_title.value.trim();
+	const content = form.message_content.value.trim();
 
 	if (!recipientId || !title || !content) {
 		alert("Wszystkie pola są wymagane!");
 		return;
 	}
 
-	// Możesz tu wysłać AJAX POST do np. send_message.php
+	// Zmiana tekstu przycisku na czas wysyłki
+	submitBtn.textContent = "Wysyłanie...";
+	submitBtn.disabled = true;
+
 	fetch("send_message.php", {
 		method: "POST",
-		headers: { "Content-Type": "application/json" },
+		headers: {
+			"Content-Type": "application/json",
+			"X-Requested-With": "XMLHttpRequest"
+		},
 		body: JSON.stringify({
 			recipient_id: recipientId,
 			title: title,
 			content: content,
-			project_id: PROJECT_ID,
+			project_id: PROJECT_ID // Upewnij się że ta zmienna jest zdefiniowana
 		}),
 	})
-		.then((res) => res.json())
-		.then((data) => {
+		.then(response => {
+			if (!response.ok) {
+				throw new Error(`Błąd HTTP: ${response.status}`);
+			}
+			return response.json();
+		})
+		.then(data => {
 			if (data.success) {
-				alert("Wiadomość wysłana!");
+				alert("Wiadomość wysłana pomyślnie!");
 				const modal = document.querySelector(".message-modal");
 				if (modal) modal.remove();
+
+				// Opcjonalnie: odśwież listę wiadomości lub pokaż potwierdzenie
+				if (typeof refreshMessages === 'function') {
+					refreshMessages();
+				}
 			} else {
-				alert("Błąd: " + (data.error || "Nieznany"));
+				throw new Error(data.message || "Nieznany błąd podczas wysyłania wiadomości");
 			}
 		})
 		.catch((err) => {
-			console.error(err);
-			alert("Wystąpił błąd podczas wysyłki wiadomości.");
+			console.error("Błąd wysyłania wiadomości:", err);
+			alert("Wystąpił błąd podczas wysyłania wiadomości: " + err.message);
+		})
+		.finally(() => {
+			// Przywróć przycisk do stanu początkowego
+			submitBtn.textContent = originalText;
+			submitBtn.disabled = false;
 		});
 }
 
